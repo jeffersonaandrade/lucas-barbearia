@@ -10,6 +10,7 @@ Site moderno, responsivo e acolhedor para a fisioterapeuta respiratória Joanna 
 - ✅ **Code Splitting**: Bundle dividido em chunks menores
 - ✅ **Intersection Observer**: Animações baseadas em visibilidade
 - ✅ **Otimização de Build**: Configuração Vite otimizada
+- ✅ **Favicon Otimizado**: Logo.png como favicon principal com fallback para favicon.ico
 
 ### **Estrutura e Organização**
 - ✅ **Configuração Centralizada**: Dados centralizados em `/src/config`
@@ -24,6 +25,7 @@ Site moderno, responsivo e acolhedor para a fisioterapeuta respiratória Joanna 
 - ✅ **Structured Data**: Schema.org para SEO
 - ✅ **Meta Tags Otimizadas**: Open Graph e Twitter Cards
 - ✅ **Focus Management**: Indicadores visuais de foco
+- ✅ **Favicon Configurado**: Logo da marca como favicon em todos os navegadores
 
 ### **Manutenibilidade**
 - ✅ **Configuração Centralizada**: Telefone e URLs em um lugar
@@ -55,6 +57,12 @@ Criar uma extensão digital do Instagram @respirarporjoannabomfim que transmita:
 - **Rosa Claro**: #fce4ec (backgrounds suaves)
 - **Verde Suave**: Para elementos de confiança
 - **Neutros**: Branco, cinza claro
+
+### Favicon e Ícones
+- **Favicon Principal**: Logo.png (192x192px) para navegadores modernos
+- **Favicon Fallback**: favicon.ico para navegadores mais antigos
+- **Apple Touch Icon**: Logo.png para dispositivos iOS
+- **Web Manifest**: Configurado para PWA com ícones apropriados
 
 ### Tipografia
 - Fontes modernas e legíveis
@@ -207,6 +215,15 @@ pnpm run build
 pnpm run preview
 ```
 
+### Configuração do Favicon
+O favicon está configurado para usar o `logo.png` como ícone principal:
+- **Navegadores modernos**: Usam logo.png (192x192px)
+- **Navegadores antigos**: Fallback para favicon.ico
+- **Dispositivos Apple**: Apple touch icon configurado
+- **PWA**: Web manifest com ícones apropriados
+
+Para alterar o favicon, substitua o arquivo `public/logo.png` mantendo as dimensões de 192x192px.
+
 ## 📝 Próximos Passos
 
 1. **Imagens Reais**: Substituir placeholders por fotos da Joanna
@@ -215,6 +232,7 @@ pnpm run preview
 4. **SEO**: Otimizar meta tags e estrutura
 5. **Analytics**: Implementar Google Analytics
 6. **Deploy**: Configurar deploy automático
+7. **PWA**: Configurar service worker para funcionalidade offline
 
 ## 🎨 Customização
 

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { openWhatsApp, openInstagram, openEmail, siteConfig } from '@/config/site.js';
+import { openWhatsApp, siteConfig } from '@/config/site.js';
 
 export const useWhatsApp = () => {
   const sendMessage = useCallback((messageType, customMessage = null) => {
@@ -14,34 +14,10 @@ export const useWhatsApp = () => {
     openWhatsApp(message);
   }, []);
 
-  const handleContactAction = useCallback((action, messageType = null) => {
-    switch (action) {
-      case 'whatsapp':
-        if (messageType) {
-          sendMessage(messageType);
-        } else {
-          openWhatsApp(siteConfig.whatsappMessages.schedule);
-        }
-        break;
-      case 'instagram':
-        openInstagram();
-        break;
-      case 'email':
-        openEmail();
-        break;
-      default:
-        break;
-    }
-  }, [sendMessage]);
-
   return {
     sendMessage,
     sendCourseMessage,
-    handleContactAction,
     openWhatsApp,
-    openInstagram,
-    openEmail,
-    whatsappNumber: siteConfig.contact.whatsappFormatted,
-    contactInfo: siteConfig.contactInfo
+    whatsappNumber: siteConfig.contact.whatsappFormatted
   };
 }; 
