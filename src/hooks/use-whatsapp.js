@@ -1,23 +1,23 @@
 import { useCallback } from 'react';
-import { openWhatsApp, siteConfig } from '@/config/site.js';
+import { useExternalLinks } from './use-external-links.js';
+import { siteConfig } from '@/config/site.js';
 
 export const useWhatsApp = () => {
-  const sendMessage = useCallback((messageType, customMessage = null) => {
-    const message = customMessage || siteConfig.whatsappMessages[messageType];
-    if (message) {
-      openWhatsApp(message);
-    }
-  }, []);
+  const { sendWhatsAppMessage, sendCourseMessage, whatsappNumber } = useExternalLinks();
 
-  const sendCourseMessage = useCallback((courseTitle, type = 'courseInfo') => {
-    const message = siteConfig.whatsappMessages[type](courseTitle);
-    openWhatsApp(message);
-  }, []);
+  // Mantém compatibilidade com código existente
+  const sendMessage = useCallback((messageType, customMessage = null) => {
+    sendWhatsAppMessage(messageType, customMessage);
+  }, [sendWhatsAppMessage]);
+
+  const openWhatsApp = useCallback((message) => {
+    sendWhatsAppMessage('custom', message);
+  }, [sendWhatsAppMessage]);
 
   return {
     sendMessage,
     sendCourseMessage,
     openWhatsApp,
-    whatsappNumber: siteConfig.contact.whatsappFormatted
+    whatsappNumber
   };
 }; 

@@ -58,7 +58,7 @@ export const siteConfig = {
     calendly: "https://calendly.com/ronaldocinebox1/30min"
   },
   
-  // Mensagens de WhatsApp
+  // Mensagens de WhatsApp (importadas de messages.js)
   whatsappMessages: {
     schedule: "Olá! Gostaria de agendar uma consulta com a Joanna.",
     scheduleChild: "Olá! Gostaria de agendar uma consulta com a Joanna para meu filho.",
