@@ -1,0 +1,238 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* Paleta de cores inspirada no Instagram da Joanna Bomfim */
+  --background: #fefefe;
+  --foreground: #2d2d2d;
+  --card: #ffffff;
+  --card-foreground: #2d2d2d;
+  --popover: #ffffff;
+  --popover-foreground: #2d2d2d;
+  --primary: #e91e63; /* Rosa principal */
+  --primary-foreground: #ffffff;
+  --secondary: #fce4ec; /* Rosa claro */
+  --secondary-foreground: #2d2d2d;
+  --muted: #f5f5f5;
+  --muted-foreground: #6b7280;
+  --accent: #ff9800; /* Laranja/coral */
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: #e5e7eb;
+  --input: #f3f4f6;
+  --ring: #e91e63;
+  --chart-1: #e91e63;
+  --chart-2: #ff9800;
+  --chart-3: #4caf50;
+  --chart-4: #2196f3;
+  --chart-5: #9c27b0;
+  --sidebar: #fefefe;
+  --sidebar-foreground: #2d2d2d;
+  --sidebar-primary: #e91e63;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fce4ec;
+  --sidebar-accent-foreground: #2d2d2d;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #e91e63;
+}
+
+.dark {
+  --background: #1a1a1a;
+  --foreground: #ffffff;
+  --card: #2d2d2d;
+  --card-foreground: #ffffff;
+  --popover: #2d2d2d;
+  --popover-foreground: #ffffff;
+  --primary: #f48fb1;
+  --primary-foreground: #1a1a1a;
+  --secondary: #424242;
+  --secondary-foreground: #ffffff;
+  --muted: #424242;
+  --muted-foreground: #9ca3af;
+  --accent: #ffb74d;
+  --accent-foreground: #1a1a1a;
+  --destructive: #ef4444;
+  --border: #374151;
+  --input: #374151;
+  --ring: #f48fb1;
+  --chart-1: #f48fb1;
+  --chart-2: #ffb74d;
+  --chart-3: #81c784;
+  --chart-4: #64b5f6;
+  --chart-5: #ba68c8;
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #f48fb1;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: #424242;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #374151;
+  --sidebar-ring: #f48fb1;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Gradientes personalizados */
+.gradient-primary {
+  background: linear-gradient(135deg, #e91e63 0%, #ff9800 100%);
+}
+
+.gradient-soft {
+  background: linear-gradient(135deg, #fce4ec 0%, #fff3e0 100%);
+}
+
+/* Animações suaves */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Botão WhatsApp flutuante */
+.whatsapp-float {
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .whatsapp-float {
+    bottom: 140px;
+    right: 30px;
+  }
+}
+
+@media (min-width: 768px) {
+  .whatsapp-float {
+    bottom: 160px;
+    right: 40px;
+  }
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Botão Calendly flutuante */
+.calendly-float {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #006bff 0%, #0056cc 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 107, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .calendly-float {
+    bottom: 30px;
+    right: 30px;
+  }
+}
+
+@media (min-width: 768px) {
+  .calendly-float {
+    bottom: 40px;
+    right: 40px;
+  }
+}
+
+.calendly-float:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 107, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Estilos para seções */
+.section-padding {
+  @apply py-16 px-4 md:px-8 lg:px-16;
+}
+
+/* Tipografia personalizada */
+.heading-primary {
+  @apply text-4xl md:text-5xl lg:text-6xl font-bold text-foreground;
+}
+
+.heading-secondary {
+  @apply text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground;
+}
+
+.text-body {
+  @apply text-base md:text-lg text-muted-foreground leading-relaxed;
+}

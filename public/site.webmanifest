@@ -1,0 +1,26 @@
+{
+  "name": "Respirar - Cuidado Respiratório por Joanna Bomfim",
+  "short_name": "Respirar",
+  "description": "Fisioterapia respiratória infantil com atendimento domiciliar personalizado e humanizado.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fefefe",
+  "theme_color": "#e91e63",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+} 
