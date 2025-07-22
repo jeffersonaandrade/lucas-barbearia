@@ -1,0 +1,205 @@
+{
+  "barbearias": [
+    {
+      "id": 1,
+      "nome": "Lucas Barbearia - Centro",
+      "endereco": "Rua das Flores, 123 - Centro",
+      "telefone": "(11) 99999-9999",
+      "whatsapp": "5511999999999",
+      "instagram": "@lucasbarbearia_centro",
+      "horario": {
+        "segunda": "9h às 19h",
+        "terca": "9h às 19h",
+        "quarta": "9h às 19h",
+        "quinta": "9h às 19h",
+        "sexta": "9h às 19h",
+        "sabado": "9h às 18h",
+        "domingo": "Fechado"
+      },
+      "barbeiros": [
+        {
+          "id": "joao",
+          "nome": "João Silva",
+          "especialidade": "Cortes modernos",
+          "disponivel": true,
+          "diasTrabalho": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+          "horarioInicio": "09:00",
+          "horarioFim": "19:00"
+        },
+        {
+          "id": "pedro",
+          "nome": "Pedro Santos",
+          "especialidade": "Barba e acabamentos",
+          "disponivel": true,
+          "diasTrabalho": ["segunda", "terca", "quarta", "quinta", "sexta"],
+          "horarioInicio": "10:00",
+          "horarioFim": "18:00"
+        },
+        {
+          "id": "carlos",
+          "nome": "Carlos Oliveira",
+          "especialidade": "Cortes tradicionais",
+          "disponivel": true,
+          "diasTrabalho": ["terca", "quarta", "quinta", "sexta", "sabado"],
+          "horarioInicio": "09:00",
+          "horarioFim": "18:00"
+        }
+      ],
+      "configuracoes": {
+        "tempoMedioPorCliente": 15,
+        "maximoNaFila": 20,
+        "atualizacaoAutomatica": true,
+        "intervaloAtualizacao": 60000
+      },
+      "servicos": [
+        {
+          "nome": "Corte Masculino",
+          "preco": "R$ 35",
+          "duracao": "30 min"
+        },
+        {
+          "nome": "Barba",
+          "preco": "R$ 25",
+          "duracao": "20 min"
+        },
+        {
+          "nome": "Corte + Barba",
+          "preco": "R$ 50",
+          "duracao": "45 min"
+        }
+      ],
+      "ativo": true
+    },
+    {
+      "id": 2,
+      "nome": "Lucas Barbearia - Shopping",
+      "endereco": "Shopping Plaza, Loja 45 - 2º Andar",
+      "telefone": "(11) 88888-8888",
+      "whatsapp": "5511888888888",
+      "instagram": "@lucasbarbearia_shopping",
+      "horario": {
+        "segunda": "10h às 22h",
+        "terca": "10h às 22h",
+        "quarta": "10h às 22h",
+        "quinta": "10h às 22h",
+        "sexta": "10h às 22h",
+        "sabado": "10h às 22h",
+        "domingo": "14h às 20h"
+      },
+      "barbeiros": [
+        {
+          "id": "miguel",
+          "nome": "Miguel Costa",
+          "especialidade": "Cortes modernos",
+          "disponivel": true,
+          "diasTrabalho": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"],
+          "horarioInicio": "10:00",
+          "horarioFim": "22:00"
+        },
+        {
+          "id": "lucas",
+          "nome": "Lucas Ferreira",
+          "especialidade": "Barba e acabamentos",
+          "disponivel": true,
+          "diasTrabalho": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+          "horarioInicio": "10:00",
+          "horarioFim": "20:00"
+        },
+        {
+          "id": "rafael",
+          "nome": "Rafael Almeida",
+          "especialidade": "Cortes tradicionais",
+          "disponivel": true,
+          "diasTrabalho": ["quinta", "sexta", "sabado", "domingo"],
+          "horarioInicio": "14:00",
+          "horarioFim": "20:00"
+        }
+      ],
+      "configuracoes": {
+        "tempoMedioPorCliente": 20,
+        "maximoNaFila": 25,
+        "atualizacaoAutomatica": true,
+        "intervaloAtualizacao": 60000
+      },
+      "servicos": [
+        {
+          "nome": "Corte Masculino",
+          "preco": "R$ 40",
+          "duracao": "35 min"
+        },
+        {
+          "nome": "Barba",
+          "preco": "R$ 30",
+          "duracao": "25 min"
+        },
+        {
+          "nome": "Corte + Barba",
+          "preco": "R$ 60",
+          "duracao": "50 min"
+        }
+      ],
+      "ativo": true
+    },
+    {
+      "id": 3,
+      "nome": "Lucas Barbearia - Bairro",
+      "endereco": "Av. Principal, 456 - Bairro Residencial",
+      "telefone": "(11) 77777-7777",
+      "whatsapp": "5511777777777",
+      "instagram": "@lucasbarbearia_bairro",
+      "horario": {
+        "segunda": "8h às 18h",
+        "terca": "8h às 18h",
+        "quarta": "8h às 18h",
+        "quinta": "8h às 18h",
+        "sexta": "8h às 18h",
+        "sabado": "8h às 17h",
+        "domingo": "Fechado"
+      },
+      "barbeiros": [
+        {
+          "id": "andre",
+          "nome": "André Lima",
+          "especialidade": "Cortes modernos",
+          "disponivel": true,
+          "diasTrabalho": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+          "horarioInicio": "08:00",
+          "horarioFim": "18:00"
+        },
+        {
+          "id": "bruno",
+          "nome": "Bruno Costa",
+          "especialidade": "Barba e acabamentos",
+          "disponivel": true,
+          "diasTrabalho": ["terca", "quarta", "quinta", "sexta", "sabado"],
+          "horarioInicio": "09:00",
+          "horarioFim": "17:00"
+        }
+      ],
+      "configuracoes": {
+        "tempoMedioPorCliente": 12,
+        "maximoNaFila": 15,
+        "atualizacaoAutomatica": true,
+        "intervaloAtualizacao": 60000
+      },
+      "servicos": [
+        {
+          "nome": "Corte Masculino",
+          "preco": "R$ 30",
+          "duracao": "25 min"
+        },
+        {
+          "nome": "Barba",
+          "preco": "R$ 20",
+          "duracao": "15 min"
+        },
+        {
+          "nome": "Corte + Barba",
+          "preco": "R$ 45",
+          "duracao": "35 min"
+        }
+      ],
+      "ativo": true
+    }
+  ]
+} 

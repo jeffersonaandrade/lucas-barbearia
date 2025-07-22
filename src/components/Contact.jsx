@@ -1,8 +1,8 @@
-import { Phone, Mail, MapPin, Clock, Instagram, MessageCircle, Calendar } from 'lucide-react';
+import { Phone, MapPin, Clock, Instagram, MessageCircle, Scissors } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { siteConfig } from '@/config/site.js';
-import AppointmentScheduler from './AppointmentScheduler.jsx';
+import { Link } from 'react-router-dom';
 
 const Contact = () => {
   return (
@@ -22,7 +22,7 @@ const Contact = () => {
           </h2>
           
           <p className="text-body max-w-2xl mx-auto">
-            Entre em contato para agendar uma consulta ou tirar suas dúvidas.
+            Entre em contato para entrar na fila ou tirar suas dúvidas sobre nossos serviços.
           </p>
         </div>
 
@@ -53,69 +53,83 @@ const Contact = () => {
               </div>
             </div>
 
-            {/* Informações de Consulta */}
+            {/* Informações da Barbearia */}
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
                 <Clock className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <p className="font-medium text-foreground">Duração</p>
-                  <p className="text-muted-foreground">{siteConfig.consultation.duration}</p>
+                  <p className="font-medium text-foreground">Horário de Funcionamento</p>
+                  <div className="text-muted-foreground space-y-1">
+                    <p>Segunda a Sexta: 9h às 19h</p>
+                    <p>Sábado: 9h às 18h</p>
+                    <p>Domingo: Fechado</p>
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-start space-x-4">
                 <MapPin className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <p className="font-medium text-foreground">Área de Atendimento</p>
-                  <p className="text-muted-foreground">{siteConfig.consultation.area}</p>
+                  <p className="font-medium text-foreground">Localização</p>
+                  <p className="text-muted-foreground">São Paulo, SP</p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-4">
-                <Calendar className="w-5 h-5 text-primary mt-1" />
+                <Scissors className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <p className="font-medium text-foreground">Agendamento</p>
-                  <p className="text-muted-foreground">{siteConfig.consultation.scheduling}</p>
+                  <p className="font-medium text-foreground">Informações Importantes</p>
+                  <div className="text-muted-foreground space-y-1">
+                    <p>• Agendamento recomendado</p>
+                    <p>• Aceitamos cartões e PIX</p>
+                    <p>• Produtos disponíveis para venda</p>
+                    <p>• Estacionamento gratuito</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Formulário de Contato */}
+          {/* Ações Rápidas */}
           <div className="space-y-8">
             <div>
               <h3 className="text-2xl font-semibold text-foreground mb-6">
-                Agende sua Consulta
+                Ações Rápidas
               </h3>
               
               <div className="space-y-6">
-                {/* Agendamento Online */}
+                {/* Entrar na Fila */}
                 <Card className="border-primary/20">
                   <CardContent className="p-6">
                     <div className="text-center space-y-4">
                       <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                        <Calendar className="w-8 h-8 text-primary" />
+                        <Scissors className="w-8 h-8 text-primary" />
                       </div>
                       <div>
                         <h4 className="text-lg font-semibold text-foreground mb-2">
-                          Agendamento Online
+                          Nossas Unidades
                         </h4>
                         <p className="text-muted-foreground mb-4">
-                          Marque sua consulta diretamente pelo calendário online. 
-                          Rápido, seguro e confortável.
+                          Conheça nossas unidades e escolha a mais próxima de você. 
+                          Todas com a mesma qualidade e atendimento.
                         </p>
-                        <AppointmentScheduler />
+                        <Link to="/barbearias">
+                          <Button className="w-full bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground">
+                            <Scissors className="w-4 h-4 mr-2" />
+                            Nossas Unidades
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* WhatsApp */}
-                <Card className="border-green-200">
+                <Card className="border-primary/20">
                   <CardContent className="p-6">
                     <div className="text-center space-y-4">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                        <MessageCircle className="w-8 h-8 text-green-600" />
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                        <MessageCircle className="w-8 h-8 text-primary" />
                       </div>
                       <div>
                         <h4 className="text-lg font-semibold text-foreground mb-2">
@@ -125,11 +139,11 @@ const Contact = () => {
                           Prefere conversar diretamente? Entre em contato pelo WhatsApp.
                         </p>
                         <Button 
-                          className="w-full bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de falar com a Tia Jow.', '_blank')}
+                          className="w-full bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de falar com a Lucas Barbearia.', '_blank')}
                         >
                           <MessageCircle className="w-4 h-4 mr-2" />
-                          Falar com a Tia Jow
+                          Falar com a Barbearia
                         </Button>
                       </div>
                     </div>
@@ -137,22 +151,22 @@ const Contact = () => {
                 </Card>
 
                 {/* Instagram */}
-                <Card className="border-pink-200">
+                <Card className="border-primary/20">
                   <CardContent className="p-6">
                     <div className="text-center space-y-4">
-                      <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto">
-                        <Instagram className="w-8 h-8 text-pink-600" />
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                        <Instagram className="w-8 h-8 text-primary" />
                       </div>
                       <div>
                         <h4 className="text-lg font-semibold text-foreground mb-2">
                           Instagram
                         </h4>
                         <p className="text-muted-foreground mb-4">
-                          Siga a Tia Jow no Instagram para dicas e novidades.
+                          Siga a Lucas Barbearia no Instagram para novidades e inspirações.
                         </p>
                         <Button 
                           variant="outline"
-                          className="w-full border-pink-300 text-pink-600 hover:bg-pink-50"
+                          className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                           onClick={() => window.open(siteConfig.urls.instagram, '_blank')}
                         >
                           <Instagram className="w-4 h-4 mr-2" />
@@ -171,20 +185,26 @@ const Contact = () => {
         <div className="mt-16 text-center">
           <div className="bg-white rounded-2xl p-8 shadow-sm">
             <h3 className="text-xl font-semibold text-foreground mb-4">
-              Pronto para cuidar da respiração do seu filho?
+              Pronto para um visual incrível?
             </h3>
             <p className="text-muted-foreground mb-6">
-              Agende agora mesmo uma consulta com a Tia Jow e veja como o cuidado humanizado pode 
-              fazer toda a diferença na saúde respiratória do seu pequeno.
+              Conheça nossas unidades e descubra como a Lucas Barbearia pode transformar seu visual 
+              com qualidade e praticidade.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <AppointmentScheduler />
+              <Link to="/barbearias">
+                <Button className="bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground">
+                  <Scissors className="w-4 h-4 mr-2" />
+                  Nossas Unidades
+                </Button>
+              </Link>
               <Button 
                 variant="outline"
-                className="border-primary text-primary hover:bg-primary hover:text-white"
-                onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de mais informações sobre a consulta.', '_blank')}
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de mais informações sobre a barbearia.', '_blank')}
               >
-                Falar com a Tia Jow
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Falar com a Barbearia
               </Button>
             </div>
           </div>

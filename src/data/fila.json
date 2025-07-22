@@ -1,0 +1,100 @@
+{
+  "barbearias": {
+    "1": {
+      "fila": [
+        {
+          "id": 1,
+          "nome": "João Silva",
+          "telefone": "(11) 99999-9999",
+          "barbeiro": "Fila Geral",
+          "status": "atendendo",
+          "posicao": 1,
+          "tempoEstimado": 15,
+          "token": "token_1703123456789_abc123def",
+          "dataEntrada": "2024-01-15T10:30:00Z"
+        },
+        {
+          "id": 2,
+          "nome": "Pedro Santos",
+          "telefone": "(11) 88888-8888",
+          "barbeiro": "João Silva",
+          "status": "próximo",
+          "posicao": 2,
+          "tempoEstimado": 30,
+          "token": "token_1703123456790_def456ghi",
+          "dataEntrada": "2024-01-15T10:45:00Z"
+        },
+        {
+          "id": 3,
+          "nome": "Carlos Oliveira",
+          "telefone": "(11) 77777-7777",
+          "barbeiro": "Pedro Santos",
+          "status": "aguardando",
+          "posicao": 3,
+          "tempoEstimado": 45,
+          "token": "token_1703123456791_ghi789jkl",
+          "dataEntrada": "2024-01-15T11:00:00Z"
+        }
+      ],
+      "estatisticas": {
+        "totalAtendidos": 1250,
+        "tempoMedioEspera": 25,
+        "avaliacaoMedia": 4.9,
+        "clientesAtivos": 3
+      }
+    },
+    "2": {
+      "fila": [
+        {
+          "id": 1,
+          "nome": "Miguel Costa",
+          "telefone": "(11) 66666-6666",
+          "barbeiro": "Fila Geral",
+          "status": "atendendo",
+          "posicao": 1,
+          "tempoEstimado": 20,
+          "token": "token_1703123456794_pqr678stu",
+          "dataEntrada": "2024-01-15T11:00:00Z"
+        },
+        {
+          "id": 2,
+          "nome": "Lucas Ferreira",
+          "telefone": "(11) 55555-5555",
+          "barbeiro": "Miguel Costa",
+          "status": "próximo",
+          "posicao": 2,
+          "tempoEstimado": 40,
+          "token": "token_1703123456795_stu901vwx",
+          "dataEntrada": "2024-01-15T11:20:00Z"
+        }
+      ],
+      "estatisticas": {
+        "totalAtendidos": 890,
+        "tempoMedioEspera": 30,
+        "avaliacaoMedia": 4.8,
+        "clientesAtivos": 2
+      }
+    },
+    "3": {
+      "fila": [
+        {
+          "id": 1,
+          "nome": "Rafael Almeida",
+          "telefone": "(11) 44444-4444",
+          "barbeiro": "Fila Geral",
+          "status": "atendendo",
+          "posicao": 1,
+          "tempoEstimado": 12,
+          "token": "token_1703123456796_vwx234yza",
+          "dataEntrada": "2024-01-15T10:30:00Z"
+        }
+      ],
+      "estatisticas": {
+        "totalAtendidos": 650,
+        "tempoMedioEspera": 18,
+        "avaliacaoMedia": 4.7,
+        "clientesAtivos": 1
+      }
+    }
+  }
+} 

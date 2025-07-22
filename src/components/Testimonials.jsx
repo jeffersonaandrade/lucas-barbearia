@@ -1,55 +1,56 @@
-import { Star, Quote, Heart } from 'lucide-react';
+import { Star, Quote, Scissors } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card.jsx';
+import { Link } from 'react-router-dom';
 
 const Testimonials = () => {
   const testimonials = [
     {
       id: 1,
-      name: 'Maria Silva',
-      role: 'Mãe do Pedro, 4 anos',
-      content: 'A Tia Jow é maravilhosa! Meu filho tinha muito medo de fisioterapia, mas ela conseguiu criar um vínculo incrível com ele. O Pedro agora até pede para fazer os exercícios. Os resultados foram surpreendentes!',
+      name: 'João Silva',
+      role: 'Cliente há 3 anos',
+      content: 'A Lucas Barbearia é incrível! O sistema de fila online é muito prático, não preciso mais ficar esperando horas. Os barbeiros são profissionais e sempre fazem um trabalho perfeito.',
       rating: 5,
-      image: 'bg-gradient-to-br from-pink-200 to-pink-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     },
     {
       id: 2,
-      name: 'Ana Cardoso',
-      role: 'Mãe da Sofia, 2 anos',
-      content: 'O atendimento domiciliar fez toda a diferença. A Sofia se sente segura em casa e a Joanna sempre respeita o tempo dela. É um cuidado verdadeiramente humanizado. Recomendo de olhos fechados!',
+      name: 'Pedro Santos',
+      role: 'Cliente há 1 ano',
+      content: 'Melhor barbearia que já frequentei! O sistema de fila é genial, posso acompanhar minha posição em tempo real e chegar na hora certa. Sempre saio satisfeito com o resultado.',
       rating: 5,
-      image: 'bg-gradient-to-br from-purple-200 to-purple-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     },
     {
       id: 3,
-      name: 'Carlos Mendes',
-      role: 'Pai do Lucas, 6 anos',
-      content: 'Depois de várias tentativas com outros profissionais, encontramos na Tia Jow a solução. Ela entende que cada criança é única e adapta o tratamento. O Lucas melhorou muito!',
+      name: 'Carlos Oliveira',
+      role: 'Cliente há 2 anos',
+      content: 'A praticidade do sistema de fila online mudou minha vida! Não preciso mais perder tempo esperando. Os barbeiros são muito atenciosos e o ambiente é super agradável.',
       rating: 5,
-      image: 'bg-gradient-to-br from-blue-200 to-blue-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     },
     {
       id: 4,
-      name: 'Fernanda Costa',
-      role: 'Mãe da Isabela, 3 anos',
-      content: 'A Joanna não trata apenas a criança, ela acolhe toda a família. Suas orientações são claras e ela sempre está disponível para tirar dúvidas. É mais que uma fisioterapeuta, é um anjo!',
+      name: 'Miguel Costa',
+      role: 'Cliente há 6 meses',
+      content: 'Sistema de fila inteligente e barbeiros profissionais! A Lucas Barbearia entende o que o cliente precisa: qualidade, praticidade e respeito pelo tempo. Recomendo demais!',
       rating: 5,
-      image: 'bg-gradient-to-br from-green-200 to-green-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     },
     {
       id: 5,
-      name: 'Roberto Santos',
-      role: 'Pai do Miguel, 5 anos',
-      content: 'O Miguel nasceu prematuro e sempre teve problemas respiratórios. Com a Tia Jow, ele aprendeu a respirar melhor e ganhou qualidade de vida. Somos eternamente gratos!',
+      name: 'Lucas Ferreira',
+      role: 'Cliente há 1 ano',
+      content: 'A tecnologia da fila online é fantástica! Posso entrar na fila de casa e chegar na hora certa. Os barbeiros são muito bons e o atendimento é sempre cordial.',
       rating: 5,
-      image: 'bg-gradient-to-br from-orange-200 to-orange-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     },
     {
       id: 6,
-      name: 'Juliana Oliveira',
-      role: 'Mãe da Manuela, 4 anos',
-      content: 'A abordagem da Joanna é única. Ela consegue fazer com que a fisioterapia seja um momento prazeroso para a criança. A Manuela adora as sessões e os resultados são visíveis!',
+      name: 'Rafael Almeida',
+      role: 'Cliente há 8 meses',
+      content: 'Lucas Barbearia é sinônimo de qualidade! O sistema de fila é muito eficiente e os barbeiros são verdadeiros artistas. Sempre saio com um visual incrível e satisfeito.',
       rating: 5,
-      image: 'bg-gradient-to-br from-teal-200 to-teal-300'
+      image: 'bg-gradient-to-br from-gray-200 to-gray-300'
     }
   ];
 
@@ -58,20 +59,20 @@ const Testimonials = () => {
       <div className="container mx-auto">
         <div className="text-center space-y-4 mb-16">
           <div className="flex items-center justify-center space-x-2 text-primary">
-            <Heart className="w-5 h-5" />
+            <Scissors className="w-5 h-5" />
             <span className="text-sm font-medium uppercase tracking-wide">
               Depoimentos
             </span>
           </div>
           
           <h2 className="heading-secondary">
-            O que os pais falam sobre a{' '}
-            <span className="text-primary">Tia Jow</span>
+            O que os clientes falam sobre a{' '}
+            <span className="text-primary">Lucas Barbearia</span>
           </h2>
           
           <p className="text-body max-w-2xl mx-auto">
-            Histórias reais de famílias que confiaram no cuidado humanizado e 
-            viram seus pequenos respirarem melhor e viverem com mais qualidade.
+            Histórias reais de clientes que descobriram a praticidade do sistema de fila online 
+            e a qualidade dos nossos barbeiros profissionais.
           </p>
         </div>
 
@@ -98,7 +99,7 @@ const Testimonials = () => {
                 {/* Autor */}
                 <div className="flex items-center space-x-3 pt-4 border-t border-border">
                   <div className={`w-12 h-12 rounded-full ${testimonial.image} flex items-center justify-center`}>
-                    <Heart className="w-6 h-6 text-white" />
+                    <Scissors className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <div className="font-semibold text-foreground">{testimonial.name}</div>
@@ -114,16 +115,16 @@ const Testimonials = () => {
         <div className="bg-white rounded-2xl p-8 shadow-sm">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">2.375</div>
+              <div className="text-3xl font-bold text-primary">1.250</div>
               <div className="text-sm text-muted-foreground">Seguidores no Instagram</div>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">10+</div>
+              <div className="text-3xl font-bold text-primary">5+</div>
               <div className="text-sm text-muted-foreground">Anos de experiência</div>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">500+</div>
-              <div className="text-sm text-muted-foreground">Crianças atendidas</div>
+              <div className="text-3xl font-bold text-primary">2.500+</div>
+              <div className="text-sm text-muted-foreground">Clientes atendidos</div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-center space-x-1">
@@ -131,7 +132,7 @@ const Testimonials = () => {
                   <Star key={i} className="w-5 h-5 fill-accent text-accent" />
                 ))}
               </div>
-              <div className="text-sm text-muted-foreground">Avaliação dos pais</div>
+              <div className="text-sm text-muted-foreground">Avaliação dos clientes</div>
             </div>
           </div>
         </div>
@@ -140,22 +141,23 @@ const Testimonials = () => {
         <div className="text-center mt-12">
           <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-2xl p-8">
             <h3 className="text-xl font-semibold text-foreground mb-4">
-              Quer que seu filho também tenha essa experiência?
+              Quer experimentar essa experiência?
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Agende uma consulta e descubra como o cuidado humanizado pode 
-              fazer a diferença na respiração do seu pequeno.
+              Entre na fila online e descubra como a Lucas Barbearia pode 
+              transformar seu visual com qualidade e praticidade.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/barbearias">
               <button 
-                className="px-6 py-3 gradient-primary text-white rounded-lg hover:opacity-90 transition-opacity"
-                onClick={() => window.open('https://calendly.com/ronaldocinebox1/30min', '_blank')}
+                  className="px-6 py-3 bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
               >
-                Agendar Consulta
+                  Nossas Unidades
               </button>
+              </Link>
               <button 
-                className="px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
-                onClick={() => window.open('https://instagram.com/respirarporjoannabomfim', '_blank')}
+                className="px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+                onClick={() => window.open(siteConfig.urls.instagram, '_blank')}
               >
                 Ver mais no Instagram
               </button>

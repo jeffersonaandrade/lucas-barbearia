@@ -1,19 +1,19 @@
 import { MessageCircle } from 'lucide-react';
 import { memo } from 'react';
-import ActionButton from '@/components/ui/action-button.jsx';
+import { useWhatsApp } from '@/hooks/use-whatsapp.js';
 
 const WhatsAppFloat = memo(() => {
+  const { handleContactAction } = useWhatsApp();
+
   return (
-    <ActionButton
-      action="whatsapp"
-      messageType="hero"
-      customMessage="Olá! Gostaria de falar com a Tia Jow."
-      delay={100}
-      icon={MessageCircle}
-      className="whatsapp-float focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16"
-      aria-label="Falar com a Tia Jow pelo WhatsApp"
-      title="Falar com a Tia Jow pelo WhatsApp"
-    />
+    <button
+      onClick={() => handleContactAction('whatsapp', 'hero')}
+      className="fixed bottom-6 right-6 z-50 w-14 h-14 sm:w-16 sm:h-16 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50"
+      aria-label="Falar com a Lucas Barbearia pelo WhatsApp"
+      title="Falar com a Lucas Barbearia pelo WhatsApp"
+    >
+      <MessageCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+    </button>
   );
 });
 

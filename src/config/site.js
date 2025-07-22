@@ -1,38 +1,38 @@
 export const siteConfig = {
   // Informações básicas
-  name: "Respirar",
-  title: "Respirar - Fisioterapia Respiratória Infantil | Joanna Bomfim | Recife",
-  description: "Fisioterapia respiratória infantil com atendimento domiciliar em Recife. Especialista em problemas respiratórios em crianças. Agende sua consulta com a Tia Jow.",
-  keywords: "fisioterapia respiratória, fisioterapia infantil, atendimento domiciliar, Joanna Bomfim, cuidado respiratório, Recife, problemas respiratórios crianças, bronquite infantil, asma infantil, fisioterapeuta respiratória, Tia Jow, fisioterapia domiciliar Recife",
+  name: "Lucas Barbearia",
+  title: "Lucas Barberia - Sistema de Filas | Barbearia Moderna | São Paulo",
+  description: "Sistema de filas inteligente para barbearia. Entre na fila online, acompanhe sua posição e chegue na hora certa.",
+  keywords: "barbearia, sistema de filas, fila online, Lucas Barbearia, barbearia São Paulo, agendamento fila, acompanhar fila",
   
   // SEO Avançado
   seo: {
-    title: "Fisioterapia Respiratória Infantil Recife | Joanna Bomfim - Atendimento Domiciliar",
-    description: "Especialista em fisioterapia respiratória infantil em Recife. Atendimento domiciliar para crianças com problemas respiratórios. Agende com a Tia Jow.",
+    title: "Lucas Barbearia São Paulo | Cortes Masculinos e Barba - Agendamento Online",
+    description: "Barbearia moderna em São Paulo. Cortes masculinos, barba e serviços premium. Agende seu horário online com o Lucas.",
     keywords: [
-      "fisioterapia respiratória infantil",
-      "fisioterapeuta respiratória Recife", 
-      "atendimento domiciliar fisioterapia",
-      "problemas respiratórios crianças",
-      "bronquite infantil tratamento",
-      "asma infantil fisioterapia",
-      "Joanna Bomfim fisioterapeuta",
-      "Tia Jow fisioterapia",
-      "fisioterapia domiciliar Recife",
-      "respiração infantil",
-      "fisioterapia pediátrica",
-      "tratamento respiratório crianças"
+      "barbearia São Paulo",
+      "corte masculino",
+      "barba",
+      "Lucas barbearia",
+      "barbearia moderna",
+      "agendamento barbearia",
+      "corte tradicional",
+      "barbearia premium",
+      "serviços barbearia",
+      "corte degradê",
+      "barbearia masculina",
+      "corte personalizado"
     ],
     localBusiness: {
-      name: "Respirar - Fisioterapia Respiratória Infantil",
-      address: "Recife, Pernambuco, Brasil",
+      name: "Lucas Barbearia",
+      address: "São Paulo, SP, Brasil",
       phone: "+5511999999999",
-      email: "contato@respirarjoanna.com",
-      website: "https://respirarjoanna.com",
-      latitude: "-8.0476",
-      longitude: "-34.8770",
-      serviceArea: "Recife e Região Metropolitana",
-      businessHours: "Segunda a Sexta, 8h às 18h"
+      email: "contato@lucasbarbearia.com",
+      website: "https://lucasbarbearia.com",
+      latitude: "-23.5505",
+      longitude: "-46.6333",
+      serviceArea: "São Paulo e Região",
+      businessHours: "Segunda a Sábado, 9h às 19h"
     }
   },
   
@@ -40,42 +40,42 @@ export const siteConfig = {
   contact: {
     whatsapp: "5511999999999",
     whatsappFormatted: "(11) 99999-9999",
-    instagram: "@respirarporjoannabomfim",
-    instagramUrl: "https://instagram.com/respirarporjoannabomfim",
-    email: "contato@respirarjoanna.com",
-    address: "Recife e Região Metropolitana",
-    schedule: "Segunda a Sexta, 8h às 18h",
-    consultationPrice: "R$ 280,00",
-    consultationDuration: "45 a 60 minutos por sessão",
-    serviceArea: "Recife e Região Metropolitana"
+    instagram: "@lucasbarbearia",
+    instagramUrl: "https://instagram.com/lucasbarbearia",
+    email: "contato@lucasbarbearia.com",
+    address: "São Paulo, SP",
+    schedule: "Segunda a Sábado, 9h às 19h",
+    consultationPrice: "R$ 35,00",
+    consultationDuration: "30 a 45 minutos por sessão",
+    serviceArea: "São Paulo e Região"
   },
   
   // URLs
   urls: {
     whatsapp: "https://wa.me/5511999999999",
-    instagram: "https://instagram.com/respirarporjoannabomfim",
-    email: "contato@respirarjoanna.com",
-    calendly: "https://calendly.com/ronaldocinebox1/30min"
+    instagram: "https://instagram.com/lucasbarbearia",
+    email: "contato@lucasbarbearia.com",
+    calendly: "https://calendly.com/lucasbarbearia/30min"
   },
   
   // Mensagens de WhatsApp (importadas de messages.js)
   whatsappMessages: {
-    schedule: "Olá! Gostaria de agendar uma consulta com a Joanna.",
-    scheduleChild: "Olá! Gostaria de agendar uma consulta com a Joanna para meu filho.",
-    hero: "Olá! Vi o site da Tia Jow e gostaria de falar sobre fisioterapia respiratória para meu filho.",
-    questions: "Olá! Tenho algumas dúvidas sobre o atendimento.",
-    respiratoryQuestions: "Olá! Tenho algumas dúvidas sobre o atendimento de fisioterapia respiratória.",
-    testimonials: "Olá! Vi os depoimentos e gostaria de agendar uma consulta para meu filho.",
-    videos: "Olá! Gostaria de receber mais informações sobre os vídeos e dicas.",
-    courses: "Olá! Gostaria de receber informações sobre novos cursos.",
-    courseInfo: (courseTitle) => `Olá! Gostaria de mais informações sobre o curso "${courseTitle}".`,
-    courseEnrollment: (courseTitle) => `Olá! Gostaria de me inscrever no curso "${courseTitle}".`
+    schedule: "Olá! Gostaria de agendar um horário na barbearia.",
+    scheduleHaircut: "Olá! Gostaria de agendar um corte de cabelo.",
+    hero: "Olá! Vi o site da Lucas Barbearia e gostaria de agendar um horário.",
+    questions: "Olá! Tenho algumas dúvidas sobre os serviços.",
+    serviceQuestions: "Olá! Tenho algumas dúvidas sobre os serviços da barbearia.",
+    testimonials: "Olá! Vi os depoimentos e gostaria de agendar um horário.",
+    gallery: "Olá! Gostaria de ver mais fotos dos trabalhos.",
+    services: "Olá! Gostaria de receber informações sobre os serviços.",
+    serviceInfo: (serviceTitle) => `Olá! Gostaria de mais informações sobre o serviço "${serviceTitle}".`,
+    serviceBooking: (serviceTitle) => `Olá! Gostaria de agendar o serviço "${serviceTitle}".`
   },
   
   // Estatísticas
   stats: {
-    experience: "10+",
-    followers: "2.375",
+    experience: "5+",
+    followers: "1.250",
     rating: 5
   },
   
@@ -83,8 +83,7 @@ export const siteConfig = {
   navigation: [
     { label: 'Início', href: '#home' },
     { label: 'Sobre', href: '#about' },
-    { label: 'Dicas em Vídeo', href: '#videos' },
-    { label: 'Cursos', href: '#courses' },
+    { label: 'Serviços', href: '#services' },
     { label: 'Depoimentos', href: '#testimonials' },
     { label: 'FAQ', href: '#faq' },
     { label: 'Contato', href: '#contact' }
@@ -92,21 +91,21 @@ export const siteConfig = {
   
   // Indicadores de confiança
   trustIndicators: [
-    "Atendimento domiciliar",
-    "Cuidado humanizado"
+    "Qualidade garantida",
+    "Atendimento personalizado"
   ],
   
   // Informações de consulta
   consultation: {
-    duration: "45 a 60 minutos por sessão",
-    area: "Recife e Região Metropolitana",
+    duration: "30 a 45 minutos por sessão",
+    area: "São Paulo e Região",
     scheduling: "Agendamento via WhatsApp",
     benefits: [
-      "Atendimento domiciliar",
-      "Avaliação completa",
-      "Técnicas personalizadas",
-      "Orientação para pais",
-      "Acompanhamento"
+      "Atendimento personalizado",
+      "Produtos premium",
+      "Técnicas modernas",
+      "Ambiente confortável",
+      "Resultado garantido"
     ]
   },
   
@@ -116,29 +115,29 @@ export const siteConfig = {
       icon: "Phone",
       title: 'WhatsApp',
       content: '(11) 99999-9999',
-      description: 'Atendimento de segunda a sexta',
+      description: 'Atendimento de segunda a sábado',
       action: 'whatsapp',
       messageType: 'schedule'
     },
     {
       icon: "Instagram", 
       title: 'Instagram',
-      content: '@respirarporjoannabomfim',
-      description: 'Dicas semanais e conteúdo educativo',
+      content: '@lucasbarbearia',
+      description: 'Fotos dos trabalhos e novidades',
       action: 'instagram'
     },
     {
       icon: "MapPin",
-      title: 'Atendimento',
-      content: 'Domiciliar',
-      description: 'Recife e Região Metropolitana',
+      title: 'Localização',
+      content: 'São Paulo, SP',
+      description: 'Zona Central',
       action: null
     },
     {
       icon: "Clock",
       title: 'Horários',
-      content: 'Segunda a Sexta',
-      description: '8h às 18h',
+      content: 'Segunda a Sábado',
+      description: '9h às 19h',
       action: null
     }
   ]

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { cn } from '@/lib/utils.js';
-import logoImage from '@/assets/logo.png';
+import { Scissors } from 'lucide-react';
 
 const Logo = memo(({ 
   size = 'md', 
@@ -27,10 +27,8 @@ const Logo = memo(({
   };
 
   const LogoIcon = () => (
-    <img 
-      src={logoImage}
-      alt="Respirar - Logo da marca"
-      className={cn(sizeClasses[size], 'object-contain', className)}
+    <Scissors 
+      className={cn(sizeClasses[size], 'text-primary', className)}
     />
   );
 
@@ -44,15 +42,15 @@ const Logo = memo(({
       {showText && (
         <div className="flex flex-col">
           <span className={cn('font-bold text-foreground', textSizes[size])}>
-            RESPIRAR
+            LUCAS
           </span>
           {variant === 'full' && (
             <>
               <span className={cn('text-muted-foreground font-normal', textSizes[size === 'xs' ? 'xs' : 'sm'])}>
-                - Cuidado Respiratório -
+                BARBEARIA
               </span>
               <span className={cn('text-muted-foreground italic', textSizes[size === 'xs' ? 'xs' : 'sm'])}>
-                Por Joanna Bomfim
+                Sistema de Filas
               </span>
             </>
           )}

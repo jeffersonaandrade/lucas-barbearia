@@ -1,4 +1,4 @@
-import { Instagram, MessageCircle, Phone, Clock, MapPin, Calendar } from 'lucide-react';
+import { Instagram, MessageCircle, Phone, Clock, MapPin } from 'lucide-react';
 import { Logo } from '@/components/ui/logo.jsx';
 import { siteConfig } from '@/config/site.js';
 import { useWhatsApp } from '@/hooks/use-whatsapp.js';
@@ -22,9 +22,9 @@ const Footer = () => {
             <Logo size="lg" variant="full" className="text-white" />
             
             <p className="text-white/70 text-sm leading-relaxed">
-              Fisioterapia respiratória infantil com atendimento domiciliar 
-              personalizado e humanizado. Mais de 10 anos cuidando da respiração 
-              dos pequenos com atenção e carinho.
+              Sistema de filas inteligente para barbearia. Entre na fila online, 
+              acompanhe sua posição em tempo real e chegue na hora certa. 
+              Tecnologia a serviço da tradição.
             </p>
           </div>
 
@@ -69,7 +69,7 @@ const Footer = () => {
                 <Phone className="w-5 h-5 text-primary" />
                 <div>
                   <p className="text-sm font-medium">Atendimento</p>
-                  <p className="text-white/70 text-sm">Domiciliar - {siteConfig.contact.address}</p>
+                  <p className="text-white/70 text-sm">Barbearia - {siteConfig.contact.address}</p>
                 </div>
               </div>
             </div>
@@ -85,13 +85,7 @@ const Footer = () => {
                 >
                   <Instagram className="w-5 h-5" />
                 </button>
-                <button
-                  onClick={() => window.open('https://calendly.com/ronaldocinebox1/30min', '_blank')}
-                  className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-primary transition-colors"
-                  aria-label="Agendar consulta pelo Calendly"
-                >
-                  <Calendar className="w-5 h-5" />
-                </button>
+
               </div>
             </div>
           </div>
@@ -101,18 +95,18 @@ const Footer = () => {
         <div className="border-t border-white/20 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-white/70 text-sm">
-              © {currentYear} Respirar - Cuidado Respiratório por Joanna Bomfim. Todos os direitos reservados.
+              © {currentYear} Lucas Barbearia - Sistema de Filas Inteligente. Todos os direitos reservados.
             </div>
             
             <div className="flex items-center space-x-6 text-white/70 text-sm">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-primary" />
-                    <span>{siteConfig.consultation.duration}</span>
+                    <span>15 min por atendimento</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <MapPin className="w-4 h-4 text-primary" />
-                    <span>{siteConfig.consultation.area}</span>
+                    <span>São Paulo, SP</span>
                   </div>
                 </div>
             </div>
