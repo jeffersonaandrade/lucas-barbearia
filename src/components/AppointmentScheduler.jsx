@@ -212,14 +212,14 @@ const AppointmentScheduler = () => {
                   {/* CTA */}
                   <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4">
                     <p className="text-sm text-muted-foreground mb-3">
-                      Prefere falar com a Tia Jow primeiro?
+                      Prefere falar com a Lucas Barbearia primeiro?
                     </p>
                     <Button 
                       variant="outline" 
                       className="w-full border-primary text-primary hover:bg-primary hover:text-white"
-                      onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de falar com a Tia Jow.', '_blank')}
+                      onClick={() => window.open('https://wa.me/5581999999999?text=Olá! Gostaria de falar com a Lucas Barbearia.', '_blank')}
                     >
-                      Falar com a Tia Jow
+                                              Falar com a Barbearia
                     </Button>
                   </div>
                 </div>

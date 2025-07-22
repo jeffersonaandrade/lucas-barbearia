@@ -181,7 +181,7 @@ const BarbeariasList = () => {
               </div>
               <div className="text-center">
                 <h4 className="font-semibold text-gray-900 mb-2">Cobertura</h4>
-                <p className="text-2xl font-bold text-primary">São Paulo</p>
+                <p className="text-2xl font-bold text-primary">Recife</p>
                 <p className="text-sm text-gray-600">Capital e Região</p>
               </div>
               <div className="text-center">

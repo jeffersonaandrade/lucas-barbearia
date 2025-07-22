@@ -403,7 +403,7 @@ const Videos = () => {
           
           <h2 className="heading-secondary">
             Orientações semanais da{' '}
-            <span className="text-primary">Tia Jow</span>
+                            <span className="text-primary">Lucas Barbearia</span>
           </h2>
           
           <p className="text-body max-w-2xl mx-auto">
@@ -469,7 +469,7 @@ const Videos = () => {
                   
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-xs text-muted-foreground">
-                      Publicado por Tia Jow
+                      Publicado por Lucas Barbearia
                     </span>
                     <Button 
                       size="sm" 
@@ -489,7 +489,7 @@ const Videos = () => {
         <div className="text-center space-y-6">
           <div className="bg-white rounded-2xl p-8 shadow-sm">
             <h3 className="text-xl font-semibold text-foreground mb-4">
-              Quer receber as dicas da Tia Jow toda semana?
+                              Quer receber as novidades da Lucas Barbearia toda semana?
             </h3>
             <p className="text-muted-foreground mb-6">
               Siga o Instagram @respirarporjoannabomfim e não perca nenhuma orientação importante 

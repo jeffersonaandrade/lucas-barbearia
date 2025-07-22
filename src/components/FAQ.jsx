@@ -99,16 +99,16 @@ const FAQ = memo(() => {
               Ainda tem dúvidas?
             </h3>
             <p className="text-muted-foreground mb-4 sm:mb-6 max-w-md mx-auto text-sm sm:text-base">
-              Entre em contato diretamente com a Tia Jow pelo WhatsApp. 
+              Entre em contato diretamente com a Lucas Barbearia pelo WhatsApp. 
               Ela terá prazer em esclarecer todas as suas questões.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <button 
                 className="px-4 sm:px-6 py-2.5 sm:py-3 gradient-primary text-white rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm sm:text-base"
                 onClick={() => handleWhatsAppClick('respiratoryQuestions')}
-                aria-label="Falar com a Tia Jow pelo WhatsApp"
+                aria-label="Falar com a Lucas Barbearia pelo WhatsApp"
               >
-                Falar com a Tia Jow
+                                  Falar com a Barbearia
               </button>
               <button 
                 className="px-4 sm:px-6 py-2.5 sm:py-3 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 text-sm sm:text-base"

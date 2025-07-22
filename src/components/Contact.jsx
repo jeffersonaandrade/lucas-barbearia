@@ -71,7 +71,7 @@ const Contact = () => {
                 <MapPin className="w-5 h-5 text-primary mt-1" />
                 <div>
                   <p className="font-medium text-foreground">Localização</p>
-                  <p className="text-muted-foreground">São Paulo, SP</p>
+                  <p className="text-muted-foreground">Recife, PE</p>
                 </div>
               </div>
 
@@ -140,7 +140,7 @@ const Contact = () => {
                         </p>
                         <Button 
                           className="w-full bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de falar com a Lucas Barbearia.', '_blank')}
+                          onClick={() => window.open('https://wa.me/5581999999999?text=Olá! Gostaria de falar com a Lucas Barbearia.', '_blank')}
                         >
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Falar com a Barbearia
@@ -201,7 +201,7 @@ const Contact = () => {
               <Button 
                 variant="outline"
                 className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de mais informações sobre a barbearia.', '_blank')}
+                onClick={() => window.open('https://wa.me/5581999999999?text=Olá! Gostaria de mais informações sobre a barbearia.', '_blank')}
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Falar com a Barbearia

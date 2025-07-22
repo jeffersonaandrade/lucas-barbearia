@@ -1,19 +1,30 @@
 import { useState, memo } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Logo } from '@/components/ui/logo.jsx';
 import { siteConfig } from '@/config/site.js';
 import { useScroll } from '@/hooks/use-scroll.js';
 import { useWhatsApp } from '@/hooks/use-whatsapp.js';
+import { useClienteToken } from '@/hooks/useClienteToken.js';
 
 const Header = memo(() => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { scrollToSection } = useScroll();
   const { sendMessage } = useWhatsApp();
+  const navigate = useNavigate();
+  const { hasToken, getStatusFilaUrl } = useClienteToken();
 
   const handleNavigation = (href) => {
     scrollToSection(href, () => setIsMenuOpen(false));
+  };
+
+  const handleMinhaFila = () => {
+    const statusUrl = getStatusFilaUrl();
+    if (statusUrl) {
+      navigate(statusUrl);
+      setIsMenuOpen(false);
+    }
   };
 
 
@@ -49,23 +60,36 @@ const Header = memo(() => {
               Nossas Unidades
             </Link>
 
-            <Link 
-              to="/barbearia/1/visualizar-fila"
-              className="text-sm xl:text-base text-muted-foreground hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2"
-            >
-              Ver Fila
-            </Link>
+            {hasToken ? (
+              <Button
+                onClick={handleMinhaFila}
+                variant="ghost"
+                size="sm"
+                className="text-sm xl:text-base text-primary hover:text-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2"
+              >
+                <UserCheck className="w-4 h-4 mr-1" />
+                Minha Fila
+              </Button>
+            ) : (
+              <Link 
+                to="/barbearia/1/visualizar-fila"
+                className="text-sm xl:text-base text-muted-foreground hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2"
+              >
+                Ver Fila
+              </Link>
+            )}
           </nav>
 
           {/* CTA Button Desktop */}
           <div className="hidden lg:block">
-            <Link to="/barbearias">
+            <Link to="/admin/login">
             <Button 
               size="sm"
-                className="bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground transition-colors text-sm px-4 py-2"
-                aria-label="Ver nossas unidades"
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm px-4 py-2"
+                aria-label="Acesso administrativo"
             >
-                Nossas Unidades
+                Área Admin
             </Button>
             </Link>
           </div>
@@ -107,21 +131,32 @@ const Header = memo(() => {
                 Nossas Unidades
               </Link>
 
-              <Link 
-                to="/barbearia/1/visualizar-fila"
-                onClick={() => setIsMenuOpen(false)}
-                className="px-4 py-3 text-left text-base text-muted-foreground hover:text-primary hover:bg-secondary/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              >
-                Ver Fila
-              </Link>
+              {hasToken ? (
+                <button
+                  onClick={handleMinhaFila}
+                  className="px-4 py-3 text-left text-base text-primary hover:text-accent hover:bg-secondary/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 flex items-center"
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Minha Fila
+                </button>
+              ) : (
+                <Link 
+                  to="/barbearia/1/visualizar-fila"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-4 py-3 text-left text-base text-muted-foreground hover:text-primary hover:bg-secondary/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                  Ver Fila
+                </Link>
+              )}
               <div className="px-4 py-3">
-                <Link to="/barbearias" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/admin/login" onClick={() => setIsMenuOpen(false)}>
                 <Button 
                   size="sm"
-                    className="w-full bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
-                    aria-label="Ver nossas unidades"
+                    variant="outline"
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm"
+                    aria-label="Acesso administrativo"
                 >
-                    Nossas Unidades
+                    Área Admin
                 </Button>
                 </Link>
               </div>

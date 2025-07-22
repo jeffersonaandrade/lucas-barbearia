@@ -64,6 +64,117 @@ Sistema completo de filas para barbearias que permite:
 - **Build**: Vite
 - **Persistência**: localStorage + JSON
 
+## 🔐 **Sistema de Autenticação e Permissões**
+
+### **Perfis de Usuário**
+- **Admin**: Acesso total a todas as funcionalidades administrativas
+- **Gerente**: Acesso limitado (gerenciar filas da sua barbearia)
+- **Barbeiro**: Acesso limitado (gerenciar filas da sua barbearia)
+
+### **Regras de Acesso por Perfil**
+- **Admin**: Pode remover clientes de qualquer barbearia
+- **Gerente/Barbeiro**: Só pode remover clientes da sua própria barbearia
+- **Login obrigatório** para área administrativa
+- **Persistência de sessão** via localStorage (`adminToken`, `userRole`, `userEmail`)
+
+### **Rotas Protegidas**
+- `/admin/dashboard` - Dashboard principal
+- `/admin/usuarios` - Gerenciar usuários (apenas Admin)
+- `/admin/barbearias` - Gerenciar barbearias (apenas Admin)
+- `/admin/funcionarios` - Gerenciar funcionários (apenas Admin)
+- `/admin/adicionar-fila` - Adicionar à fila (Admin, Gerente, Barbeiro)
+- `/admin/filas` - Gerenciar filas (Admin, Gerente, Barbeiro)
+
+## 🏢 **Sistema Multi-Unidades**
+
+### **Barbearias Configuradas**
+- **ID 1**: Lucas Barbearia - Centro
+- **ID 2**: Lucas Barbearia - Shopping  
+- **ID 3**: Lucas Barbearia - Bairro
+
+### **Regras de Dados por Unidade**
+- **Dados isolados** por barbearia
+- **Filas independentes** por unidade
+- **Barbeiros específicos** por barbearia
+- **Estatísticas separadas** por unidade
+- **QR Codes únicos** por unidade
+
+### **Estrutura de Dados por Barbearia**
+```javascript
+// Dados isolados por barbearia
+const filaBarbearia1 = [...]; // Clientes da barbearia 1
+const filaBarbearia2 = [...]; // Clientes da barbearia 2
+const filaBarbearia3 = [...]; // Clientes da barbearia 3
+
+// Barbeiros por unidade
+const barbeirosBarbearia1 = [...];
+const barbeirosBarbearia2 = [...];
+const barbeirosBarbearia3 = [...];
+```
+
+## 🎨 **Sistema de Componentes Reutilizáveis**
+
+### **Componentes Administrativos**
+- **AdminLayout**: Layout padrão para páginas admin (header, botão voltar, alerts)
+- **AdminModal**: Modais responsivos para formulários (95vw mobile, 2xl desktop)
+- **AdminFilters**: Filtros padronizados (busca + filtros dinâmicos)
+- **AdminTable**: Tabelas/listas padronizadas com estado vazio
+- **AdminTableCard**: Cards de item padronizados com ações
+
+### **Componentes de UI**
+- **AdminHeader**: Header simplificado (Painel Administrativo + Sair)
+- **BackButton**: Botão voltar padronizado
+- **AdminAlerts**: Alertas de sucesso e erro padronizados
+- **DashboardCard**: Cards de ação para dashboard
+
+### **Padrões de Responsividade**
+- **Mobile-first** design
+- **Breakpoints**: sm (640px), md (768px), lg (1024px)
+- **Modais responsivos**: 95vw em mobile, 2xl em desktop
+- **Grid adaptativo** para diferentes telas
+- **Botões empilhados** em mobile
+
+## 📊 **Sistema de Estados e Feedback**
+
+### **Loading States**
+- **Operações CRUD** com loading
+- **Feedback visual** durante operações
+- **Estados de erro** e sucesso
+- **Confirmações** para ações destrutivas
+
+### **Mensagens de Feedback**
+- **Alertas de sucesso** (verde) - 5 segundos de duração
+- **Alertas de erro** (vermelho) - até correção
+- **Confirmações** para exclusões via AlertDialog
+- **Feedback imediato** para ações
+
+### **Estados de Formulário**
+- **Validação em tempo real**
+- **Campos obrigatórios** marcados com *
+- **Senha com toggle** show/hide
+- **Reset automático** após operações
+
+## 🚀 **Sistema de Performance e Otimização**
+
+### **Otimizações Implementadas**
+- **Lazy loading** de componentes
+- **Memoização** de componentes pesados
+- **Debounce** em campos de busca
+- **Atualizações otimizadas** da fila
+- **Componentes reutilizáveis** para reduzir bundle size
+
+### **Redução de Código**
+- **AdminDashboard**: 281 → 150 linhas (~47% redução)
+- **AdminUsuarios**: 592 → 400 linhas (~32% redução)
+- **AdminFuncionarios**: 712 → 573 linhas (~20% redução)
+- **Componentes reutilizáveis** eliminam duplicação
+
+### **Limitações Atuais**
+- **Dados mockados** em localStorage
+- **Sem backend real** implementado
+- **QR Codes** gerados externamente
+- **Sem verificação de localização** (QR Code já garante presença)
+
 ## 🚀 **Como Executar**
 
 ### **Instalação**
@@ -385,6 +496,114 @@ localStorage.getItem('fila_barbearia_id')
 - [ ] Integração com pagamentos
 - [ ] App mobile nativo
 
+## 🔧 **Regras de Desenvolvimento e Manutenibilidade**
+
+### **Padrões de Código**
+- **Componentes funcionais** com hooks
+- **Props tipadas** e validadas
+- **Nomes descritivos** para variáveis e funções
+- **Comentários** para lógica complexa
+- **Estrutura de pastas** organizada
+
+### **Componentes Reutilizáveis**
+- **Sempre criar** componentes reutilizáveis quando possível
+- **Props flexíveis** para diferentes usos
+- **Documentação** clara de props e uso
+- **Testes** para componentes críticos
+
+### **Refatoração Contínua**
+- **Identificar** código duplicado
+- **Extrair** lógica comum em hooks
+- **Criar** componentes reutilizáveis
+- **Manter** consistência visual e comportamental
+
+### **Performance**
+- **Lazy loading** para componentes pesados
+- **Memoização** para cálculos complexos
+- **Debounce** para inputs de busca
+- **Otimização** de re-renders
+
+### **Responsividade**
+- **Mobile-first** design
+- **Testar** em diferentes tamanhos de tela
+- **Modais responsivos** (95vw mobile, 2xl desktop)
+- **Grid adaptativo** para layouts
+
+### **Estados e Feedback**
+- **Loading states** para operações assíncronas
+- **Error handling** com mensagens claras
+- **Success feedback** para ações completadas
+- **Confirmações** para ações destrutivas
+
+### **Estrutura de Arquivos**
+```
+src/
+├── components/
+│   ├── ui/           # Componentes reutilizáveis
+│   ├── admin/        # Componentes administrativos
+│   └── pages/        # Páginas específicas
+├── hooks/            # Hooks customizados
+├── services/         # Serviços e APIs
+├── config/           # Configurações
+└── data/             # Dados mockados
+```
+
+### **Convenções de Nomenclatura**
+- **Componentes**: PascalCase (AdminLayout)
+- **Arquivos**: kebab-case (admin-layout.jsx)
+- **Hooks**: camelCase com prefixo 'use' (useAuth)
+- **Variáveis**: camelCase (userRole)
+- **Constantes**: UPPER_SNAKE_CASE (ADMIN_ROLES)
+
+### **Padrões de Estado**
+- **useState** para estado local
+- **useEffect** para side effects
+- **Custom hooks** para lógica reutilizável
+- **Context** para estado global (se necessário)
+
+### **Tratamento de Erros**
+- **Try/catch** para operações assíncronas
+- **Validação** de props e dados
+- **Fallbacks** para estados de erro
+- **Logging** para debugging
+
+### **Acessibilidade**
+- **Labels** para todos os inputs
+- **Alt text** para imagens
+- **Keyboard navigation** suportada
+- **Contraste** adequado de cores
+
+## 🧪 **Testes e Qualidade**
+
+### **Testes de Funcionalidade**
+- **Login e autenticação** - Verificar perfis de acesso
+- **CRUD de entidades** - Criar, editar, excluir dados
+- **Filtros e busca** - Funcionamento dos filtros
+- **Responsividade** - Testar em diferentes dispositivos
+- **Estados de loading** - Feedback durante operações
+
+### **Testes de Interface**
+- **Navegação** - Fluxo entre páginas
+- **Formulários** - Validação e submissão
+- **Modais** - Abertura, fechamento e responsividade
+- **Alertas** - Mensagens de sucesso e erro
+- **Acessibilidade** - Navegação por teclado
+
+### **Testes de Performance**
+- **Carregamento** - Tempo de resposta
+- **Filtros** - Responsividade em listas grandes
+- **Modais** - Performance em dispositivos móveis
+- **Bundle size** - Tamanho do código
+
+### **Checklist de Qualidade**
+- [ ] Código sem erros de linting
+- [ ] Componentes responsivos
+- [ ] Estados de loading implementados
+- [ ] Tratamento de erros adequado
+- [ ] Feedback visual para ações
+- [ ] Acessibilidade básica
+- [ ] Performance aceitável
+
 ## 🤝 **Contribuição**
 
 1. Fork o projeto
@@ -392,6 +611,13 @@ localStorage.getItem('fila_barbearia_id')
 3. Commit suas mudanças
 4. Push para a branch
 5. Abra um Pull Request
+
+### **Diretrizes para Contribuição**
+- **Seguir** os padrões de código estabelecidos
+- **Criar** componentes reutilizáveis quando possível
+- **Testar** funcionalidades antes do commit
+- **Documentar** mudanças significativas
+- **Manter** consistência visual e comportamental
 
 ## 📄 **Licença**
 

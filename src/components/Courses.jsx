@@ -60,7 +60,7 @@ const Courses = () => {
           
           <h2 className="heading-secondary">
             Aprenda com a{' '}
-            <span className="text-primary">Tia Jow</span>
+                            <span className="text-primary">Lucas Barbearia</span>
           </h2>
           
           <p className="text-body max-w-2xl mx-auto">
@@ -131,14 +131,14 @@ const Courses = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button 
                     className="flex-1 gradient-primary text-white hover:opacity-90"
-                    onClick={() => window.open(`https://wa.me/5511999999999?text=Olá! Gostaria de me inscrever no curso "${course.title}".`, '_blank')}
+                    onClick={() => window.open(`https://wa.me/5581999999999?text=Olá! Gostaria de me inscrever no curso "${course.title}".`, '_blank')}
                   >
                     {course.status === 'Em breve' ? 'Pré-inscrição' : 'Inscrever-se'}
                   </Button>
                   <Button 
                     variant="outline"
                     className="border-primary text-primary hover:bg-primary hover:text-white"
-                    onClick={() => window.open(`https://wa.me/5511999999999?text=Olá! Gostaria de mais informações sobre o curso "${course.title}".`, '_blank')}
+                    onClick={() => window.open(`https://wa.me/5581999999999?text=Olá! Gostaria de mais informações sobre o curso "${course.title}".`, '_blank')}
                   >
                     Mais Informações
                   </Button>
@@ -155,11 +155,11 @@ const Courses = () => {
           </h3>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Cadastre-se para receber informações sobre novos cursos, datas de inscrição 
-            e conteúdos exclusivos da Tia Jow.
+                            e conteúdos exclusivos da Lucas Barbearia.
           </p>
           <Button 
             className="gradient-primary text-white hover:opacity-90"
-            onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Gostaria de receber informações sobre novos cursos.', '_blank')}
+            onClick={() => window.open('https://wa.me/5581999999999?text=Olá! Gostaria de receber informações sobre novos cursos.', '_blank')}
           >
             Quero ser avisado
           </Button>

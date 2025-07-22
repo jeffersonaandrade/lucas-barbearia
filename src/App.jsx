@@ -1,10 +1,12 @@
 import './App.css'
 import { lazy } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import Hero from './components/Hero.jsx'
 import WhatsAppFloat from './components/WhatsAppFloat.jsx'
+import CookieConsent from './components/CookieConsent.jsx'
 import { SuspenseWrapper } from './components/ui/suspense-wrapper.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 // Lazy loading para componentes menos críticos
 const About = lazy(() => import('./components/About.jsx'))
@@ -23,36 +25,56 @@ const QRCodeGenerator = lazy(() => import('./components/QRCodeGenerator.jsx'))
 const BarbeariasList = lazy(() => import('./components/BarbeariasList.jsx'))
 const DebugPanel = lazy(() => import('./components/DebugPanel.jsx'))
 const TestComponent = lazy(() => import('./components/TestComponent.jsx'))
+const NotFound = lazy(() => import('./components/NotFound.jsx'))
+const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy.jsx'))
+const TermsOfService = lazy(() => import('./components/TermsOfService.jsx'))
+const Avaliacao = lazy(() => import('./components/Avaliacao.jsx'))
+const AvaliacoesList = lazy(() => import('./components/AvaliacoesList.jsx'))
+const DevAvaliacao = lazy(() => import('./components/DevAvaliacao.jsx'))
 
-function App() {
+// Componentes administrativos
+const Login = lazy(() => import('./components/Login.jsx'))
+const RecuperarSenha = lazy(() => import('./components/RecuperarSenha.jsx'))
+const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'))
+const AdminUsuarios = lazy(() => import('./components/AdminUsuarios.jsx'))
+const AdminBarbearias = lazy(() => import('./components/AdminBarbearias.jsx'))
+const AdminFuncionarios = lazy(() => import('./components/AdminFuncionarios.jsx'))
+const AdminAdicionarFila = lazy(() => import('./components/AdminAdicionarFila.jsx'))
+const AdminFilas = lazy(() => import('./components/AdminFilas.jsx'))
+const Unauthorized = lazy(() => import('./components/Unauthorized.jsx'))
+
+function AppContent() {
+  const location = useLocation();
+  
+  // Verificar se está em uma rota administrativa
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
   return (
-    <Router>
     <div className="min-h-screen">
-        <Routes>
+      <Routes>
           {/* Página inicial */}
           <Route path="/" element={
             <>
-      <Header />
-      <main>
-        <Hero />
-        <SuspenseWrapper>
-          <About />
-        </SuspenseWrapper>
-        <SuspenseWrapper>
+              <Header />
+              <main>
+                <Hero />
+                <SuspenseWrapper>
+                  <About />
+                </SuspenseWrapper>
+                <SuspenseWrapper>
                   <Services />
-        </SuspenseWrapper>
-        <SuspenseWrapper>
-          <Testimonials />
-        </SuspenseWrapper>
-                
-        <SuspenseWrapper>
-          <Contact />
-        </SuspenseWrapper>
-      </main>
-      <SuspenseWrapper>
-        <Footer />
-      </SuspenseWrapper>
-      <WhatsAppFloat />
+                </SuspenseWrapper>
+                <SuspenseWrapper>
+                  <Testimonials />
+                </SuspenseWrapper>
+                <SuspenseWrapper>
+                  <Contact />
+                </SuspenseWrapper>
+              </main>
+              <SuspenseWrapper>
+                <Footer />
+              </SuspenseWrapper>
+              <WhatsAppFloat />
             </>
           } />
           
@@ -62,7 +84,16 @@ function App() {
               <EntrarFila />
             </SuspenseWrapper>
           } />
+          
+          {/* Rota principal para entrar na fila via QR Code */}
           <Route path="/barbearia/:id/entrar-fila" element={
+            <SuspenseWrapper>
+              <EntrarFila />
+            </SuspenseWrapper>
+          } />
+          
+          {/* Rota de desenvolvimento para testes (sem QR Code) */}
+          <Route path="/dev/barbearia/:id/entrar-fila" element={
             <SuspenseWrapper>
               <EntrarFila />
             </SuspenseWrapper>
@@ -80,12 +111,79 @@ function App() {
             </SuspenseWrapper>
           } />
           
-          <Route path="/admin" element={
+          {/* Rotas administrativas */}
+          <Route path="/admin/login" element={
             <SuspenseWrapper>
-              <AdminPanel />
+              <Login />
             </SuspenseWrapper>
           } />
           
+          <Route path="/admin/recuperar-senha" element={
+            <SuspenseWrapper>
+              <RecuperarSenha />
+            </SuspenseWrapper>
+          } />
+          
+          {/* Rotas administrativas específicas - devem vir antes da rota /admin genérica */}
+          <Route path="/admin/usuarios" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <SuspenseWrapper>
+                <AdminUsuarios />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/barbearias" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <SuspenseWrapper>
+                <AdminBarbearias />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/funcionarios" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <SuspenseWrapper>
+                <AdminFuncionarios />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/adicionar-fila" element={
+            <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
+              <SuspenseWrapper>
+                <AdminAdicionarFila />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/filas" element={
+            <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
+              <SuspenseWrapper>
+                <AdminFilas />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
+              <SuspenseWrapper>
+                <AdminDashboard />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/unauthorized" element={
+            <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
+              <SuspenseWrapper>
+                <Unauthorized />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
+
+          
+          {/* Rota para gerar QR Code da barbearia */}
           <Route path="/qr-code/:barbeariaId" element={
             <SuspenseWrapper>
               <QRCodeGenerator />
@@ -98,10 +196,53 @@ function App() {
             </SuspenseWrapper>
           } />
           
+          {/* Páginas legais */}
+          <Route path="/privacidade" element={
+            <SuspenseWrapper>
+              <PrivacyPolicy />
+            </SuspenseWrapper>
+          } />
+          
+          <Route path="/termos" element={
+            <SuspenseWrapper>
+              <TermsOfService />
+            </SuspenseWrapper>
+          } />
+          
+          {/* Rota para avaliação após atendimento */}
+          <Route path="/barbearia/:id/avaliacao" element={
+            <SuspenseWrapper>
+              <Avaliacao />
+            </SuspenseWrapper>
+          } />
+          
+          {/* Rota para lista de avaliações (admin) */}
+          <Route path="/avaliacoes" element={
+            <SuspenseWrapper>
+              <AvaliacoesList />
+            </SuspenseWrapper>
+          } />
+          
+          {/* Rota para simulação de avaliação (dev) */}
+          <Route path="/dev/avaliacao" element={
+            <SuspenseWrapper>
+              <DevAvaliacao />
+            </SuspenseWrapper>
+          } />
+          
           <Route path="/debug" element={
             <SuspenseWrapper>
               <DebugPanel />
             </SuspenseWrapper>
+          } />
+          
+          {/* Rota /admin genérica - deve vir por último */}
+          <Route path="/admin" element={
+            <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
+              <SuspenseWrapper>
+                <AdminPanel />
+              </SuspenseWrapper>
+            </ProtectedRoute>
           } />
           
           <Route path="/test" element={
@@ -110,14 +251,25 @@ function App() {
             </SuspenseWrapper>
           } />
           
-          {/* Rota de desenvolvimento para testes */}
-          <Route path="/dev/entrar-fila/:barbeariaId" element={
+          {/* Rota catch-all para páginas não encontradas */}
+          <Route path="*" element={
             <SuspenseWrapper>
-              <EntrarFila />
+              <NotFound />
             </SuspenseWrapper>
           } />
         </Routes>
-    </div>
+        
+        {/* Componentes globais que devem aparecer em todas as páginas */}
+        {!isAdminRoute && <WhatsAppFloat />}
+        <CookieConsent />
+      </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   )
 }

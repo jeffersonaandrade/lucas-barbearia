@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, RefreshCw, Bell, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Users, Clock, RefreshCw, Bell, LogOut, AlertTriangle, CheckCircle, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
@@ -187,7 +187,37 @@ const StatusFila = () => {
                   <Alert className="mt-6 border-primary bg-primary/10">
                     <CheckCircle className="h-4 w-4 text-primary" />
                     <AlertDescription className="text-foreground">
-                      <strong>É sua vez!</strong> Dirija-se à barbearia para ser atendido.
+                      <strong>É sua vez!</strong> {
+                        clienteAtual.barbeiro && clienteAtual.barbeiro !== 'Geral' 
+                          ? `Dirija-se ao balcão do barbeiro ${clienteAtual.barbeiro}!`
+                          : 'Dirija-se ao balcão do próximo barbeiro disponível!'
+                      }
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Botão de avaliação após atendimento */}
+                {clienteAtual.posicao === 0 && (
+                  <Alert className="mt-6 border-green-500 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-foreground">
+                      <div className="flex items-center justify-between">
+                        <span>
+                          <strong>Atendimento concluído!</strong> {
+                            clienteAtual.barbeiro && clienteAtual.barbeiro !== 'Geral'
+                              ? `Como foi sua experiência com o ${clienteAtual.barbeiro}?`
+                              : 'Como foi sua experiência?'
+                          }
+                        </span>
+                        <Button
+                          onClick={() => navigate(`/barbearia/${id}/avaliacao`)}
+                          size="sm"
+                          className="bg-green-600 text-white hover:bg-green-700 ml-4"
+                        >
+                          <Star className="w-4 h-4 mr-1" />
+                          Avaliar
+                        </Button>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 )}

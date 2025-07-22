@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, RefreshCw, Users2, Eye, MapPin, QrCode } from 'lucide-react';
+import { ArrowLeft, Users, Clock, RefreshCw, Users2, Eye, MapPin, QrCode, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { useFila } from '@/hooks/useFila.js';
+import { useClienteToken } from '@/hooks/useClienteToken.js';
 import { getBarbeariaInfo } from '@/services/filaDataService.js';
 
 const VisualizarFila = () => {
@@ -14,9 +16,19 @@ const VisualizarFila = () => {
   const [selectedBarbeariaId, setSelectedBarbeariaId] = useState(id ? parseInt(id) : 1);
   const [barbearias, setBarbearias] = useState([]);
   
-  const { fila, loading, error, estatisticas, obterFilaAtual, barbeariaInfo } = useFila(selectedBarbeariaId);
+  const { fila, loading, error, estatisticas, obterFilaAtual, barbeariaInfo, clienteAtual } = useFila(selectedBarbeariaId);
+  const { hasToken, getStatusFilaUrl } = useClienteToken();
   
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [showRedirectAlert, setShowRedirectAlert] = useState(false);
+
+  // Verificar se o cliente tem token cadastrado e redirecionar
+  useEffect(() => {
+    if (hasToken) {
+      console.log('🔍 Cliente com token encontrado, mostrando alerta de redirecionamento...');
+      setShowRedirectAlert(true);
+    }
+  }, [hasToken]);
 
   // Carregar lista de barbearias
   useEffect(() => {
@@ -97,8 +109,59 @@ const VisualizarFila = () => {
     navigate(`/qr-code/${selectedBarbeariaId}`);
   };
 
+  const handleIrParaMinhaFila = () => {
+    const statusUrl = getStatusFilaUrl();
+    if (statusUrl) {
+      navigate(statusUrl);
+    }
+  };
+
+  const handleContinuarVisualizando = () => {
+    setShowRedirectAlert(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Alerta de redirecionamento para clientes com token */}
+      {showRedirectAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md bg-card border border-border shadow-lg">
+            <CardHeader className="text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserCheck className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle className="text-foreground">Você está na fila!</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="border-primary bg-primary/10">
+                <UserCheck className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-foreground">
+                  Detectamos que você já está cadastrado na fila. Deseja ver o status da sua fila pessoal?
+                </AlertDescription>
+              </Alert>
+              
+              <div className="flex space-x-3">
+                <Button
+                  onClick={handleIrParaMinhaFila}
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-accent"
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Minha Fila
+                </Button>
+                <Button
+                  onClick={handleContinuarVisualizando}
+                  variant="outline"
+                  className="flex-1 border-foreground text-foreground hover:bg-foreground hover:text-background"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Continuar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <div className="container mx-auto px-4 py-8">
         <Button
@@ -150,6 +213,19 @@ const VisualizarFila = () => {
                 </p>
               </div>
             </div>
+
+            {/* Botão para clientes com token */}
+            {hasToken && (
+              <div className="max-w-md mx-auto mb-6">
+                <Button
+                  onClick={handleIrParaMinhaFila}
+                  className="w-full bg-primary text-primary-foreground hover:bg-accent"
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Ver Minha Fila
+                </Button>
+              </div>
+            )}
 
             <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
               <Eye className="w-4 h-4" />

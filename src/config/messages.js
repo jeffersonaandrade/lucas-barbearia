@@ -1,18 +1,18 @@
 // Mensagens do WhatsApp
 export const WHATSAPP_MESSAGES = {
-  schedule: "Olá! Gostaria de agendar uma consulta com a Joanna.",
-  scheduleChild: "Olá! Gostaria de agendar uma consulta com a Joanna para meu filho.",
-  hero: "Olá! Vi o site da Tia Jow e gostaria de falar sobre fisioterapia respiratória para meu filho.",
-  questions: "Olá! Tenho algumas dúvidas sobre o atendimento.",
-  respiratoryQuestions: "Olá! Tenho algumas dúvidas sobre o atendimento de fisioterapia respiratória.",
-  testimonials: "Olá! Vi os depoimentos e gostaria de agendar uma consulta para meu filho.",
-  videos: "Olá! Gostaria de receber mais informações sobre os vídeos e dicas.",
+  schedule: "Olá! Gostaria de agendar um horário na barbearia.",
+  scheduleHaircut: "Olá! Gostaria de agendar um corte de cabelo.",
+  hero: "Olá! Vi o site da Lucas Barbearia e gostaria de agendar um horário.",
+  questions: "Olá! Tenho algumas dúvidas sobre os serviços.",
+  serviceQuestions: "Olá! Tenho algumas dúvidas sobre os serviços da barbearia.",
+  testimonials: "Olá! Vi os depoimentos e gostaria de agendar um horário.",
+  videos: "Olá! Gostaria de ver mais fotos dos trabalhos.",
   courses: "Olá! Gostaria de receber informações sobre novos cursos.",
   courseInfo: (courseTitle) => `Olá! Gostaria de mais informações sobre o curso "${courseTitle}".`,
   courseEnrollment: (courseTitle) => `Olá! Gostaria de me inscrever no curso "${courseTitle}".`,
-  contact: "Olá! Gostaria de falar com a Tia Jow.",
-  consultation: "Olá! Gostaria de mais informações sobre a consulta.",
-  float: "Olá! Gostaria de falar com a Tia Jow."
+  contact: "Olá! Gostaria de falar com a Lucas Barbearia.",
+  consultation: "Olá! Gostaria de mais informações sobre os serviços.",
+  float: "Olá! Gostaria de falar com a Lucas Barbearia."
 };
 
 // Mensagens de erro
@@ -26,15 +26,15 @@ export const ERROR_MESSAGES = {
 // Mensagens de sucesso
 export const SUCCESS_MESSAGES = {
   contactSent: "Mensagem enviada com sucesso!",
-  appointmentScheduled: "Consulta agendada com sucesso!",
+  appointmentScheduled: "Horário agendado com sucesso!",
   formSubmitted: "Formulário enviado com sucesso!"
 };
 
 // Textos de interface
 export const UI_TEXTS = {
   buttons: {
-    schedule: "Agendar Consulta",
-    contact: "Falar com a Tia Jow",
+    schedule: "Agendar Horário",
+    contact: "Falar com a Barbearia",
     follow: "Seguir no Instagram",
     moreInfo: "Mais Informações",
     enroll: "Inscrever-se",
@@ -54,8 +54,8 @@ export const UI_TEXTS = {
   aria: {
     menuOpen: "Abrir menu",
     menuClose: "Fechar menu",
-    whatsapp: "Falar com a Tia Jow pelo WhatsApp",
-    calendly: "Agendar consulta pelo Calendly",
+    whatsapp: "Falar com a Lucas Barbearia pelo WhatsApp",
+    calendly: "Agendar horário pelo Calendly",
     instagram: "Seguir no Instagram",
     email: "Enviar email"
   }

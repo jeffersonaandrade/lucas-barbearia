@@ -161,7 +161,7 @@ const InstagramEmbed = ({
             
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-muted-foreground">
-                Publicado por Tia Jow
+                Publicado por Lucas Barbearia
               </span>
               <Button 
                 size="sm" 

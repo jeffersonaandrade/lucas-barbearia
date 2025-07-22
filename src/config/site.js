@@ -1,16 +1,16 @@
 export const siteConfig = {
   // Informações básicas
   name: "Lucas Barbearia",
-  title: "Lucas Barberia - Sistema de Filas | Barbearia Moderna | São Paulo",
+  title: "Lucas Barberia - Sistema de Filas | Barbearia Moderna | Recife",
   description: "Sistema de filas inteligente para barbearia. Entre na fila online, acompanhe sua posição e chegue na hora certa.",
-  keywords: "barbearia, sistema de filas, fila online, Lucas Barbearia, barbearia São Paulo, agendamento fila, acompanhar fila",
+  keywords: "barbearia, sistema de filas, fila online, Lucas Barbearia, barbearia Recife, agendamento fila, acompanhar fila",
   
   // SEO Avançado
   seo: {
-    title: "Lucas Barbearia São Paulo | Cortes Masculinos e Barba - Agendamento Online",
-    description: "Barbearia moderna em São Paulo. Cortes masculinos, barba e serviços premium. Agende seu horário online com o Lucas.",
+    title: "Lucas Barbearia Recife | Cortes Masculinos e Barba - Agendamento Online",
+    description: "Barbearia moderna em Recife. Cortes masculinos, barba e serviços premium. Agende seu horário online com o Lucas.",
     keywords: [
-      "barbearia São Paulo",
+      "barbearia Recife",
       "corte masculino",
       "barba",
       "Lucas barbearia",
@@ -25,34 +25,34 @@ export const siteConfig = {
     ],
     localBusiness: {
       name: "Lucas Barbearia",
-      address: "São Paulo, SP, Brasil",
-      phone: "+5511999999999",
+      address: "Recife, PE, Brasil",
+      phone: "+5581999999999",
       email: "contato@lucasbarbearia.com",
       website: "https://lucasbarbearia.com",
-      latitude: "-23.5505",
-      longitude: "-46.6333",
-      serviceArea: "São Paulo e Região",
+      latitude: "-8.0476",
+      longitude: "-34.8770",
+      serviceArea: "Recife e Região Metropolitana",
       businessHours: "Segunda a Sábado, 9h às 19h"
     }
   },
   
   // Contato
   contact: {
-    whatsapp: "5511999999999",
-    whatsappFormatted: "(11) 99999-9999",
+    whatsapp: "5581999999999",
+    whatsappFormatted: "(81) 99999-9999",
     instagram: "@lucasbarbearia",
     instagramUrl: "https://instagram.com/lucasbarbearia",
     email: "contato@lucasbarbearia.com",
-    address: "São Paulo, SP",
+    address: "Recife, PE",
     schedule: "Segunda a Sábado, 9h às 19h",
     consultationPrice: "R$ 35,00",
     consultationDuration: "30 a 45 minutos por sessão",
-    serviceArea: "São Paulo e Região"
+    serviceArea: "Recife e Região Metropolitana"
   },
   
   // URLs
   urls: {
-    whatsapp: "https://wa.me/5511999999999",
+    whatsapp: "https://wa.me/5581999999999",
     instagram: "https://instagram.com/lucasbarbearia",
     email: "contato@lucasbarbearia.com",
     calendly: "https://calendly.com/lucasbarbearia/30min"
@@ -67,7 +67,11 @@ export const siteConfig = {
     serviceQuestions: "Olá! Tenho algumas dúvidas sobre os serviços da barbearia.",
     testimonials: "Olá! Vi os depoimentos e gostaria de agendar um horário.",
     gallery: "Olá! Gostaria de ver mais fotos dos trabalhos.",
+    videos: "Olá! Gostaria de ver mais fotos dos trabalhos.",
     services: "Olá! Gostaria de receber informações sobre os serviços.",
+    contact: "Olá! Gostaria de falar com a Lucas Barbearia.",
+    consultation: "Olá! Gostaria de mais informações sobre os serviços.",
+    float: "Olá! Gostaria de falar com a Lucas Barbearia.",
     serviceInfo: (serviceTitle) => `Olá! Gostaria de mais informações sobre o serviço "${serviceTitle}".`,
     serviceBooking: (serviceTitle) => `Olá! Gostaria de agendar o serviço "${serviceTitle}".`
   },
@@ -98,7 +102,7 @@ export const siteConfig = {
   // Informações de consulta
   consultation: {
     duration: "30 a 45 minutos por sessão",
-    area: "São Paulo e Região",
+    area: "Recife e Região Metropolitana",
     scheduling: "Agendamento via WhatsApp",
     benefits: [
       "Atendimento personalizado",
@@ -114,7 +118,7 @@ export const siteConfig = {
     {
       icon: "Phone",
       title: 'WhatsApp',
-      content: '(11) 99999-9999',
+      content: '(81) 99999-9999',
       description: 'Atendimento de segunda a sábado',
       action: 'whatsapp',
       messageType: 'schedule'
@@ -129,7 +133,7 @@ export const siteConfig = {
     {
       icon: "MapPin",
       title: 'Localização',
-      content: 'São Paulo, SP',
+      content: 'Recife, PE',
       description: 'Zona Central',
       action: null
     },

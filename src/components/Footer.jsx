@@ -1,16 +1,27 @@
-import { Instagram, MessageCircle, Phone, Clock, MapPin } from 'lucide-react';
+import { Instagram, MessageCircle, Phone, Clock, MapPin, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/logo.jsx';
 import { siteConfig } from '@/config/site.js';
 import { useWhatsApp } from '@/hooks/use-whatsapp.js';
 import { useScroll } from '@/hooks/use-scroll.js';
+import { useCookieConsent } from '@/hooks/useCookieConsent.js';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { handleContactAction } = useWhatsApp();
   const { scrollToSection } = useScroll();
+  const navigate = useNavigate();
+  const { clearConsent } = useCookieConsent();
 
   const handleNavigation = (href) => {
     scrollToSection(href);
+  };
+
+  const handleCookieSettings = () => {
+    // Limpar consentimento atual para mostrar o modal novamente
+    clearConsent();
+    // Recarregar a página para mostrar o modal
+    window.location.reload();
   };
 
   return (
@@ -99,16 +110,38 @@ const Footer = () => {
             </div>
             
             <div className="flex items-center space-x-6 text-white/70 text-sm">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span>15 min por atendimento</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span>São Paulo, SP</span>
-                  </div>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => navigate('/privacidade')}
+                  className="hover:text-white transition-colors"
+                >
+                  Política de Privacidade
+                </button>
+                <button
+                  onClick={() => navigate('/termos')}
+                  className="hover:text-white transition-colors"
+                >
+                  Termos de Uso
+                </button>
+                <button
+                  onClick={handleCookieSettings}
+                  className="hover:text-white transition-colors flex items-center space-x-1"
+                >
+                  <Settings className="w-3 h-3" />
+                  <span>Cookies</span>
+                </button>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span>15 min por atendimento</span>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span>Recife, PE</span>
+                </div>
+              </div>
             </div>
           </div>
           
