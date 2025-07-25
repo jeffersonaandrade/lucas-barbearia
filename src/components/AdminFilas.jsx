@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog.jsx';
-import { useAuth } from '@/hooks/useAuth.js';
+import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 import { 
   ArrowLeft, 
   Shield, 
@@ -29,10 +29,10 @@ import {
   UserX,
   Filter
 } from 'lucide-react';
-import { removerCliente } from '@/services/filaDataService.js';
+import { barbeariasService, filaService } from '@/services/api.js';
 
 const AdminFilas = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthBackend();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,49 +40,62 @@ const AdminFilas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBarbearia, setSelectedBarbearia] = useState('todas');
   const [filas, setFilas] = useState([]);
-
-  // Dados simulados de barbearias
-  const mockBarbearias = [
-    { id: 1, nome: 'Lucas Barbearia - Centro' },
-    { id: 2, nome: 'Lucas Barbearia - Shopping' },
-    { id: 3, nome: 'Lucas Barbearia - Bairro' }
-  ];
-
-  // Dados simulados de filas (substitua por dados reais)
-  const mockFilas = [
-    {
-      barbeariaId: 1,
-      barbeariaNome: 'Lucas Barbearia - Centro',
-      clientes: [
-        { id: 1, nome: 'João Silva', telefone: '(81) 99999-9999', barbeiro: 'Pedro Santos', status: 'aguardando', token: 'token_1', horarioEntrada: '14:30' },
-        { id: 2, nome: 'Maria Costa', telefone: '(81) 88888-8888', barbeiro: 'Geral', status: 'aguardando', token: 'token_2', horarioEntrada: '14:45' },
-        { id: 3, nome: 'Carlos Oliveira', telefone: '(81) 77777-7777', barbeiro: 'Miguel Costa', status: 'em_atendimento', token: 'token_3', horarioEntrada: '15:00' }
-      ]
-    },
-    {
-      barbeariaId: 2,
-      barbeariaNome: 'Lucas Barbearia - Shopping',
-      clientes: [
-        { id: 4, nome: 'Ana Santos', telefone: '(81) 66666-6666', barbeiro: 'João Ferreira', status: 'aguardando', token: 'token_4', horarioEntrada: '15:15' },
-        { id: 5, nome: 'Roberto Lima', telefone: '(81) 55555-5555', barbeiro: 'Geral', status: 'aguardando', token: 'token_5', horarioEntrada: '15:30' }
-      ]
-    },
-    {
-      barbeariaId: 3,
-      barbeariaNome: 'Lucas Barbearia - Bairro',
-      clientes: [
-        { id: 6, nome: 'Lucas Ferreira', telefone: '(81) 44444-4444', barbeiro: 'Lucas Ferreira', status: 'aguardando', token: 'token_6', horarioEntrada: '15:45' }
-      ]
-    }
-  ];
+  const [barbearias, setBarbearias] = useState([]);
 
   useEffect(() => {
     console.log('AdminFilas - Componente carregado');
     console.log('AdminFilas - User:', user);
     
-    // Carregar dados das filas
-    setFilas(mockFilas);
+    // Carregar dados das filas do backend
+    carregarDados();
   }, [user]);
+
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Carregar barbearias
+      console.log('Carregando barbearias...');
+      const barbeariasData = await barbeariasService.listarBarbearias();
+      const barbeariasArray = (barbeariasData && barbeariasData.data && Array.isArray(barbeariasData.data)) 
+        ? barbeariasData.data 
+        : [];
+      setBarbearias(barbeariasArray);
+      console.log('Barbearias carregadas:', barbeariasArray);
+
+      // Carregar filas de todas as barbearias
+      console.log('Carregando filas...');
+      const filasPromises = barbeariasArray.map(async (barbearia) => {
+        try {
+          const filaData = await filaService.obterFila(barbearia.id);
+          console.log(`Fila carregada para barbearia ${barbearia.id}:`, filaData);
+          return {
+            barbeariaId: barbearia.id,
+            barbeariaNome: barbearia.nome,
+            clientes: filaData.fila || []
+          };
+        } catch (error) {
+          console.log(`Fila não encontrada para barbearia ${barbearia.id}:`, error.message);
+          return {
+            barbeariaId: barbearia.id,
+            barbeariaNome: barbearia.nome,
+            clientes: []
+          };
+        }
+      });
+
+      const filasData = await Promise.all(filasPromises);
+      setFilas(filasData);
+      console.log('Filas carregadas:', filasData);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      setError('Erro ao carregar dados das filas');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -145,17 +158,13 @@ const AdminFilas = () => {
     setSuccess('');
 
     try {
-      // Simular remoção do cliente
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log(`Removendo cliente ${cliente.id} da barbearia ${barbeariaId}`);
       
-      // Remover cliente da fila local
-      setFilas(prevFilas => 
-        prevFilas.map(fila => 
-          fila.barbeariaId === barbeariaId 
-            ? { ...fila, clientes: fila.clientes.filter(c => c.id !== cliente.id) }
-            : fila
-        )
-      );
+      // Remover cliente do backend
+      await filaService.removerCliente(barbeariaId, cliente.id);
+      
+      // Recarregar dados para garantir sincronização
+      await carregarDados();
 
       setSuccess(`✅ Cliente ${cliente.nome} removido da fila com sucesso!`);
       
@@ -317,7 +326,7 @@ const AdminFilas = () => {
 
         {/* Filtros */}
         <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -330,6 +339,17 @@ const AdminFilas = () => {
               </div>
             </div>
             
+            <Button
+              onClick={carregarDados}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Atualizar</span>
+            </Button>
+            
             {user?.role === 'admin' && (
               <div className="sm:w-48">
                 <select
@@ -338,7 +358,7 @@ const AdminFilas = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="todas">Todas as Barbearias</option>
-                  {mockBarbearias.map(barbearia => (
+                  {barbearias.map(barbearia => (
                     <option key={barbearia.id} value={barbearia.id}>
                       {barbearia.nome}
                     </option>
@@ -350,7 +370,19 @@ const AdminFilas = () => {
         </div>
 
         {/* Lista de Filas */}
-        {filasFiltradas.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Carregando filas...
+              </h3>
+              <p className="text-gray-600">
+                Aguarde enquanto carregamos os dados das filas.
+              </p>
+            </CardContent>
+          </Card>
+        ) : filasFiltradas.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />

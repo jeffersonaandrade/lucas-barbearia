@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
+import { barbeariasService } from '@/services/api.js';
 import { 
   MapPin, 
   Phone, 
@@ -12,10 +14,11 @@ import {
   QrCode,
   ArrowRight,
   Star,
-  ArrowLeft
+  ArrowLeft,
+  Instagram,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
-import { getBarbeariaInfo } from '@/services/filaDataService.js';
-import barbeariasData from '@/data/barbearias.json';
 
 const BarbeariasList = () => {
   const navigate = useNavigate();
@@ -23,11 +26,10 @@ const BarbeariasList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const carregarBarbearias = () => {
+    const carregarBarbearias = async () => {
       try {
-        // Filtrar apenas barbearias ativas
-        const barbeariasAtivas = barbeariasData.barbearias.filter(b => b.ativo);
-        setBarbearias(barbeariasAtivas);
+        const response = await barbeariasService.listarBarbearias();
+        setBarbearias(response.data);
       } catch (error) {
         console.error('Erro ao carregar barbearias:', error);
       } finally {
@@ -98,13 +100,16 @@ const BarbeariasList = () => {
                   <div className="flex items-center space-x-3">
                     <Clock className="w-4 h-4 text-gray-500" />
                     <span className="text-sm text-gray-700">
-                      Segunda a Sexta: {barbearia.horario.segunda}
+                      Segunda a Sexta: {barbearia.horario.segunda.aberto ? 
+                        `${barbearia.horario.segunda.inicio} - ${barbearia.horario.segunda.fim}` : 
+                        'Fechado'
+                      }
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span className="text-sm text-gray-700">
-                      {barbearia.barbeiros.length} barbeiros
+                      {barbearia.barbeiros && barbearia.barbeiros.length > 0 ? `${barbearia.barbeiros.length} barbeiros` : 'Nenhum barbeiro disponível'}
                     </span>
                   </div>
                 </div>

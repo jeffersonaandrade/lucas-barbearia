@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth.js';
+import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +18,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, apiStatus } = useAuthBackend();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,42 +26,22 @@ const Login = () => {
     setError('');
 
     try {
-      // Simulação de login - em produção, isso seria uma chamada API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aplicar trim() nos campos antes de enviar
+      const email = formData.email.trim();
+      const senha = formData.senha.trim();
       
-      // Validação básica
-      if (formData.email === 'admin@lucasbarbearia.com' && formData.senha === 'admin123') {
-        // Login como Admin
-        const userData = {
-          token: 'admin_token_' + Date.now(),
-          role: 'admin',
-          email: formData.email
-        };
-        login(userData);
-        navigate(location.state?.from?.pathname || '/admin/dashboard');
-      } else if (formData.email === 'gerente@lucasbarbearia.com' && formData.senha === 'gerente123') {
-        // Login como Gerente
-        const userData = {
-          token: 'gerente_token_' + Date.now(),
-          role: 'gerente',
-          email: formData.email
-        };
-        login(userData);
-        navigate(location.state?.from?.pathname || '/admin/dashboard');
-      } else if (formData.email === 'barbeiro@lucasbarbearia.com' && formData.senha === 'barbeiro123') {
-        // Login como Barbeiro
-        const userData = {
-          token: 'barbeiro_token_' + Date.now(),
-          role: 'barbeiro',
-          email: formData.email
-        };
-        login(userData);
-        navigate(location.state?.from?.pathname || '/admin/dashboard');
-      } else {
-        setError('Email ou senha incorretos');
+      // Validar se os campos não estão vazios após o trim
+      if (!email || !senha) {
+        setError('Por favor, preencha todos os campos.');
+        return;
       }
+      
+      // Chamar a API real de login
+      await login(email, senha);
+      navigate(location.state?.from?.pathname || '/admin/dashboard');
     } catch (error) {
-      setError('Erro ao fazer login. Tente novamente.');
+      console.error('Erro no login:', error);
+      setError(error.message || 'Erro ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);
     }

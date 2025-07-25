@@ -1,9 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog.jsx';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog.jsx';
 import { Button } from '@/components/ui/button.jsx';
 
 const AdminModal = ({ 
   trigger, 
   title, 
+  description,
   children, 
   open, 
   onOpenChange,
@@ -24,6 +25,11 @@ const AdminModal = ({
           <DialogTitle className="text-lg">
             {title}
           </DialogTitle>
+          {description && (
+            <DialogDescription>
+              {description}
+            </DialogDescription>
+          )}
         </DialogHeader>
         
         <div className="space-y-2 sm:space-y-4">

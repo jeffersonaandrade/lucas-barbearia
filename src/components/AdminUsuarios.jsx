@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
-import { useAuth } from '@/hooks/useAuth.js';
+import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 import AdminLayout from '@/components/ui/admin-layout.jsx';
 import AdminModal from '@/components/ui/admin-modal.jsx';
 import { 
@@ -19,14 +19,15 @@ import {
   Eye,
   EyeOff,
   Mail,
-  Phone,
-  Building2
+  Phone
 } from 'lucide-react';
+import { usuariosService, barbeariasService } from '@/services/api.js';
 
 const AdminUsuarios = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthBackend();
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
+  const [barbearias, setBarbearias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('todos');
@@ -39,65 +40,46 @@ const AdminUsuarios = () => {
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
-    senha: '',
+    password: '',
     telefone: '',
-    role: 'barbeiro',
-    barbeariaId: '1',
-    ativo: true
+    role: 'barbeiro'
   });
 
-  // Dados simulados de usuários
-  const mockUsuarios = [
-    {
-      id: 1,
-      nome: 'Lucas Silva',
-      email: 'admin@lucasbarbearia.com',
-      telefone: '(81) 99999-9999',
-      role: 'admin',
-      barbeariaId: 1,
-      barbeariaNome: 'Lucas Barbearia - Centro',
-      ativo: true,
-      dataCriacao: '2024-01-15'
-    },
-    {
-      id: 2,
-      nome: 'Maria Costa',
-      email: 'gerente@lucasbarbearia.com',
-      telefone: '(81) 88888-8888',
-      role: 'gerente',
-      barbeariaId: 2,
-      barbeariaNome: 'Lucas Barbearia - Shopping',
-      ativo: true,
-      dataCriacao: '2024-01-20'
-    },
-    {
-      id: 3,
-      nome: 'Pedro Santos',
-      email: 'pedro@lucasbarbearia.com',
-      telefone: '(81) 77777-7777',
-      role: 'barbeiro',
-      barbeariaId: 1,
-      barbeariaNome: 'Lucas Barbearia - Centro',
-      ativo: true,
-      dataCriacao: '2024-02-01'
-    },
-    {
-      id: 4,
-      nome: 'João Ferreira',
-      email: 'joao@lucasbarbearia.com',
-      telefone: '(81) 66666-6666',
-      role: 'barbeiro',
-      barbeariaId: 2,
-      barbeariaNome: 'Lucas Barbearia - Shopping',
-      ativo: false,
-      dataCriacao: '2024-02-10'
-    }
-  ];
-
   useEffect(() => {
-    // Carregar usuários (o ProtectedRoute já verifica as permissões)
-    setUsuarios(mockUsuarios);
+    // Carregar dados do backend
+    carregarDados();
   }, [user]);
+
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Carregar barbearias
+      console.log('Carregando barbearias...');
+      const barbeariasData = await barbeariasService.listarBarbearias();
+      const barbeariasArray = (barbeariasData && barbeariasData.data && Array.isArray(barbeariasData.data)) 
+        ? barbeariasData.data 
+        : [];
+      setBarbearias(barbeariasArray);
+      console.log('Barbearias carregadas:', barbeariasArray);
+
+      // Carregar usuários
+      console.log('Carregando usuários...');
+      const usuariosData = await usuariosService.listarUsuarios();
+      const usuariosArray = (usuariosData && usuariosData.data && Array.isArray(usuariosData.data)) 
+        ? usuariosData.data 
+        : [];
+      setUsuarios(usuariosArray);
+      console.log('Usuários carregados:', usuariosArray);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      setError('Erro ao carregar dados dos usuários');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -117,39 +99,86 @@ const AdminUsuarios = () => {
     return roles[role] || { label: role, color: 'bg-gray-100 text-gray-800' };
   };
 
-  const getBarbeariaNome = (barbeariaId) => {
-    const barbearias = {
-      1: 'Lucas Barbearia - Centro',
-      2: 'Lucas Barbearia - Shopping',
-      3: 'Lucas Barbearia - Bairro'
-    };
-    return barbearias[barbeariaId] || 'Barbearia não encontrada';
+
+
+  // Funções de validação
+  const validarEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validarSenha = (password) => {
+    return password && password.length >= 6;
+  };
+
+  const validarNome = (nome) => {
+    return nome && nome.length >= 2 && nome.length <= 255;
+  };
+
+  const validarTelefone = (telefone) => {
+    if (!telefone) return true; // Telefone é opcional
+    const telefoneRegex = /^\+?[1-9]\d{1,14}$/;
+    return telefoneRegex.test(telefone.replace(/\D/g, '')); // Remove caracteres não numéricos
+  };
+
+  const formatarTelefone = (telefone) => {
+    if (!telefone) return '';
+    // Remove todos os caracteres não numéricos
+    const numeros = telefone.replace(/\D/g, '');
+    return numeros;
   };
 
   const handleAddUser = async () => {
-    if (!formData.nome || !formData.email || !formData.senha) {
+    // Validações
+    if (!formData.nome || !formData.email || !formData.password) {
       setError('Por favor, preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!validarNome(formData.nome)) {
+      setError('Nome deve ter entre 2 e 255 caracteres');
+      return;
+    }
+
+    if (!validarEmail(formData.email)) {
+      setError('Email deve ter um formato válido');
+      return;
+    }
+
+    if (!validarSenha(formData.password)) {
+      setError('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    if (!validarTelefone(formData.telefone)) {
+      setError('Telefone deve ter formato válido (ex: 11999999999)');
       return;
     }
 
     setLoading(true);
     try {
-      // Simular criação de usuário
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Criando usuário:', formData);
       
-      const newUser = {
-        id: Date.now(),
-        ...formData,
-        barbeariaNome: getBarbeariaNome(formData.barbeariaId),
-        dataCriacao: new Date().toISOString().split('T')[0]
+      // Criar usuário no backend (apenas campos necessários)
+      const dadosUsuario = {
+        nome: formData.nome.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        telefone: formatarTelefone(formData.telefone),
+        role: formData.role
       };
 
-      setUsuarios([...usuarios, newUser]);
+      await usuariosService.criarUsuario(dadosUsuario);
+      
+      // Recarregar dados
+      await carregarDados();
+      
       setSuccess('Usuário criado com sucesso!');
       setShowAddDialog(false);
       resetForm();
     } catch (error) {
-      setError('Erro ao criar usuário');
+      console.error('Erro ao criar usuário:', error);
+      setError('Erro ao criar usuário: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -160,44 +189,69 @@ const AdminUsuarios = () => {
     setFormData({
       nome: user.nome,
       email: user.email,
-      senha: '',
+      password: '',
       telefone: user.telefone,
-      role: user.role,
-      barbeariaId: user.barbeariaId.toString(),
-      ativo: user.ativo
+      role: user.role
     });
     setShowAddDialog(true);
   };
 
   const handleUpdateUser = async () => {
+    // Validações
     if (!formData.nome || !formData.email) {
       setError('Por favor, preencha todos os campos obrigatórios');
       return;
     }
 
+    if (!validarNome(formData.nome)) {
+      setError('Nome deve ter entre 2 e 255 caracteres');
+      return;
+    }
+
+    if (!validarEmail(formData.email)) {
+      setError('Email deve ter um formato válido');
+      return;
+    }
+
+    if (formData.password && !validarSenha(formData.password)) {
+      setError('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    if (!validarTelefone(formData.telefone)) {
+      setError('Telefone deve ter formato válido (ex: 11999999999)');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simular atualização
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Atualizando usuário:', editingUser.id, formData);
       
-      const updatedUsuarios = usuarios.map(u => 
-        u.id === editingUser.id 
-          ? { 
-              ...u, 
-              ...formData, 
-              barbeariaNome: getBarbeariaNome(formData.barbeariaId),
-              senha: formData.senha || u.senha
-            }
-          : u
-      );
+      // Atualizar usuário no backend (apenas campos necessários)
+      const dadosUsuario = {
+        nome: formData.nome.trim(),
+        email: formData.email.trim().toLowerCase(),
+        telefone: formatarTelefone(formData.telefone),
+        role: formData.role
+      };
 
-      setUsuarios(updatedUsuarios);
+      // Incluir password apenas se foi alterada
+      if (formData.password) {
+        dadosUsuario.password = formData.password;
+      }
+
+      await usuariosService.atualizarUsuario(editingUser.id, dadosUsuario);
+      
+      // Recarregar dados
+      await carregarDados();
+      
       setSuccess('Usuário atualizado com sucesso!');
       setShowAddDialog(false);
       setEditingUser(null);
       resetForm();
     } catch (error) {
-      setError('Erro ao atualizar usuário');
+      console.error('Erro ao atualizar usuário:', error);
+      setError('Erro ao atualizar usuário: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -208,13 +262,18 @@ const AdminUsuarios = () => {
 
     setLoading(true);
     try {
-      // Simular exclusão
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Removendo usuário:', userId);
       
-      setUsuarios(usuarios.filter(u => u.id !== userId));
+      // Remover usuário do backend
+      await usuariosService.removerUsuario(userId);
+      
+      // Recarregar dados
+      await carregarDados();
+      
       setSuccess('Usuário excluído com sucesso!');
     } catch (error) {
-      setError('Erro ao excluir usuário');
+      console.error('Erro ao excluir usuário:', error);
+      setError('Erro ao excluir usuário: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -224,11 +283,9 @@ const AdminUsuarios = () => {
     setFormData({
       nome: '',
       email: '',
-      senha: '',
+      password: '',
       telefone: '',
-      role: 'barbeiro',
-      barbeariaId: '1',
-      ativo: true
+      role: 'barbeiro'
     });
     setEditingUser(null);
     setError('');
@@ -261,14 +318,26 @@ const AdminUsuarios = () => {
         
         <AdminModal
           trigger={
-            <Button className="flex items-center space-x-2">
+            <Button 
+              className="flex items-center space-x-2"
+              onClick={() => {
+                setEditingUser(null);
+                resetForm();
+                setShowAddDialog(true);
+              }}
+            >
               <UserPlus className="w-4 h-4" />
               <span>Adicionar Usuário</span>
             </Button>
           }
           title={editingUser ? 'Editar Usuário' : 'Adicionar Novo Usuário'}
           open={showAddDialog}
-          onOpenChange={setShowAddDialog}
+          onOpenChange={(open) => {
+            setShowAddDialog(open);
+            if (!open) {
+              resetForm();
+            }
+          }}
           onCancel={() => {
             setShowAddDialog(false);
             resetForm();
@@ -286,8 +355,13 @@ const AdminUsuarios = () => {
                 value={formData.nome}
                 onChange={(e) => setFormData({...formData, nome: e.target.value})}
                 placeholder="Nome do usuário"
-                className="mt-1"
+                className={`mt-1 ${formData.nome && !validarNome(formData.nome) ? 'border-red-500' : ''}`}
               />
+              {formData.nome && !validarNome(formData.nome) && (
+                <p className="text-xs text-red-500 mt-1">
+                  Nome deve ter entre 2 e 255 caracteres
+                </p>
+              )}
             </div>
             
             <div>
@@ -298,23 +372,29 @@ const AdminUsuarios = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="usuario@email.com"
-                className="mt-1"
+                className={`mt-1 ${formData.email && !validarEmail(formData.email) ? 'border-red-500' : ''}`}
               />
+              {formData.email && !validarEmail(formData.email) && (
+                <p className="text-xs text-red-500 mt-1">
+                  Email deve ter um formato válido
+                </p>
+              )}
             </div>
           </div>
           
           {/* Senha */}
           <div>
-            <Label htmlFor="senha" className="text-sm font-medium">
+            <Label htmlFor="password" className="text-sm font-medium">
               {editingUser ? 'Nova Senha (deixe vazio para manter)' : 'Senha *'}
             </Label>
             <div className="relative mt-1">
               <Input
-                id="senha"
+                id="password"
                 type={showPassword ? 'text' : 'password'}
-                value={formData.senha}
-                onChange={(e) => setFormData({...formData, senha: e.target.value})}
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Senha do usuário"
+                className={`${formData.password && !validarSenha(formData.password) ? 'border-red-500' : ''}`}
               />
               <button
                 type="button"
@@ -324,22 +404,35 @@ const AdminUsuarios = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {formData.password && !validarSenha(formData.password) && (
+              <p className="text-xs text-red-500 mt-1">
+                Senha deve ter pelo menos 6 caracteres
+              </p>
+            )}
           </div>
           
           {/* Telefone */}
           <div>
-            <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+            <Label htmlFor="telefone" className="text-sm font-medium">Telefone (opcional)</Label>
             <Input
               id="telefone"
               value={formData.telefone}
               onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-              placeholder="(81) 99999-9999"
-              className="mt-1"
+              placeholder="11999999999 (apenas números)"
+              className={`mt-1 ${formData.telefone && !validarTelefone(formData.telefone) ? 'border-red-500' : ''}`}
             />
+            {formData.telefone && !validarTelefone(formData.telefone) ? (
+              <p className="text-xs text-red-500 mt-1">
+                Telefone deve ter formato válido (ex: 11999999999)
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Formato: apenas números (ex: 11999999999)
+              </p>
+            )}
           </div>
           
-          {/* Perfil e Barbearia */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+          {/* Perfil */}
             <div>
               <Label htmlFor="role" className="text-sm font-medium">Perfil *</Label>
               <Select 
@@ -347,7 +440,7 @@ const AdminUsuarios = () => {
                 onValueChange={(value) => setFormData({...formData, role: value})}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue />
+                <SelectValue placeholder="Selecione o perfil" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador</SelectItem>
@@ -355,36 +448,6 @@ const AdminUsuarios = () => {
                   <SelectItem value="barbeiro">Barbeiro</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="barbearia" className="text-sm font-medium">Barbearia</Label>
-              <Select 
-                value={formData.barbeariaId} 
-                onValueChange={(value) => setFormData({...formData, barbeariaId: value})}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Lucas Barbearia - Centro</SelectItem>
-                  <SelectItem value="2">Lucas Barbearia - Shopping</SelectItem>
-                  <SelectItem value="3">Lucas Barbearia - Bairro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {/* Status */}
-          <div className="flex items-center space-x-2 pt-2">
-            <input
-              type="checkbox"
-              id="ativo"
-              checked={formData.ativo}
-              onChange={(e) => setFormData({...formData, ativo: e.target.checked})}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="ativo" className="text-sm">Usuário ativo</Label>
           </div>
         </AdminModal>
       </div>
@@ -392,7 +455,7 @@ const AdminUsuarios = () => {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
               <div className="flex-1">
                 <Label htmlFor="search" className="text-sm font-medium">Buscar</Label>
                 <div className="relative">
@@ -411,7 +474,7 @@ const AdminUsuarios = () => {
                 <Label htmlFor="filter" className="text-sm font-medium">Filtrar por Perfil</Label>
                 <Select value={filterRole} onValueChange={setFilterRole}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Filtrar por perfil" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
@@ -421,11 +484,47 @@ const AdminUsuarios = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <Button
+                onClick={carregarDados}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2"
+              >
+                <Filter className="w-4 h-4" />
+                <span>Atualizar</span>
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Users List */}
+        {loading ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Carregando usuários...
+              </h3>
+              <p className="text-gray-600">
+                Aguarde enquanto carregamos os dados dos usuários.
+              </p>
+            </CardContent>
+          </Card>
+        ) : filteredUsuarios.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Nenhum usuário encontrado
+              </h3>
+              <p className="text-gray-600">
+                {searchTerm || filterRole !== 'todos' ? 'Nenhum usuário encontrado com os filtros aplicados.' : 'Não há usuários cadastrados no sistema.'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
         <div className="grid gap-6">
           {filteredUsuarios.map((usuario) => {
             const roleInfo = getRoleDisplay(usuario.role);
@@ -462,12 +561,9 @@ const AdminUsuarios = () => {
                             </div>
                           )}
                           
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="w-4 h-4" />
-                            <span>{usuario.barbeariaNome}</span>
-                          </div>
-                          
+                          {usuario.dataCriacao && (
                           <span>Criado em: {new Date(usuario.dataCriacao).toLocaleDateString('pt-BR')}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -499,24 +595,8 @@ const AdminUsuarios = () => {
               </Card>
             );
           })}
-          
-          {filteredUsuarios.length === 0 && (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                  Nenhum usuário encontrado
-                </h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || filterRole !== 'todos' 
-                    ? 'Tente ajustar os filtros de busca'
-                    : 'Comece adicionando o primeiro usuário'
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
+        )}
     </AdminLayout>
   );
 };

@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
+import { barbeariasService, filaService } from '@/services/api.js';
+import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 import { 
   Download, 
   Upload, 
@@ -11,40 +15,70 @@ import {
   Clock, 
   Star,
   Scissors,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
-import { 
-  getFilaData, 
-  resetarDados, 
-  exportarDados, 
-  importarDados,
-  obterEstatisticas 
-} from '@/services/filaDataService.js';
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
+  const { user } = useAuthBackend();
   const [filaData, setFilaData] = useState(null);
   const [estatisticas, setEstatisticas] = useState({});
   const [loading, setLoading] = useState(false);
+  const [barbearias, setBarbearias] = useState([]);
+  const [selectedBarbeariaId, setSelectedBarbeariaId] = useState(null);
 
-  const carregarDados = () => {
-    const data = getFilaData();
-    setFilaData(data);
-    setEstatisticas(obterEstatisticas());
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      
+      // Carregar barbearias
+      const barbeariasResponse = await barbeariasService.listarBarbearias();
+      const barbeariasArray = barbeariasResponse.data || barbeariasResponse;
+      setBarbearias(barbeariasArray);
+      
+      if (barbeariasArray.length > 0 && !selectedBarbeariaId) {
+        setSelectedBarbeariaId(barbeariasArray[0].id);
+      }
+      
+      // Carregar dados da fila se houver barbearia selecionada
+      if (selectedBarbeariaId) {
+        try {
+          const filaResponse = await filaService.obterFilaPublica(selectedBarbeariaId);
+          const filaArray = filaResponse.data?.fila || [];
+          const estatisticasObj = filaResponse.data?.estatisticas || {};
+          
+          setFilaData(filaArray);
+          setEstatisticas(estatisticasObj);
+        } catch (error) {
+          console.error('Erro ao carregar dados da fila:', error);
+          setFilaData([]);
+          setEstatisticas({});
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     carregarDados();
-  }, []);
+  }, [selectedBarbeariaId]);
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Tem certeza que deseja resetar todos os dados da fila? Esta ação não pode ser desfeita.')) {
       setLoading(true);
       try {
-        resetarDados();
-        carregarDados();
-        alert('Dados resetados com sucesso!');
+        // Nota: O backend não tem endpoint para resetar dados, então apenas recarregamos
+        await carregarDados();
+        alert('Dados recarregados com sucesso!');
       } catch (error) {
-        alert('Erro ao resetar dados: ' + error.message);
+        alert('Erro ao recarregar dados: ' + error.message);
       } finally {
         setLoading(false);
       }
@@ -54,7 +88,23 @@ const AdminPanel = () => {
   const handleExport = () => {
     setLoading(true);
     try {
-      exportarDados();
+      const dataToExport = {
+        fila: filaData,
+        estatisticas: estatisticas,
+        barbearia: barbearias.find(b => b.id === selectedBarbeariaId),
+        timestamp: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fila-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       alert('Dados exportados com sucesso!');
     } catch (error) {
       alert('Erro ao exportar dados: ' + error.message);
@@ -69,15 +119,11 @@ const AdminPanel = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const success = importarDados(e.target.result);
-          if (success) {
-            carregarDados();
-            alert('Dados importados com sucesso!');
-          } else {
-            alert('Erro ao importar dados. Verifique se o arquivo é válido.');
-          }
+          const importedData = JSON.parse(e.target.result);
+          console.log('Dados importados:', importedData);
+          alert('Dados importados com sucesso! (Apenas visualização - não salvos no servidor)');
         } catch (error) {
-          alert('Erro ao importar dados: ' + error.message);
+          alert('Erro ao importar dados. Verifique se o arquivo é válido.');
         }
       };
       reader.readAsText(file);
@@ -222,18 +268,18 @@ const AdminPanel = () => {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Users className="w-5 h-5" />
-              <span>Fila Atual ({filaData.fila.length} clientes)</span>
+              <span>Fila Atual ({filaData.length} clientes)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {filaData.fila.length === 0 ? (
+            {filaData.length === 0 ? (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">Nenhum cliente na fila</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {filaData.fila.map((cliente) => (
+                {filaData.map((cliente) => (
                   <div 
                     key={cliente.id}
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
@@ -274,7 +320,7 @@ const AdminPanel = () => {
               <div>
                 <h4 className="font-semibold mb-3">Barbeiros</h4>
                 <div className="space-y-2">
-                  {filaData.barbeiros.map((barbeiro) => (
+                  {barbearias.map((barbeiro) => (
                     <div key={barbeiro.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                       <span className="font-medium">{barbeiro.nome}</span>
                       <Badge variant={barbeiro.disponivel ? "default" : "secondary"}>
@@ -289,16 +335,16 @@ const AdminPanel = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between p-3 bg-gray-50 rounded">
                     <span>Tempo médio por cliente</span>
-                    <span className="font-medium">{filaData.configuracoes.tempoMedioPorCliente}min</span>
+                    <span className="font-medium">{filaData.configuracoes?.tempoMedioPorCliente}min</span>
                   </div>
                   <div className="flex justify-between p-3 bg-gray-50 rounded">
                     <span>Máximo na fila</span>
-                    <span className="font-medium">{filaData.configuracoes.maximoNaFila}</span>
+                    <span className="font-medium">{filaData.configuracoes?.maximoNaFila}</span>
                   </div>
                   <div className="flex justify-between p-3 bg-gray-50 rounded">
                     <span>Atualização automática</span>
-                    <Badge variant={filaData.configuracoes.atualizacaoAutomatica ? "default" : "secondary"}>
-                      {filaData.configuracoes.atualizacaoAutomatica ? "Ativada" : "Desativada"}
+                    <Badge variant={filaData.configuracoes?.atualizacaoAutomatica ? "default" : "secondary"}>
+                      {filaData.configuracoes?.atualizacaoAutomatica ? "Ativada" : "Desativada"}
                     </Badge>
                   </div>
                 </div>

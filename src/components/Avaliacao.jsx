@@ -17,13 +17,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { useFila } from '@/hooks/useFila.js';
+import { useFilaBackend } from '@/hooks/useFilaBackend.js';
 import { useClienteToken } from '@/hooks/useClienteToken.js';
 
 const Avaliacao = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { clienteAtual, barbeariaInfo } = useFila(parseInt(id));
+  const { clienteAtual, barbeariaInfo } = useFilaBackend(parseInt(id));
   const { hasToken, getStatusFilaUrl } = useClienteToken();
   
   const [rating, setRating] = useState(0);

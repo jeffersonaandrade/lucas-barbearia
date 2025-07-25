@@ -3,18 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
+import { barbeariasService } from '@/services/api.js';
 import { 
   QrCode, 
   Download, 
   Copy, 
-  MapPin, 
-  Phone, 
+  CheckCircle, 
+  AlertCircle,
+  MapPin,
+  Phone,
+  Instagram,
   Clock,
   Users,
   Scissors,
   ArrowLeft
 } from 'lucide-react';
-import { getBarbeariaInfo } from '@/services/filaDataService.js';
 
 const QRCodeGenerator = () => {
   const navigate = useNavigate();
@@ -24,15 +28,16 @@ const QRCodeGenerator = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const carregarBarbearia = () => {
+    const carregarBarbearia = async () => {
       try {
-        const info = getBarbeariaInfo(barbeariaId);
+        const response = await barbeariasService.obterBarbearia(barbeariaId);
+        const info = response.data || response;
         if (info) {
           setBarbeariaInfo(info);
           // Gerar URL para o QR Code
-                        const baseUrl = window.location.origin;
-              const qrUrl = `${baseUrl}/barbearia/${barbeariaId}/entrar-fila?qr=true&barbearia=${barbeariaId}`;
-              setQrCodeUrl(qrUrl);
+          const baseUrl = window.location.origin;
+          const qrUrl = `${baseUrl}/barbearia/${barbeariaId}/entrar-fila?qr=true&barbearia=${barbeariaId}`;
+          setQrCodeUrl(qrUrl);
         }
       } catch (error) {
         console.error('Erro ao carregar informações da barbearia:', error);
@@ -134,48 +139,58 @@ const QRCodeGenerator = () => {
                   <div className="flex items-center space-x-3">
                     <Clock className="w-4 h-4 text-gray-500" />
                     <span className="text-gray-700">
-                      Segunda a Sexta: {barbeariaInfo.horario.segunda}
+                      Segunda a Sexta: {barbeariaInfo.horario?.segunda?.aberto ? 
+                        `${barbeariaInfo.horario.segunda.inicio} - ${barbeariaInfo.horario.segunda.fim}` : 
+                        'Fechado'
+                      }
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span className="text-gray-700">
-                      {barbeariaInfo.barbeiros.length} barbeiros disponíveis
+                      {barbeariaInfo.barbeiros && barbeariaInfo.barbeiros.length > 0 ? 
+                        `${barbeariaInfo.barbeiros.length} barbeiros disponíveis` : 
+                        'Nenhum barbeiro disponível'
+                      }
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Barbeiros */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Barbeiros:</h4>
-                <div className="space-y-2">
-                  {barbeariaInfo.barbeiros.map((barbeiro) => (
-                    <div key={barbeiro.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="font-medium">{barbeiro.nome}</span>
-                      <Badge variant={barbeiro.disponivel ? "default" : "secondary"}>
-                        {barbeiro.disponivel ? "Disponível" : "Indisponível"}
-                      </Badge>
-                    </div>
-                  ))}
+              {barbeariaInfo.barbeiros && barbeariaInfo.barbeiros.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Barbeiros:</h4>
+                  <div className="space-y-2">
+                    {barbeariaInfo.barbeiros.map((barbeiro) => (
+                      <div key={barbeiro.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="font-medium">{barbeiro.nome}</span>
+                        <Badge variant={barbeiro.disponivel ? "default" : "secondary"}>
+                          {barbeiro.disponivel ? "Disponível" : "Indisponível"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Serviços */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Serviços:</h4>
-                <div className="space-y-2">
-                  {barbeariaInfo.servicos.map((servico, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <span className="font-medium">{servico.nome}</span>
-                        <p className="text-sm text-gray-600">{servico.duracao}</p>
+              {barbeariaInfo.servicos && barbeariaInfo.servicos.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Serviços:</h4>
+                  <div className="space-y-2">
+                    {barbeariaInfo.servicos.map((servico, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div>
+                          <span className="font-medium">{servico.nome}</span>
+                          <p className="text-sm text-gray-600">{servico.duracao}</p>
+                        </div>
+                        <span className="font-semibold text-primary">{servico.preco}</span>
                       </div>
-                      <span className="font-semibold text-primary">{servico.preco}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -202,7 +217,9 @@ const QRCodeGenerator = () => {
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <h4 className="font-semibold text-purple-900">Tempo Médio</h4>
                 <p className="text-2xl font-bold text-purple-600">
-                  {barbeariaInfo.configuracoes.tempoMedioPorCliente}min
+                  {barbeariaInfo.configuracoes?.tempo_medio_atendimento || 
+                   barbeariaInfo.configuracoes?.tempoMedioPorCliente || 
+                   30}min
                 </p>
               </div>
             </div>

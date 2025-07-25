@@ -19,7 +19,7 @@ const DashboardCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-gray-700 dark:text-white mb-4">
           {description}
         </p>
         <Button 

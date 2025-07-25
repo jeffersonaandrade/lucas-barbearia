@@ -23,25 +23,28 @@ const VisualizarFila = lazy(() => import('./pages/VisualizarFila.jsx'))
 const AdminPanel = lazy(() => import('./components/AdminPanel.jsx'))
 const QRCodeGenerator = lazy(() => import('./components/QRCodeGenerator.jsx'))
 const BarbeariasList = lazy(() => import('./components/BarbeariasList.jsx'))
-const DebugPanel = lazy(() => import('./components/DebugPanel.jsx'))
-const TestComponent = lazy(() => import('./components/TestComponent.jsx'))
 const NotFound = lazy(() => import('./components/NotFound.jsx'))
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy.jsx'))
 const TermsOfService = lazy(() => import('./components/TermsOfService.jsx'))
 const Avaliacao = lazy(() => import('./components/Avaliacao.jsx'))
 const AvaliacoesList = lazy(() => import('./components/AvaliacoesList.jsx'))
-const DevAvaliacao = lazy(() => import('./components/DevAvaliacao.jsx'))
 
 // Componentes administrativos
 const Login = lazy(() => import('./components/Login.jsx'))
 const RecuperarSenha = lazy(() => import('./components/RecuperarSenha.jsx'))
 const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'))
+
+
 const AdminUsuarios = lazy(() => import('./components/AdminUsuarios.jsx'))
 const AdminBarbearias = lazy(() => import('./components/AdminBarbearias.jsx'))
 const AdminFuncionarios = lazy(() => import('./components/AdminFuncionarios.jsx'))
 const AdminAdicionarFila = lazy(() => import('./components/AdminAdicionarFila.jsx'))
 const AdminFilas = lazy(() => import('./components/AdminFilas.jsx'))
+const AdminRelatorios = lazy(() => import('./components/AdminRelatorios.jsx'))
 const Unauthorized = lazy(() => import('./components/Unauthorized.jsx'))
+const TestUserCreation = lazy(() => import('./components/TestUserCreation.jsx'))
+const ApiTest = lazy(() => import('./components/ApiTest.jsx'))
+const DebugAPI = lazy(() => import('./components/DebugAPI.jsx'))
 
 function AppContent() {
   const location = useLocation();
@@ -165,6 +168,14 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
+          <Route path="/admin/relatorios" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <SuspenseWrapper>
+                <AdminRelatorios />
+              </SuspenseWrapper>
+            </ProtectedRoute>
+          } />
+          
           <Route path="/admin/dashboard" element={
             <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
               <SuspenseWrapper>
@@ -223,18 +234,13 @@ function AppContent() {
             </SuspenseWrapper>
           } />
           
-          {/* Rota para simulação de avaliação (dev) */}
-          <Route path="/dev/avaliacao" element={
+          <Route path="/debug" element={
             <SuspenseWrapper>
-              <DevAvaliacao />
+              <DebugAPI />
             </SuspenseWrapper>
           } />
           
-          <Route path="/debug" element={
-            <SuspenseWrapper>
-              <DebugPanel />
-            </SuspenseWrapper>
-          } />
+
           
           {/* Rota /admin genérica - deve vir por último */}
           <Route path="/admin" element={
@@ -245,9 +251,21 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          <Route path="/test" element={
+          <Route path="/test-user-creation" element={
             <SuspenseWrapper>
-              <TestComponent />
+              <TestUserCreation />
+            </SuspenseWrapper>
+          } />
+          
+          <Route path="/api-test" element={
+            <SuspenseWrapper>
+              <ApiTest />
+            </SuspenseWrapper>
+          } />
+          
+          <Route path="/debug-api" element={
+            <SuspenseWrapper>
+              <DebugAPI />
             </SuspenseWrapper>
           } />
           

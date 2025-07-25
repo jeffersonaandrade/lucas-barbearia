@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { useFila } from '@/hooks/useFila.js';
+import { useFilaBackend } from '@/hooks/useFilaBackend.js';
 import { useQRCodeAccess } from '@/hooks/useQRCodeAccess.js';
 import RestrictedAccess from '@/components/RestrictedAccess.jsx';
 
@@ -15,7 +15,7 @@ const EntrarFila = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
-  const { entrarNaFila, loading, error, estatisticas, barbeiros, barbeariaInfo } = useFila(parseInt(id));
+  const { entrarNaFila, loading, error, estatisticas, barbeiros, barbeariaInfo } = useFilaBackend(parseInt(id));
   
   // Verificar se é uma rota de desenvolvimento
   const isDevRoute = location.pathname.startsWith('/dev/');
@@ -23,7 +23,7 @@ const EntrarFila = () => {
   const [formData, setFormData] = useState({
     nome: '',
     telefone: '',
-    barbeiro: ''
+    barbeiro: 'Fila Geral'
   });
   const [success, setSuccess] = useState(false);
   const [resultado, setResultado] = useState(null);
@@ -180,8 +180,11 @@ const EntrarFila = () => {
                         <SelectValue placeholder="Selecione um barbeiro" />
                       </SelectTrigger>
                       <SelectContent className="bg-secondary border-border">
+                        <SelectItem value="Fila Geral">
+                          🎯 Fila Geral (Qualquer barbeiro)
+                        </SelectItem>
                         {barbeiros.map((barbeiro) => (
-                          <SelectItem key={barbeiro.id} value={barbeiro.nome}>
+                          <SelectItem key={barbeiro.id} value={barbeiro.id}>
                             {barbeiro.nome}
                           </SelectItem>
                         ))}

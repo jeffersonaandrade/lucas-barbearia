@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
-import { useFila } from '@/hooks/useFila.js';
+import { useFilaBackend } from '@/hooks/useFilaBackend.js';
 
 const StatusFila = () => {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ const StatusFila = () => {
     sairDaFila, 
     atualizarPosicao,
     barbeariaInfo
-  } = useFila(parseInt(id));
+  } = useFilaBackend(parseInt(id));
   
   const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -93,6 +93,39 @@ const StatusFila = () => {
       });
     }
   };
+
+  // Tratamento de erro
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+        <Card className="w-full max-w-md bg-card border border-border shadow-lg">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">Erro ao Carregar</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Tentar Novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Estado de loading
+  if (loading && !clienteAtual) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+        <Card className="w-full max-w-md bg-card border border-border shadow-lg">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Carregando...</h2>
+            <p className="text-muted-foreground">Aguarde enquanto carregamos suas informações.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!clienteAtual) {
     return (

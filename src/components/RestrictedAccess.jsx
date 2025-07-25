@@ -55,7 +55,17 @@ const RestrictedAccess = ({ barbeariaId, barbeariaInfo }) => {
                   </div>
                   <Badge variant="outline">
                     {barbeariaInfo.horario ? 
-                      Object.values(barbeariaInfo.horario)[new Date().getDay()] : 
+                      (() => {
+                        const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+                        const diaAtual = diasSemana[new Date().getDay()];
+                        const horarioDia = barbeariaInfo.horario[diaAtual];
+                        
+                        if (horarioDia && horarioDia.aberto) {
+                          return `${horarioDia.inicio} - ${horarioDia.fim}`;
+                        } else {
+                          return 'Fechado hoje';
+                        }
+                      })() : 
                       'Horário não disponível'
                     }
                   </Badge>

@@ -1,15 +1,13 @@
-import { ArrowRight, Play, Scissors, Heart, Users, Star, Clock, Users2, CheckCircle, MapPin, UserCheck } from 'lucide-react';
+import { ArrowRight, Play, Scissors, Heart, Users, Star, Clock, Users2, CheckCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { siteConfig } from '@/config/site.js';
 import { useWhatsApp } from '@/hooks/use-whatsapp.js';
 import { useIntersectionObserver } from '@/hooks/use-intersection-observer.js';
-import { useClienteToken } from '@/hooks/useClienteToken.js';
 import { Link } from 'react-router-dom';
 
 const Hero = () => {
   const { handleContactAction } = useWhatsApp();
   const { elementRef, hasIntersected } = useIntersectionObserver();
-  const { hasToken, getStatusFilaUrl } = useClienteToken();
 
   return (
                     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 sm:pt-24 lg:pt-28">
@@ -69,30 +67,19 @@ const Hero = () => {
                 </Button>
               </Link>
               
-              {hasToken ? (
-                <Link to={getStatusFilaUrl()}>
-                  <Button 
-                    size="lg"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 px-8 py-3 text-lg font-semibold"
-                  >
-                    <UserCheck className="w-5 h-5 mr-2" />
-                    MINHA FILA
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              ) : (
-                <Link to="/barbearia/1/visualizar-fila">
-                  <Button 
-                    variant="outline"
-                    size="lg"
-                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-lg font-semibold"
-                  >
-                    <Clock className="w-5 h-5 mr-2" />
-                    VISUALIZAR FILA
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              )}
+
+              
+              <Link to="/barbearia/1/visualizar-fila">
+              <Button 
+                variant="outline"
+                size="lg"
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-lg font-semibold"
+              >
+                  <Clock className="w-5 h-5 mr-2" />
+                  VISUALIZAR FILA
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              </Link>
             </div>
 
             {/* Como Funciona */}
