@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   Instagram,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 
 const BarbeariasList = () => {
@@ -137,10 +138,12 @@ const BarbeariasList = () => {
 
                 {/* Ações */}
                 <div className="space-y-2 pt-4">
-                  <div className="text-center p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <QrCode className="w-4 h-4 mx-auto mb-1 text-amber-600" />
-                    <p className="text-xs text-amber-800 font-medium">QR Code na unidade</p>
-                  </div>
+                  <Link to={`/barbearia/${barbearia.id}/agendar`}>
+                    <Button className="w-full bg-primary hover:bg-primary/90">
+                      <CalendarIcon className="w-4 h-4 mr-2" />
+                      Agendar Horário
+                    </Button>
+                  </Link>
                   
                   <Link to={`/barbearia/${barbearia.id}/visualizar-fila`}>
                     <Button variant="outline" className="w-full">

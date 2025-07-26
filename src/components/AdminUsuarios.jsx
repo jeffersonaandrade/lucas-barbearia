@@ -67,8 +67,8 @@ const AdminUsuarios = () => {
       // Carregar usuários
       console.log('Carregando usuários...');
       const usuariosData = await usuariosService.listarUsuarios();
-      const usuariosArray = (usuariosData && usuariosData.data && Array.isArray(usuariosData.data)) 
-        ? usuariosData.data 
+      const usuariosArray = (usuariosData && usuariosData.data && usuariosData.data.users && Array.isArray(usuariosData.data.users)) 
+        ? usuariosData.data.users 
         : [];
       setUsuarios(usuariosArray);
       console.log('Usuários carregados:', usuariosArray);

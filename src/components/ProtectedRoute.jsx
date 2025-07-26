@@ -1,9 +1,9 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, loading, isAuthenticated, hasAnyRole, apiStatus } = useAuthBackend();
+  const { user, loading, isAuthenticated, hasAnyRole, apiStatus } = useAuth();
   const location = useLocation();
 
   console.log('ProtectedRoute - Debug:', {

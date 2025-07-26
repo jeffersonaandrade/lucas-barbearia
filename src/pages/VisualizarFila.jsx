@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, RefreshCw, Users2, Eye, MapPin, QrCode, UserCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Users, Clock, RefreshCw, Users2, Eye, MapPin, UserCheck, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -9,6 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { useFilaBackend } from '@/hooks/useFilaBackend.js';
 import { useClienteToken } from '@/hooks/useClienteToken.js';
 import { barbeariasService } from '@/services/api.js';
+import { FilaList } from '@/components/ui/fila-list.jsx';
+import { FilaStats } from '@/components/ui/fila-stats.jsx';
+import { useFilaStats } from '@/hooks/useFilaStats.js';
 
 const VisualizarFila = () => {
   const navigate = useNavigate();
@@ -17,7 +20,10 @@ const VisualizarFila = () => {
   const [barbearias, setBarbearias] = useState([]);
   const [pageError, setPageError] = useState(null);
   
-  const { fila, loading, error: filaError, estatisticas, obterFilaAtual, barbeariaInfo, clienteAtual, barbeiros } = useFilaBackend(selectedBarbeariaId);
+  const { fila, loading, error: filaError, estatisticas: estatisticasAPI, obterFilaAtual, barbeariaInfo, clienteAtual, barbeiros } = useFilaBackend(selectedBarbeariaId);
+  
+  // Usar hook customizado para estatísticas
+  const estatisticas = useFilaStats(fila, estatisticasAPI);
   const { hasToken, getStatusFilaUrl } = useClienteToken();
   
   // Debug logs
@@ -25,11 +31,12 @@ const VisualizarFila = () => {
     console.log('🔍 DEBUG VisualizarFila:');
     console.log('📍 selectedBarbeariaId:', selectedBarbeariaId);
     console.log('👥 fila:', fila);
+    console.log('👨‍💼 barbeiros:', barbeiros);
     console.log('📊 estatisticas:', estatisticas);
     console.log('🏪 barbeariaInfo:', barbeariaInfo);
     console.log('⏳ loading:', loading);
     console.log('❌ error:', filaError);
-  }, [selectedBarbeariaId, fila, estatisticas, barbeariaInfo, loading, filaError]);
+  }, [selectedBarbeariaId, fila, barbeiros, estatisticas, barbeariaInfo, loading, filaError]);
   
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showRedirectAlert, setShowRedirectAlert] = useState(false);
@@ -141,7 +148,7 @@ const VisualizarFila = () => {
   };
 
   const handleInformacoesUnidade = () => {
-    navigate(`/qr-code/${selectedBarbeariaId}`);
+    navigate(`/barbearia/${selectedBarbeariaId}/entrar-fila`);
   };
 
   const handleIrParaMinhaFila = () => {
@@ -296,15 +303,7 @@ const VisualizarFila = () => {
               </Select>
             </div>
 
-            {/* Informação sobre QR Code */}
-            <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center justify-center space-x-2">
-                <QrCode className="w-5 h-5 text-amber-600" />
-                <p className="text-sm text-amber-800 font-medium">
-                  Para entrar na fila, escaneie o QR Code na barbearia
-                </p>
-              </div>
-            </div>
+
 
             {/* Botão para clientes com token */}
             {hasToken && (
@@ -336,43 +335,18 @@ const VisualizarFila = () => {
           </div>
 
           {/* Estatísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <Card className="bg-card border border-border shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Users className="w-8 h-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold text-foreground mb-1">{estatisticas ? (estatisticas.total || estatisticas.total_na_fila || 0) : 0}</div>
-                <div className="text-sm text-muted-foreground">Total na Fila</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border border-border shadow-lg">
-              <CardContent className="p-6 text-center">
-                <div className="w-8 h-8 bg-green-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                  <Users2 className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-3xl font-bold text-foreground mb-1">{estatisticas ? (estatisticas.atendendo || estatisticas.atendendo_agora || 0) : 0}</div>
-                <div className="text-sm text-muted-foreground">Atendendo</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border border-border shadow-lg">
-              <CardContent className="p-6 text-center">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-                  <Users2 className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-3xl font-bold text-foreground mb-1">{estatisticas ? (estatisticas.proximo || estatisticas.proximo_atendimento || 0) : 0}</div>
-                <div className="text-sm text-muted-foreground">Próximo</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border border-border shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Clock className="w-8 h-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold text-foreground mb-1">{estatisticas ? (estatisticas.tempoMedio || estatisticas.tempo_medio_espera || 0) : 0}</div>
-                <div className="text-sm text-muted-foreground">Min. Médio</div>
-              </CardContent>
-            </Card>
-          </div>
+          <FilaStats
+            estatisticas={estatisticas}
+            title=""
+            showTotal={true}
+            showAguardando={true}
+            showAtendendo={false}
+            showProximo={false}
+            showTempoMedio={true}
+            showBarbeirosDisponiveis={true}
+            variant="default"
+            className="mb-12"
+          />
 
           {/* Barbeiros Disponíveis */}
           <Card className="bg-card border border-border shadow-lg mb-8">
@@ -389,136 +363,91 @@ const VisualizarFila = () => {
                     <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <h4 className="font-semibold text-amber-800 mb-2">Horário de Funcionamento:</h4>
                       <div className="text-sm text-amber-700 space-y-1">
-                        {Object.entries(barbeariaInfo.horario).map(([dia, horario]) => (
-                          <div key={dia} className="flex justify-between">
-                            <span className="capitalize">{dia}:</span>
-                            <span>
-                              {horario.aberto ? 
-                                `${horario.inicio} - ${horario.fim}` : 
-                                'Fechado'
-                              }
-                            </span>
-                          </div>
-                        ))}
+                        {Object.entries(barbeariaInfo.horario)
+                          .sort(([a], [b]) => {
+                            const ordem = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+                            return ordem.indexOf(a) - ordem.indexOf(b);
+                          })
+                          .map(([dia, horario]) => (
+                            <div key={dia} className="flex justify-between">
+                              <span className="capitalize">{dia}:</span>
+                              <span>
+                                {horario.aberto ? 
+                                  `${horario.inicio} - ${horario.fim}` : 
+                                  'Fechado'
+                                }
+                              </span>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
                   
-                  <p className="text-sm text-muted-foreground mt-3">
-                    Volte mais tarde ou entre em contato com a barbearia.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {barbeiros.map((barbeiro) => (
-                    <div key={barbeiro.id} className="flex items-center space-x-4 p-4 bg-secondary rounded-lg">
-                      <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        {barbeiro.nome.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">{barbeiro.nome}</p>
-                        <p className="text-sm text-muted-foreground">{barbeiro.especialidade}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {barbeiro.horario_inicio} - {barbeiro.horario_fim}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Próximo na Fila */}
-          {fila && fila.filter(p => p.status === 'próximo').length > 0 && (
-            <Card className="bg-card border border-border shadow-lg mb-8">
-              <CardHeader>
-                <CardTitle className="text-foreground">Próximo na Fila</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {fila
-                    .filter(pessoa => pessoa.status === 'próximo')
-                    .map((pessoa) => (
-                      <div key={pessoa.id} className="flex items-center space-x-4 p-4 bg-secondary rounded-lg">
-                        <div className="w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                          {pessoa.posicao}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">{pessoa.nome}</p>
-                          <p className="text-sm text-muted-foreground">{pessoa.barbeiro}</p>
-                          <p className="text-xs text-muted-foreground">{pessoa.tempoEstimado} min</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Lista Completa da Fila */}
-          <Card className="bg-card border border-border shadow-lg mb-8">
-            <CardHeader>
-              <CardTitle className="text-foreground">Fila Completa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!fila || fila.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Fila Vazia</h3>
-                  <p className="text-muted-foreground">Não há ninguém na fila no momento.</p>
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Dica:</strong> Para entrar na fila, escaneie o QR Code na barbearia ou use o botão abaixo.
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 mb-3">
+                      <strong>Barbearia Fechada:</strong> Não há barbeiros disponíveis no momento.
                     </p>
-                    <Button
-                      onClick={handleEntrarNaFila}
-                      className="mt-2 bg-primary text-primary-foreground hover:bg-accent"
-                    >
-                      Entrar na Fila
-                    </Button>
+                    <p className="text-xs text-red-700">
+                      Volte mais tarde quando houver barbeiros ativos.
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {fila.map((pessoa) => (
-                    <div
-                      key={pessoa.id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-                          pessoa.status === 'atendendo' ? 'bg-green-500' :
-                          pessoa.status === 'próximo' ? 'bg-yellow-500' :
-                          'bg-gray-500'
-                        }`}>
-                          {pessoa.posicao}
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {barbeiros.map((barbeiro) => (
+                      <div key={barbeiro.id} className="flex items-center space-x-4 p-4 bg-secondary rounded-lg">
+                        <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          {barbeiro.nome.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground">{pessoa.nome}</p>
-                          <p className="text-sm text-muted-foreground">{pessoa.barbeiro || pessoa.barbeiro_nome || 'Fila Geral'}</p>
+                          <p className="font-semibold text-foreground">{barbeiro.nome}</p>
+                          <p className="text-sm text-muted-foreground">{barbeiro.especialidade}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {barbeiro.horario_inicio} - {barbeiro.horario_fim}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge className={`${getStatusColor(pessoa.status)} text-white`}>
-                          {getStatusText(pessoa.status)}
-                        </Badge>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-foreground">{pessoa.tempoEstimado || pessoa.tempo_estimado || 0} min</p>
-                          <p className="text-xs text-muted-foreground">estimado</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  
+                                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <p className="text-sm text-green-800 mb-3">
+                    <strong>Seja bem vindo!</strong> Clique aqui para entrar na fila
+                  </p>
+                  <Button
+                    onClick={handleEntrarNaFila}
+                    className="bg-primary text-primary-foreground hover:bg-accent"
+                  >
+                    Entrar na Fila
+                  </Button>
                 </div>
+                </>
               )}
             </CardContent>
           </Card>
+
+
+
+          {/* Lista de Clientes Aguardando */}
+          <FilaList
+            fila={fila || []}
+            title="Clientes Aguardando"
+            filterStatus="aguardando"
+            showBarbeiro={true}
+            showPosition={true}
+            showTime={true}
+            showStatus={true}
+            showActions={false}
+            emptyMessage="Não há clientes aguardando no momento."
+            loading={loading}
+            className="mb-8"
+          />
 
           {/* Informação de Atualização */}
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              A fila é atualizada automaticamente a cada 10 segundos
+              A lista de clientes aguardando é atualizada automaticamente a cada 10 segundos
             </p>
           </div>
         </div>

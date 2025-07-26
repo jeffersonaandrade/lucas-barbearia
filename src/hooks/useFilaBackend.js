@@ -13,6 +13,8 @@ export const useFilaBackend = (barbeariaId = null) => {
 
   // Carregar dados iniciais
   useEffect(() => {
+    console.log('🔄 useEffect useFilaBackend chamado com barbeariaId:', barbeariaId);
+    
     // Se não há barbeariaId, não carregar dados
     if (!barbeariaId) {
       console.log('⚠️ Nenhum barbeariaId fornecido, aguardando...');
@@ -20,6 +22,7 @@ export const useFilaBackend = (barbeariaId = null) => {
     }
 
     const carregarDados = async () => {
+      console.log('🚀 Iniciando carregamento de dados para barbearia:', barbeariaId);
       try {
         setLoading(true);
         setError(null);
@@ -57,43 +60,50 @@ export const useFilaBackend = (barbeariaId = null) => {
         // Tentar carregar barbeiros (pode falhar se não autenticado)
         try {
           console.log('🔄 Carregando barbeiros para barbearia:', barbeariaId);
+          console.log('🔍 Barbearia ID:', barbeariaId, 'Tipo:', typeof barbeariaId);
           
           // Primeiro tentar o método público (para clientes)
           try {
             const barbeirosResponse = await barbeariasService.listarBarbeirosPublicos(barbeariaId);
             console.log('📦 Response dos barbeiros (público):', barbeirosResponse);
             
-            const barbeirosData = barbeirosResponse.data || barbeirosResponse;
-            console.log('👨‍💼 Dados dos barbeiros:', barbeirosData);
+            // Corrigido: extrair barbeiros da estrutura correta
+            let barbeirosArray = [];
             
-            const barbeirosArray = barbeirosData.barbeiros || barbeirosData;
-            console.log('👥 Array de barbeiros:', barbeirosArray);
+            if (barbeirosResponse.data && barbeirosResponse.data.barbeiros) {
+              // Estrutura: { data: { barbeiros: [...] } }
+              barbeirosArray = barbeirosResponse.data.barbeiros;
+            } else if (barbeirosResponse.barbeiros) {
+              // Estrutura: { barbeiros: [...] }
+              barbeirosArray = barbeirosResponse.barbeiros;
+            } else if (Array.isArray(barbeirosResponse)) {
+              // Estrutura: [...] (array direto)
+              barbeirosArray = barbeirosResponse;
+            } else if (Array.isArray(barbeirosResponse.data)) {
+              // Estrutura: { data: [...] }
+              barbeirosArray = barbeirosResponse.data;
+            }
             
-            setBarbeiros(barbeirosArray);
-          } catch (publicErr) {
-            console.log('⚠️ Método público falhou, tentando método autenticado...');
+            console.log('🪓 barbeirosData:', barbeirosResponse);
+            console.log('👥 Array de barbeiros extraído:', barbeirosArray);
             
-            // Se o método público falhar, tentar o método autenticado
-            const barbeirosResponse = await barbeariasService.listarBarbeiros({ 
-              barbearia_id: barbeariaId,
-              ativo: true,
-              disponivel: true
-            });
-            console.log('📦 Response dos barbeiros (autenticado):', barbeirosResponse);
-            
-            const barbeirosData = barbeirosResponse.data || barbeirosResponse;
-            console.log('👨‍💼 Dados dos barbeiros:', barbeirosData);
-            
-            const barbeirosArray = barbeirosData.barbeiros || barbeirosData;
-            console.log('👥 Array de barbeiros:', barbeirosArray);
-            
-            setBarbeiros(barbeirosArray);
-          }
-          
-          // Se os dados incluem informações da barbearia, atualizar também
-          if (barbeirosData.barbearia && !barbeariaInfo) {
-            console.log('🏪 Atualizando informações da barbearia:', barbeirosData.barbearia);
-            setBarbeariaInfo(barbeirosData.barbearia);
+            if (Array.isArray(barbeirosArray)) {
+              setBarbeiros(barbeirosArray);
+              console.log('✅ Barbeiros carregados:', barbeirosArray.length);
+              
+              // Se os dados incluem informações da barbearia, atualizar também
+              if (barbeirosResponse.data && barbeirosResponse.data.barbearia && !barbeariaInfo) {
+                console.log('🏪 Atualizando informações da barbearia:', barbeirosResponse.data.barbearia);
+                setBarbeariaInfo(barbeirosResponse.data.barbearia);
+              }
+            } else {
+              setBarbeiros([]);
+              console.log('⚠️ Nenhum barbeiro encontrado na resposta.');
+            }
+          } catch (err) {
+            console.log('⚠️ Não foi possível carregar barbeiros:', publicErr.message);
+            console.error('❌ Erro completo:', publicErr);
+            setBarbeiros([]);
           }
         } catch (err) {
           console.log('⚠️ Não foi possível carregar barbeiros (pode requerer autenticação):', err.message);
@@ -135,14 +145,20 @@ export const useFilaBackend = (barbeariaId = null) => {
           console.log('🏪 Barbearia ID:', barbeariaId);
           
                       try {
-              const cliente = await filaService.obterStatusCliente(token);
+              const cliente = await filaService.obterStatusCliente(token, barbeariaId);
               console.log('📦 Response do status do cliente:', cliente);
               
               if (cliente) {
                 // Verificar se a resposta tem a estrutura esperada
                 const clienteData = cliente.data || cliente;
                 console.log('✅ Cliente encontrado no servidor:', clienteData);
-                setClienteAtual(clienteData);
+                
+                // Garantir que o token esteja no objeto cliente
+                const clienteComToken = {
+                  ...clienteData,
+                  token: token
+                };
+                setClienteAtual(clienteComToken);
               } else {
                 console.log('⚠️ Cliente não encontrado no servidor, limpando localStorage...');
                 limparLocalStorage();
@@ -200,57 +216,120 @@ export const useFilaBackend = (barbeariaId = null) => {
   const carregarFilaAtual = async () => {
     try {
       console.log('🔄 Carregando fila atual para barbearia:', barbeariaId);
-      const response = await filaService.obterFilaPublica(barbeariaId);
+      const response = await filaService.obterFilaCompleta(barbeariaId);
       console.log('📦 Response da fila:', response);
       
       const filaData = response.data || response;
       console.log('📋 Dados da fila:', filaData);
       
-      const filaArray = filaData.fila || [];
-      const estatisticasObj = filaData.estatisticas || {};
+      const filaArray = filaData.clientes || [];
       
-      console.log('👥 Fila array:', filaArray);
-      console.log('📊 Estatísticas:', estatisticasObj);
-      
-      // Log detalhado da estrutura da fila
-      if (filaArray.length > 0) {
-        console.log('🔍 Primeiro item da fila:', filaArray[0]);
-        console.log('🔍 Estrutura do primeiro item:', Object.keys(filaArray[0]));
+      // Buscar estatísticas do endpoint específico
+      try {
+        const estatisticasResponse = await filaService.getEstatisticas(barbeariaId);
+        const estatisticasData = estatisticasResponse.data || estatisticasResponse;
+        
+        console.log('📊 Estatísticas do endpoint:', estatisticasData);
+        
+        // Mapear os dados do novo formato
+        const estatisticasMapeadas = {
+          total: estatisticasData.fila?.total || 0,
+          aguardando: estatisticasData.fila?.aguardando || 0,
+          atendendo: estatisticasData.fila?.atendendo || 0,
+          proximo: estatisticasData.fila?.proximo || 0,
+          finalizado: estatisticasData.fila?.finalizado || 0,
+          removido: estatisticasData.fila?.removido || 0,
+          barbeirosTotal: estatisticasData.barbeiros?.total || 0,
+          barbeirosAtendendo: estatisticasData.barbeiros?.atendendo || 0,
+          barbeirosDisponiveis: estatisticasData.barbeiros?.disponiveis || 0,
+          tempoMedioEspera: estatisticasData.tempos?.medioEspera || 0,
+          tempoMedioAtendimento: estatisticasData.tempos?.medioAtendimento || 0,
+          tempoEstimadoProximo: estatisticasData.tempos?.estimadoProximo || 0,
+          totalAtendidos24h: estatisticasData.ultimas24h?.totalAtendidos || 0,
+          tempoMedioEspera24h: estatisticasData.ultimas24h?.tempoMedioEspera || 0,
+          clientesPorHora: estatisticasData.ultimas24h?.clientesPorHora || 0
+        };
+        
+        setEstatisticas(estatisticasMapeadas);
+      } catch (err) {
+        console.error('❌ Erro ao buscar estatísticas:', err);
+        // Fallback para estatísticas básicas
+        const estatisticasBasicas = {
+          total: filaArray.length,
+          aguardando: filaArray.filter(c => c.status === 'aguardando').length,
+          atendendo: filaArray.filter(c => c.status === 'em_atendimento' || c.status === 'atendendo').length,
+          proximo: filaArray.filter(c => c.status === 'próximo' || c.status === 'proximo').length,
+          tempoMedioEspera: 15
+        };
+        setEstatisticas(estatisticasBasicas);
       }
       
-      // Log detalhado da estrutura das estatísticas
-      console.log('🔍 Estrutura das estatísticas:', Object.keys(estatisticasObj));
-      console.log('🔍 Conteúdo das estatísticas:', estatisticasObj);
-      
-      // Log detalhado da estrutura da fila
-      console.log('🔍 Estrutura da fila:', Object.keys(filaArray));
-      console.log('🔍 Conteúdo da fila:', filaArray);
-      
-      // Log da estrutura completa da resposta
-      console.log('🔍 Estrutura completa da resposta:', {
-        hasFila: !!filaData.fila,
-        hasEstatisticas: !!filaData.estatisticas,
-        filaLength: filaArray.length,
-        estatisticasKeys: Object.keys(estatisticasObj)
-      });
+      console.log('👥 Fila array:', filaArray);
       
       setFila(filaArray);
-      setEstatisticas(estatisticasObj);
     } catch (err) {
       console.error('❌ Erro ao carregar fila atual:', err);
       // Não definir dados mockados - deixar como está
     }
   };
 
-  // Gerar token único
-  const gerarToken = useCallback(() => {
-    return 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  }, []);
+
 
   // Entrar na fila
   const entrarNaFila = useCallback(async (dados) => {
+    console.log('🚀 entrarNaFila chamada com dados:', dados);
+    console.log('🏪 barbeariaId no hook:', barbeariaId);
+    
     setLoading(true);
     setError(null);
+
+    // Debug: verificar estado atual dos barbeiros
+    console.log('🔍 Estado atual dos barbeiros no hook:', barbeiros);
+    console.log('🔍 Tipo de barbeiros:', typeof barbeiros);
+    console.log('🔍 É array?', Array.isArray(barbeiros));
+    console.log('🔍 Quantidade:', barbeiros?.length);
+    
+    // Se não há barbeiros no estado, tentar carregar novamente
+    if (!barbeiros || barbeiros.length === 0) {
+      console.log('⚠️ Barbeiros não carregados, tentando carregar novamente...');
+      
+      try {
+        const barbeirosResponse = await barbeariasService.listarBarbeirosPublicos(barbeariaId);
+        console.log('📦 Nova resposta dos barbeiros:', barbeirosResponse);
+        
+        // Extrair barbeiros da resposta
+        let barbeirosArray = [];
+        if (barbeirosResponse.data && barbeirosResponse.data.barbeiros) {
+          barbeirosArray = barbeirosResponse.data.barbeiros;
+        } else if (barbeirosResponse.barbeiros) {
+          barbeirosArray = barbeirosResponse.barbeiros;
+        } else if (Array.isArray(barbeirosResponse)) {
+          barbeirosArray = barbeirosResponse;
+        } else if (Array.isArray(barbeirosResponse.data)) {
+          barbeirosArray = barbeirosResponse.data;
+        }
+        
+        console.log('👥 Barbeiros extraídos:', barbeirosArray);
+        
+        if (!barbeirosArray || barbeirosArray.length === 0) {
+          console.log('❌ Nenhum barbeiro disponível após recarregamento');
+          setError('Não é possível entrar na fila. A barbearia está fechada no momento.');
+          setLoading(false);
+          return;
+        }
+        
+        // Usar os barbeiros recarregados
+        console.log(`✅ Usando ${barbeirosArray.length} barbeiros recarregados`);
+        
+      } catch (err) {
+        console.error('❌ Erro ao recarregar barbeiros:', err);
+        setError('Erro ao verificar disponibilidade de barbeiros.');
+        setLoading(false);
+        return;
+      }
+    } else {
+      console.log(`✅ Barbeiros já carregados: ${barbeiros.length}`);
+    }
 
     try {
       const dadosCliente = {
@@ -268,7 +347,18 @@ export const useFilaBackend = (barbeariaId = null) => {
       console.log('🆔 Barbeiro ID:', dadosCliente.barbeiro_id);
       console.log('🏪 Barbearia ID:', barbeariaId);
 
-      const response = await filaService.entrarNaFila(barbeariaId, dadosCliente);
+      // Adicionar barbearia_id aos dados
+      const dadosCompletos = {
+        ...dadosCliente,
+        barbearia_id: barbeariaId
+      };
+
+      console.log('📦 Dados completos sendo enviados:', dadosCompletos);
+      console.log('🔍 Verificando se barbearia_id está presente:', dadosCompletos.barbearia_id);
+
+      console.log('📤 Dados completos sendo enviados:', dadosCompletos);
+
+      const response = await filaService.entrarNaFila(dadosCompletos);
       
       console.log('📦 Response do servidor:', response);
       console.log('🔍 Estrutura da resposta:', {
@@ -281,12 +371,12 @@ export const useFilaBackend = (barbeariaId = null) => {
 
       // Verificar se a resposta tem a estrutura esperada
       const cliente = response.cliente || response.data?.cliente || response;
-      let token = response.token || response.data?.token || response.id;
+      const token = response.token || response.data?.token || response.data?.cliente?.token || response.id;
       
-      // Se não há token na resposta, gerar um token único
+      // Verificar se há token na resposta do backend
       if (!token) {
-        console.log('⚠️ Nenhum token encontrado na resposta, gerando token único...');
-        token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        console.error('❌ Nenhum token encontrado na resposta do backend');
+        throw new Error('Token não foi gerado pelo servidor. Tente novamente.');
       }
       
       console.log('🔍 Dados extraídos:', {
@@ -294,6 +384,23 @@ export const useFilaBackend = (barbeariaId = null) => {
         token: token,
         clienteKeys: cliente ? Object.keys(cliente) : 'undefined'
       });
+
+      // Verificar se a resposta é válida
+      if (!response) {
+        console.error('❌ Resposta vazia do servidor');
+        throw new Error('Resposta vazia do servidor');
+      }
+
+      // Verificar se há erro na resposta
+      if (response.error) {
+        console.error('❌ Erro na resposta:', response.error);
+        throw new Error(response.error || 'Erro desconhecido');
+      }
+      
+      // Se há mensagem de sucesso, logar mas não tratar como erro
+      if (response.message) {
+        console.log('✅ Mensagem do servidor:', response.message);
+      }
 
       // Atualizar estado local
       await carregarFilaAtual();
@@ -315,20 +422,33 @@ export const useFilaBackend = (barbeariaId = null) => {
       console.log('  - cliente_data:', localStorage.getItem('cliente_data'));
       console.log('  - fila_barbearia_id:', localStorage.getItem('fila_barbearia_id'));
       
-      setClienteAtual(cliente);
+      // Garantir que o token esteja no objeto cliente
+      const clienteComToken = {
+        ...cliente,
+        token: token
+      };
+      setClienteAtual(clienteComToken);
 
-      return { 
+      const resultado = { 
         token: token, 
         posicao: cliente?.posicao || cliente?.position || 1, 
         tempoEstimado: cliente?.tempo_estimado || cliente?.estimated_time || 15 
       };
+
+      console.log('🎯 Resultado retornado:', resultado);
+      console.log('🔍 Verificando se resultado é válido:', {
+        hasToken: !!resultado?.token,
+        hasPosicao: !!resultado?.posicao,
+        hasTempoEstimado: !!resultado?.tempoEstimado
+      });
+      return resultado;
     } catch (err) {
       setError('Erro ao entrar na fila. Verifique sua conexão e tente novamente.');
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [gerarToken, barbeariaId]);
+  }, [barbeariaId]);
 
   // Sair da fila
   const sairDaFila = useCallback(async (token) => {
@@ -361,7 +481,7 @@ export const useFilaBackend = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const cliente = await filaService.obterStatusCliente(token);
+      const cliente = await filaService.obterStatusCliente(token, barbeariaId);
 
       if (!cliente) {
         throw new Error('Cliente não encontrado na fila');
@@ -398,7 +518,7 @@ export const useFilaBackend = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const cliente = await filaService.obterStatusCliente(token);
+      const cliente = await filaService.obterStatusCliente(token, barbeariaId);
 
       if (!cliente) {
         throw new Error('Cliente não encontrado na fila');
@@ -433,7 +553,7 @@ export const useFilaBackend = (barbeariaId = null) => {
 
   const finalizarAtendimento = useCallback(async (clienteId) => {
     try {
-      await filaService.finalizarAtendimento(barbeariaId, clienteId);
+      await filaService.finalizarAtendimento(clienteId);
       await carregarFilaAtual();
     } catch (err) {
       setError('Erro ao finalizar atendimento.');
@@ -453,7 +573,7 @@ export const useFilaBackend = (barbeariaId = null) => {
 
   const removerCliente = useCallback(async (clienteId) => {
     try {
-      await filaService.removerCliente(barbeariaId, clienteId);
+      await filaService.removerCliente(clienteId);
       await carregarFilaAtual();
     } catch (err) {
       setError('Erro ao remover cliente.');
@@ -490,7 +610,6 @@ export const useFilaBackend = (barbeariaId = null) => {
     obterStatusFila,
     obterFilaAtual,
     atualizarPosicao,
-    gerarToken,
     
     // Funções para admin/barbeiro
     chamarProximo,

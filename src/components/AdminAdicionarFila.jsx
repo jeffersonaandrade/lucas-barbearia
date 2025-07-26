@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
-import { filaService, barbeariasService, usuariosService } from '@/services/api.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
+import { filaService, barbeariasService } from '@/services/api.js';
 import { 
   UserPlus, 
   ArrowLeft, 
@@ -17,12 +17,11 @@ import {
   Building2, 
   Clock,
   CheckCircle,
-  AlertCircle,
-  Copy
+  AlertCircle
 } from 'lucide-react';
 
 const AdminAdicionarFila = () => {
-  const { user, logout } = useAuthBackend();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,64 +35,98 @@ const AdminAdicionarFila = () => {
     barbeiroId: 'geral'
   });
 
-  const [barbearias, setBarbearias] = useState([]);
-  const [barbeariasComBarbeiros, setBarbeariasComBarbeiros] = useState([]);
+  const [barbeariasDisponiveis, setBarbeariasDisponiveis] = useState([]);
   const [barbeirosDisponiveis, setBarbeirosDisponiveis] = useState([]);
   const [loadingBarbearias, setLoadingBarbearias] = useState(true);
-  const [loadingBarbeiros, setLoadingBarbeiros] = useState(false);
 
   useEffect(() => {
     console.log('AdminAdicionarFila - Componente carregado');
     console.log('AdminAdicionarFila - User:', user);
-    carregarDados();
+    carregarBarbeariasDisponiveis();
   }, [user]);
 
-  const carregarDados = async () => {
+  // Carregar barbeiros quando barbearia for selecionada
+  useEffect(() => {
+    if (formData.barbeariaId && barbeariasDisponiveis.length > 0) {
+      console.log('🔄 useEffect: Carregando barbeiros para barbearia selecionada:', formData.barbeariaId);
+      carregarBarbeirosDisponiveis(formData.barbeariaId);
+    }
+  }, [formData.barbeariaId, barbeariasDisponiveis]);
+
+  const carregarBarbeariasDisponiveis = async () => {
     try {
       setLoadingBarbearias(true);
+      setError('');
       
-      // Carregar barbearias
-      const barbeariasResponse = await barbeariasService.listarBarbearias();
-      if (barbeariasResponse.success && barbeariasResponse.data) {
-        setBarbearias(barbeariasResponse.data);
+      console.log('🔄 Carregando barbearias disponíveis...');
+      
+      // Primeiro, carregar todas as barbearias
+      const response = await barbeariasService.listarBarbearias();
+      
+      console.log('📊 Resposta do endpoint /barbearias:', response);
+      
+      if (response.success && response.data) {
+        console.log('📋 Dados das barbearias:', response.data);
         
-        // Filtrar barbearias que têm barbeiros ativos
+        // Verificar barbeiros ativos para cada barbearia
         const barbeariasComBarbeirosAtivos = [];
         
-        for (const barbearia of barbeariasResponse.data) {
+        for (const barbearia of response.data) {
           try {
-            console.log(`🔍 Verificando barbeiros ativos na barbearia ${barbearia.nome} (ID: ${barbearia.id})...`);
-            const barbeirosResponse = await usuariosService.listarBarbeirosAtivos(barbearia.id);
+            console.log(`🔍 Verificando barbeiros ativos para ${barbearia.nome} (ID: ${barbearia.id})`);
             
-            if (barbeirosResponse.success && barbeirosResponse.data && barbeirosResponse.data.length > 0) {
-              console.log(`✅ Barbearia ${barbearia.nome} tem ${barbeirosResponse.data.length} barbeiro(s) ativo(s)`);
-              barbeariasComBarbeirosAtivos.push(barbearia);
+            // Buscar barbeiros ativos desta barbearia
+            const barbeirosResponse = await barbeariasService.listarBarbeirosAtivos(barbearia.id);
+            
+            if (barbeirosResponse.success && barbeirosResponse.data && barbeirosResponse.data.barbeiros) {
+              const barbeirosAtivos = barbeirosResponse.data.barbeiros;
+              console.log(`✅ ${barbearia.nome}: ${barbeirosAtivos.length} barbeiro(s) ativo(s)`);
+              
+              if (barbeirosAtivos.length > 0) {
+                // Adicionar barbearia com barbeiros ativos
+                barbeariasComBarbeirosAtivos.push({
+                  ...barbearia,
+                  barbeiros_ativos: barbeirosAtivos.length,
+                  barbeiros: barbeirosAtivos
+                });
+              } else {
+                console.log(`⚠️ ${barbearia.nome}: Nenhum barbeiro ativo`);
+              }
             } else {
-              console.log(`❌ Barbearia ${barbearia.nome} não tem barbeiros ativos`);
+              console.log(`⚠️ ${barbearia.nome}: Erro ao buscar barbeiros ativos`);
             }
           } catch (error) {
-            console.warn(`⚠️ Erro ao verificar barbeiros da barbearia ${barbearia.nome}:`, error);
-            // Se não conseguir verificar, não incluir na lista
+            console.error(`❌ Erro ao verificar barbeiros de ${barbearia.nome}:`, error);
           }
         }
         
-        console.log(`📊 Barbearias com barbeiros ativos: ${barbeariasComBarbeirosAtivos.length} de ${barbeariasResponse.data.length}`);
-        setBarbeariasComBarbeiros(barbeariasComBarbeirosAtivos);
+        console.log('📋 Barbearias com barbeiros ativos:', barbeariasComBarbeirosAtivos);
         
-        // Definir primeira barbearia com barbeiros como padrão
-        if (barbeariasComBarbeirosAtivos.length > 0 && !formData.barbeariaId) {
-          const primeiraBarbearia = barbeariasComBarbeirosAtivos[0].id.toString();
-          setFormData(prev => ({ ...prev, barbeariaId: primeiraBarbearia }));
-          // Carregar barbeiros da primeira barbearia
-          await carregarBarbeirosDisponiveis(primeiraBarbearia);
-        } else if (barbeariasComBarbeirosAtivos.length === 0) {
-          setError('Nenhuma barbearia com barbeiros ativos encontrada');
+        if (barbeariasComBarbeirosAtivos.length > 0) {
+          setBarbeariasDisponiveis(barbeariasComBarbeirosAtivos);
+          
+          // Definir primeira barbearia como padrão
+          if (!formData.barbeariaId) {
+            const primeiraBarbearia = barbeariasComBarbeirosAtivos[0].id.toString();
+            console.log('🎯 Definindo primeira barbearia como padrão:', primeiraBarbearia);
+            setFormData(prev => ({ ...prev, barbeariaId: primeiraBarbearia }));
+            // Carregar barbeiros da primeira barbearia
+            await carregarBarbeirosDisponiveis(primeiraBarbearia);
+          }
+          
+          console.log(`✅ ${barbeariasComBarbeirosAtivos.length} barbearia(s) com barbeiros ativos carregada(s)`);
+        } else {
+          setBarbeariasDisponiveis([]);
+          setError('Nenhuma barbearia com barbeiros ativos encontrada. As barbearias podem estar fechadas ou sem barbeiros disponíveis no momento. Não é possível adicionar clientes à fila.');
         }
+      } else {
+        console.error('❌ Resposta sem sucesso:', response);
+        setError('Erro ao carregar barbearias disponíveis');
       }
       
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      setError('Erro ao carregar dados das barbearias');
+      console.error('❌ Erro ao carregar barbearias disponíveis:', error);
+      setError('Erro ao carregar barbearias disponíveis: ' + error.message);
     } finally {
       setLoadingBarbearias(false);
     }
@@ -103,58 +136,31 @@ const AdminAdicionarFila = () => {
     if (!barbeariaId) return;
     
     try {
-      setLoadingBarbeiros(true);
+      console.log(`🔄 Carregando barbeiros para barbearia ${barbeariaId}...`);
       
-      console.log(`Carregando barbeiros ativos para barbearia ${barbeariaId}...`);
+      // Converter para número para comparação correta
+      const barbeariaIdNum = parseInt(barbeariaId);
+      console.log('🔢 ID da barbearia convertido:', barbeariaIdNum, 'tipo:', typeof barbeariaIdNum);
       
-      // Tentar primeiro o novo endpoint
-      try {
-        console.log(`🔍 Tentando endpoint /users/barbeiros/ativos para barbearia ${barbeariaId}...`);
-        const response = await usuariosService.listarBarbeirosAtivos(parseInt(barbeariaId));
-        console.log('📋 Resposta do endpoint /users/barbeiros/ativos:', response);
-        
-        if (response.success && response.data) {
-          console.log(`✅ Barbeiros ativos encontrados: ${response.data.length}`);
-          console.log('📊 Estrutura dos dados:', response.data);
-          setBarbeirosDisponiveis(response.data);
-          return;
-        } else {
-          console.log('⚠️ Resposta sem sucesso ou sem dados:', response);
-        }
-      } catch (error) {
-        console.warn('❌ Erro no endpoint /users/barbeiros/ativos, tentando fallback:', error);
-      }
+      // Encontrar a barbearia selecionada
+      const barbeariaSelecionada = barbeariasDisponiveis.find(b => b.id === barbeariaIdNum);
       
-      // Fallback para o endpoint anterior
-      console.log('Tentando endpoint fallback /users/barbeiros/disponiveis...');
-      const fallbackResponse = await usuariosService.listarBarbeirosDisponiveis(parseInt(barbeariaId));
-      console.log('Resposta do endpoint fallback:', fallbackResponse);
+      console.log('🎯 Barbearia selecionada:', barbeariaSelecionada);
       
-      if (fallbackResponse.success && fallbackResponse.data) {
-        // Filtrar apenas barbeiros ativos manualmente
-        const barbeirosAtivos = fallbackResponse.data.filter(barbeiro => {
-          const isAtivo = barbeiro.barbearias && 
-            barbeiro.barbearias.some(b => b.barbearia_id === parseInt(barbeariaId) && b.ativo === true);
-          console.log(`Barbeiro ${barbeiro.nome}: ativo = ${isAtivo}`);
-          return isAtivo;
-        });
-        
-        console.log(`Barbeiros ativos encontrados (fallback): ${barbeirosAtivos.length}`);
-        setBarbeirosDisponiveis(barbeirosAtivos);
+      if (barbeariaSelecionada && barbeariaSelecionada.barbeiros) {
+        console.log(`✅ ${barbeariaSelecionada.barbeiros.length} barbeiro(s) encontrado(s) para ${barbeariaSelecionada.nome}`);
+        console.log('📋 Lista de barbeiros:', barbeariaSelecionada.barbeiros);
+        setBarbeirosDisponiveis(barbeariaSelecionada.barbeiros);
       } else {
-        console.log('Nenhum barbeiro encontrado em ambos os endpoints');
+        console.log('⚠️ Nenhum barbeiro encontrado para esta barbearia');
         setBarbeirosDisponiveis([]);
       }
       
     } catch (error) {
-      console.warn('Erro ao carregar barbeiros ativos (ambos endpoints falharam):', error);
+      console.error('❌ Erro ao carregar barbeiros:', error);
       setBarbeirosDisponiveis([]);
-    } finally {
-      setLoadingBarbeiros(false);
     }
   };
-
-
 
   const handleLogout = () => {
     logout();
@@ -176,53 +182,63 @@ const AdminAdicionarFila = () => {
       return;
     }
 
+    // Verificar se há barbeiros ativos na barbearia selecionada
+    const barbeariaSelecionada = barbeariasDisponiveis.find(b => b.id === parseInt(formData.barbeariaId));
+    if (!barbeariaSelecionada || !barbeariaSelecionada.barbeiros || barbeariaSelecionada.barbeiros.length === 0) {
+      setError('Não é possível adicionar clientes à fila. Esta barbearia não possui barbeiros ativos no momento.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
     setClienteAdicionado(null);
 
     try {
-      // Adicionar cliente à fila usando o endpoint correto
+      // Preparar dados para o endpoint /api/fila/entrar
       const dadosCliente = {
         nome: formData.nome,
-        telefone: formData.telefone
+        telefone: formData.telefone,
+        barbearia_id: parseInt(formData.barbeariaId)
       };
 
-      // Adicionar barbeiro se selecionado
+      // Adicionar barbeiro_id apenas se não for fila geral
       if (formData.barbeiroId && formData.barbeiroId !== 'geral') {
-        dadosCliente.barbeiro_id = formData.barbeiroId; // Manter como string (UUID)
+        dadosCliente.barbeiro_id = formData.barbeiroId;
       }
 
-      console.log('Adicionando cliente:', dadosCliente);
+      console.log('🔄 Adicionando cliente à fila:', dadosCliente);
       
-      const response = await filaService.entrarNaFila(parseInt(formData.barbeariaId), dadosCliente);
+      // Usar o endpoint correto conforme demanda
+      const response = await filaService.entrarNaFila(dadosCliente);
 
       if (response.success) {
+        const barbeariaNome = barbeariasDisponiveis.find(b => b.id === parseInt(formData.barbeariaId))?.nome || 'Barbearia selecionada';
         const barbeiroNome = formData.barbeiroId === 'geral' 
           ? 'Fila Geral' 
-          : barbeirosDisponiveis.find(b => b.id === parseInt(formData.barbeiroId))?.nome || 'Barbeiro selecionado';
+          : barbeirosDisponiveis.find(b => b.id === formData.barbeiroId)?.nome || 'Barbeiro selecionado';
         
         setSuccess('Cliente adicionado à fila com sucesso!');
         setClienteAdicionado({
           nome: formData.nome,
           telefone: formData.telefone,
-          barbearia: barbearias.find(b => b.id === parseInt(formData.barbeariaId))?.nome || 'Barbearia selecionada',
+          barbearia: barbeariaNome,
           barbeiro: barbeiroNome
         });
       
-      // Limpar formulário
-      setFormData({
-        nome: '',
-        telefone: '',
+        // Limpar formulário
+        setFormData({
+          nome: '',
+          telefone: '',
           barbeariaId: formData.barbeariaId, // Manter barbearia selecionada
           barbeiroId: 'geral' // Reset para fila geral
-      });
+        });
       } else {
         setError('Erro ao adicionar cliente: ' + (response.message || 'Erro desconhecido'));
       }
       
     } catch (error) {
-      console.error('Erro ao adicionar cliente:', error);
+      console.error('❌ Erro ao adicionar cliente:', error);
       setError('Erro ao adicionar cliente: ' + error.message);
     } finally {
       setLoading(false);
@@ -245,105 +261,6 @@ const AdminAdicionarFila = () => {
       nome: nomeAleatorio,
       telefone: telefoneAleatorio,
       barbeiroId: barbeiroAleatorio
-    });
-  };
-
-  // Função temporária para testar o endpoint
-  const testarEndpoint = async () => {
-    console.log('=== TESTE DO ENDPOINT ===');
-    console.log('Barbearia atual selecionada:', formData.barbeariaId);
-    console.log('Barbearias disponíveis:', barbearias);
-    console.log('Role do usuário:', user?.role);
-    
-    // Teste 1: Endpoint novo
-    console.log('\n🔍 TESTE 1: Endpoint /users/barbeiros/ativos');
-    try {
-      const response = await usuariosService.listarBarbeirosAtivos(parseInt(formData.barbeariaId));
-      console.log('✅ Endpoint funcionando:', response);
-    } catch (error) {
-      console.log('❌ Endpoint com erro:', error.message);
-    }
-    
-    // Teste 2: Endpoint anterior
-    console.log('\n🔍 TESTE 2: Endpoint /users/barbeiros/disponiveis');
-    try {
-      const response = await usuariosService.listarBarbeirosDisponiveis(parseInt(formData.barbeariaId));
-      console.log('✅ Endpoint funcionando:', response);
-      if (response.success && response.data) {
-        console.log('Barbeiros encontrados:', response.data.length);
-        console.log('Estrutura:', response.data[0]);
-      }
-    } catch (error) {
-      console.log('❌ Endpoint com erro:', error.message);
-    }
-    
-    // Teste 3: Listar todos os barbeiros
-    console.log('\n🔍 TESTE 3: Endpoint /users/barbeiros (todos)');
-    try {
-      const response = await usuariosService.listarBarbeiros();
-      console.log('✅ Endpoint funcionando:', response);
-      if (response.success && response.data) {
-        console.log('Total de barbeiros:', response.data.length);
-        // Filtrar barbeiros ativos na barbearia 6
-        const ativosNaBarbearia = response.data.filter(barbeiro => 
-          barbeiro.barbearias?.some(b => b.barbearia_id === 6 && b.ativo === true)
-        );
-        console.log('Barbeiros ativos na barbearia 6:', ativosNaBarbearia.length);
-      }
-    } catch (error) {
-      console.log('❌ Endpoint com erro:', error.message);
-    }
-  };
-
-  // Função temporária para testar endpoint de fila
-  const testarEndpointFila = async () => {
-    console.log('=== TESTE DO ENDPOINT DE FILA ===');
-    console.log('Barbearia atual selecionada:', formData.barbeariaId);
-    
-    const dadosTeste = {
-      nome: 'Cliente Teste',
-      telefone: '(11) 99999-9999'
-    };
-    
-    // Adicionar barbeiro se selecionado
-    if (formData.barbeiroId && formData.barbeiroId !== 'geral') {
-      dadosTeste.barbeiro_id = formData.barbeiroId;
-    }
-    
-    console.log('Dados de teste:', dadosTeste);
-    
-    try {
-      const response = await filaService.entrarNaFila(parseInt(formData.barbeariaId), dadosTeste);
-      console.log('✅ Endpoint de fila funcionando:', response);
-    } catch (error) {
-      console.log('❌ Endpoint de fila com erro:', error);
-      console.log('Detalhes do erro:', {
-        message: error.message,
-        stack: error.stack
-      });
-    }
-  };
-
-  const handleCopiarToken = async (token) => {
-    try {
-      await navigator.clipboard.writeText(token);
-      setSuccess('Token copiado para a área de transferência!');
-      setTimeout(() => setSuccess(''), 2000);
-    } catch (error) {
-      console.error('Erro ao copiar token:', error);
-      setError('Erro ao copiar token');
-    }
-  };
-
-  const getBarbeirosByBarbearia = (barbeariaId) => {
-    if (!barbeariaId || !barbeiros.length) return [];
-    
-    return barbeiros.filter(barbeiro => {
-      // Verificar se o barbeiro está ativo na barbearia específica
-      const barbeariaAtiva = barbeiro.barbearias?.find(b => 
-        b.barbearia_id === parseInt(barbeariaId) && b.ativo === true
-      );
-      return barbeariaAtiva;
     });
   };
 
@@ -479,6 +396,7 @@ const AdminAdicionarFila = () => {
                     <Select 
                       value={formData.barbeariaId} 
                       onValueChange={async (value) => {
+                        console.log('🔄 Barbearia selecionada:', value);
                         setFormData({...formData, barbeariaId: value, barbeiroId: 'geral'});
                         // Carregar barbeiros disponíveis na barbearia selecionada
                         await carregarBarbeirosDisponiveis(value);
@@ -487,15 +405,20 @@ const AdminAdicionarFila = () => {
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder={
-                          loadingBarbearias ? "Verificando barbearias..." : 
-                          barbeariasComBarbeiros.length === 0 ? "Nenhuma barbearia disponível" :
+                          loadingBarbearias ? "Carregando barbearias..." : 
+                          barbeariasDisponiveis.length === 0 ? "Nenhuma barbearia disponível" :
                           "Selecione uma barbearia"
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        {barbeariasComBarbeiros.map(barbearia => (
+                        {barbeariasDisponiveis.map(barbearia => (
                           <SelectItem key={barbearia.id} value={barbearia.id.toString()}>
-                            {barbearia.nome} ✅
+                            <div className="flex items-center justify-between w-full">
+                              <span>{barbearia.nome}</span>
+                              <Badge variant="secondary" className="ml-2">
+                                {barbearia.barbeiros_ativos} ativo{barbearia.barbeiros_ativos > 1 ? 's' : ''}
+                              </Badge>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -504,32 +427,40 @@ const AdminAdicionarFila = () => {
                   
                   <div>
                     <Label htmlFor="barbeiro" className="text-sm font-medium">
-                      Barbeiro {barbeirosDisponiveis.length > 0 && `(${barbeirosDisponiveis.length} ativo${barbeirosDisponiveis.length > 1 ? 's' : ''})`}
+                      Barbeiro {barbeirosDisponiveis.length > 0 && `(${barbeirosDisponiveis.length} disponível${barbeirosDisponiveis.length > 1 ? 'eis' : 'el'})`}
                     </Label>
                     <Select 
                       value={formData.barbeiroId} 
                       onValueChange={(value) => setFormData({...formData, barbeiroId: value})}
-                      disabled={loadingBarbeiros || !formData.barbeariaId}
+                      disabled={!formData.barbeariaId}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder={
-                          loadingBarbeiros ? "Carregando barbeiros ativos..." : 
-                          barbeirosDisponiveis.length === 0 ? "Nenhum barbeiro ativo" :
-                          "Selecione um barbeiro ativo"
+                          !formData.barbeariaId ? "Selecione uma barbearia primeiro" : 
+                          barbeirosDisponiveis.length === 0 ? "Nenhum barbeiro disponível" :
+                          "Selecione um barbeiro"
                         } />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="geral">Fila Geral (qualquer barbeiro ativo)</SelectItem>
-                        {barbeirosDisponiveis.map(barbeiro => (
-                          <SelectItem key={barbeiro.id} value={barbeiro.id}>
-                            {barbeiro.nome} ✅ Ativo
-                          </SelectItem>
-                        ))}
+                        {barbeirosDisponiveis.map(barbeiro => {
+                          console.log('🎨 Renderizando barbeiro:', barbeiro);
+                          return (
+                            <SelectItem key={barbeiro.id} value={barbeiro.id}>
+                              {barbeiro.nome} {barbeiro.especialidade && `(${barbeiro.especialidade})`}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
-                    {barbeariasComBarbeiros.length === 0 && !loadingBarbearias && (
+                    {barbeariasDisponiveis.length === 0 && !loadingBarbearias && (
                       <p className="text-xs text-orange-600 mt-1">
                         ⚠️ Nenhuma barbearia com barbeiros ativos encontrada
+                      </p>
+                    )}
+                    {formData.barbeariaId && barbeirosDisponiveis.length === 0 && !loadingBarbearias && (
+                      <p className="text-xs text-red-600 mt-1">
+                        🚫 Esta barbearia não possui barbeiros ativos no momento
                       </p>
                     )}
                   </div>
@@ -538,7 +469,7 @@ const AdminAdicionarFila = () => {
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                   <Button
                     onClick={handleAddToQueue}
-                    disabled={loading}
+                    disabled={loading || barbeariasDisponiveis.length === 0 || barbeirosDisponiveis.length === 0}
                     className="flex-1"
                     size="lg"
                   >
@@ -546,6 +477,11 @@ const AdminAdicionarFila = () => {
                       <>
                         <Clock className="w-4 h-4 mr-2 animate-spin" />
                         Adicionando...
+                      </>
+                    ) : barbeariasDisponiveis.length === 0 || barbeirosDisponiveis.length === 0 ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 mr-2" />
+                        Barbearia Fechada
                       </>
                     ) : (
                       <>
@@ -565,24 +501,27 @@ const AdminAdicionarFila = () => {
                   </Button>
                 </div>
                 
-                {/* Botões temporários para teste */}
-                <div className="pt-2 space-y-2">
+                {/* Botão de teste temporário */}
+                <div className="pt-2">
                   <Button
-                    onClick={testarEndpoint}
+                    onClick={() => {
+                      console.log('=== TESTE DE DADOS ===');
+                      console.log('Barbearias disponíveis:', barbeariasDisponiveis);
+                      console.log('Barbeiros disponíveis:', barbeirosDisponiveis);
+                      console.log('Barbearia selecionada:', formData.barbeariaId);
+                      console.log('Barbeiro selecionado:', formData.barbeiroId);
+                      
+                      if (barbeariasDisponiveis.length > 0) {
+                        const barbearia = barbeariasDisponiveis[0];
+                        console.log('Primeira barbearia:', barbearia);
+                        console.log('Barbeiros da primeira barbearia:', barbearia.barbeiros);
+                      }
+                    }}
                     variant="secondary"
                     size="sm"
                     className="w-full text-xs"
                   >
-                    🔧 Testar Endpoint /users/barbeiros/ativos
-                  </Button>
-                  
-                  <Button
-                    onClick={testarEndpointFila}
-                    variant="secondary"
-                    size="sm"
-                    className="w-full text-xs"
-                  >
-                    🔧 Testar Endpoint /fila/entrar
+                    🔧 Testar Dados (Console)
                   </Button>
                 </div>
               </CardContent>
@@ -615,14 +554,14 @@ const AdminAdicionarFila = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Barbearias com barbeiros:</span>
-                  <Badge variant="secondary">{loadingBarbearias ? '...' : barbeariasComBarbeiros.length}</Badge>
+                  <span className="text-sm text-muted-foreground">Barbearias disponíveis:</span>
+                  <Badge variant="secondary">{loadingBarbearias ? '...' : barbeariasDisponiveis.length}</Badge>
                 </div>
-                {(user?.role === 'admin' || user?.role === 'gerente') && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Barbeiros cadastrados:</span>
-                    <Badge variant="secondary">{loadingBarbearias ? '...' : barbeiros.length}</Badge>
-                </div>
+                {formData.barbeariaId && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Barbeiros ativos:</span>
+                    <Badge variant="secondary">{barbeirosDisponiveis.length}</Badge>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -635,9 +574,9 @@ const AdminAdicionarFila = () => {
               <CardContent className="space-y-2">
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>• Preencha nome e telefone obrigatoriamente</p>
-                  <p>• Selecione uma barbearia específica</p>
-                  <p>• Escolha "Fila Geral" ou um barbeiro ativo específico</p>
-                  <p>• Apenas barbeiros ativos são mostrados</p>
+                  <p>• Selecione uma barbearia com barbeiros ativos</p>
+                  <p>• Escolha "Fila Geral" ou um barbeiro específico</p>
+                  <p>• Apenas barbearias com barbeiros ativos são mostradas</p>
                   <p>• Use "Cliente Aleatório" para testes rápidos</p>
                 </div>
               </CardContent>

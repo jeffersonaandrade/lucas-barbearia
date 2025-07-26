@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -11,9 +11,11 @@ import {
   X,
   UserPlus,
   AlertCircle,
-  Phone
+  Phone,
+  RefreshCw
 } from 'lucide-react';
 import { filaService, historicoService } from '@/services/api.js';
+import { formatarHora, formatarData, ordenarFilaPorTempo, podeAtenderCliente, formatarNomeCliente, formatarTelefoneCliente, formatarServicoCliente } from '@/utils/formatters.js';
 
 const FilaManager = ({ 
   barbeariaAtual, 
@@ -28,111 +30,127 @@ const FilaManager = ({
   setAtendendoAtual,
   onHistoricoAtualizado
 }) => {
-  const [filaData, setFilaData] = useState({});
+  const [filaData, setFilaData] = useState({ fila: [], estatisticas: {} });
   const [loading, setLoading] = useState(false);
   const [tipoFilaAtual, setTipoFilaAtual] = useState('geral');
+  const [abaAtiva, setAbaAtiva] = useState('geral');
   const [historicoData, setHistoricoData] = useState([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
-  const [abaAtiva, setAbaAtiva] = useState('geral');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  
+  // Cache local para dados
+  const [filaCache, setFilaCache] = useState(null);
+  const [historicoCache, setHistoricoCache] = useState(null);
+  const [lastFilaUpdate, setLastFilaUpdate] = useState(0);
+  const [lastHistoricoUpdate, setLastHistoricoUpdate] = useState(0);
+  
+  // Configurações de cache
+  const filaCacheTimeout = 30000; // 30 segundos para fila
+  const historicoCacheTimeout = 300000; // 5 minutos para histórico
+  
+  // Controle de chamadas duplicadas
+  const filaCallInProgress = useRef(false);
+  const historicoCallInProgress = useRef(false);
 
-  // Função para formatar hora a partir de data_fim
-  const formatarHora = (dataFim) => {
-    if (!dataFim) return null;
-    try {
-      const data = new Date(dataFim);
-      return data.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch (error) {
-      console.error('Erro ao formatar hora:', error);
-      return null;
-    }
-  };
-
-  // Função para formatar data a partir de data_fim
-  const formatarData = (dataFim) => {
-    if (!dataFim) return null;
-    try {
-      const data = new Date(dataFim);
-      return data.toLocaleDateString('pt-BR', { 
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Erro ao formatar data:', error);
-      return null;
-    }
-  };
+  // Controle de carregamento inicial
+  const initialLoadDone = useRef(false);
+  const historicoInitialLoadDone = useRef(false);
 
   // Carregar dados da fila do backend
-  const loadFilaData = async (tipoFila = 'geral') => {
-    if (!barbeariaAtual?.id) return;
+  const loadFilaData = useCallback(async (tipoFila = 'geral') => {
+    // Evitar chamadas simultâneas
+    if (filaCallInProgress.current) {
+      console.log('🔄 Chamada de fila já em andamento, aguardando...');
+      return;
+    }
+
+    const now = Date.now();
     
+    // Evitar chamadas muito frequentes
+    if (lastFilaUpdate > 0 && (now - lastFilaUpdate) < filaCacheTimeout) {
+      console.log('📊 Usando cache da fila (última atualização há', Math.round((now - lastFilaUpdate) / 1000), 'segundos)');
+      setFilaData(filaCache);
+      return;
+    }
+
+    if (!barbeariaAtual?.id) {
+      console.log('❌ Nenhuma barbearia selecionada');
+      return;
+    }
+
     try {
+      filaCallInProgress.current = true;
+      setLastFilaUpdate(now);
+      
       setLoading(true);
-      console.log('🔍 Carregando fila para barbearia:', barbeariaAtual.id, 'tipo:', tipoFila);
+      console.log('🔄 Carregando dados da fila:', { 
+        barbeariaId: barbeariaAtual.id, 
+        tipoFila,
+        barbeiroId: barbeiroAtual?.id 
+      });
+
+      const response = await filaService.obterFila(barbeariaAtual.id);
       
-      let data;
-      
-      // Se for fila específica do barbeiro e temos o ID do barbeiro
-      if (tipoFila === 'especifica' && barbeiroAtual?.id) {
-        console.log('🔍 Carregando fila específica do barbeiro:', barbeiroAtual.id);
-        data = await filaService.obterFilaBarbeiro(barbeariaAtual.id, barbeiroAtual.id);
+      if (response && response.data) {
+        setFilaData(response.data);
+        setFilaCache(response.data); // Salvar no cache
+        console.log('✅ Dados da fila carregados:', response.data);
       } else {
-        console.log('🔍 Carregando fila geral da barbearia');
-        data = await filaService.obterFila(barbeariaAtual.id);
-      }
-      
-      console.log('📋 Resposta da API fila:', data);
-      
-      // Verificar se a resposta tem a estrutura esperada
-      if (data && data.success) {
-        console.log('✅ Resposta com sucesso, dados:', data.data);
-        // Converter estrutura do backend para o formato esperado pelo frontend
-        const filaFormatada = {
-          fila: data.data.clientes || [],
-          estatisticas: data.data.estatisticas || {}
-        };
-        console.log('🔄 Fila formatada:', filaFormatada);
-        setFilaData(filaFormatada);
-      } else if (data && data.fila) {
-        console.log('✅ Resposta direta com fila:', data.fila);
-        setFilaData(data);
-      } else if (data && data.clientes) {
-        console.log('✅ Resposta com clientes:', data.clientes);
-        setFilaData({ fila: data.clientes, estatisticas: data.estatisticas || {} });
-      } else {
-        console.log('⚠️ Estrutura de resposta inesperada:', data);
-        setFilaData({ fila: [] });
+        setFilaData({ fila: [], estatisticas: {} });
+        setFilaCache({ fila: [], estatisticas: {} });
+        console.log('⚠️ Resposta vazia da API');
       }
     } catch (error) {
       console.error('❌ Erro ao carregar dados da fila:', error);
-      // Se a fila não existe (404), criar uma fila vazia
-      if (error.message && error.message.includes('404')) {
-        console.log('Fila não encontrada, criando fila vazia para barbearia:', barbeariaAtual.id);
-        setFilaData({ fila: [] });
-      } else {
-        setFilaData({ fila: [] });
-      }
+      setFilaData({ fila: [], estatisticas: {} });
+      setFilaCache({ fila: [], estatisticas: {} });
     } finally {
       setLoading(false);
+      filaCallInProgress.current = false;
     }
-  };
+  }, []); // Sem dependências para evitar recriações
 
-  // Carregar histórico de atendimentos
-  const loadHistoricoData = async () => {
-    console.log('🚀 loadHistoricoData chamada');
-    console.log('🔍 barbeiroAtual:', barbeiroAtual);
-    
-    if (!barbeiroAtual?.id) {
-      console.log('❌ barbeiroAtual.id não encontrado');
+  // Carregar dados do histórico
+  const loadHistoricoData = useCallback(async (forceRefresh = false) => {
+    // Evitar chamadas simultâneas
+    if (historicoCallInProgress.current) {
+      console.log('🔄 Chamada de histórico já em andamento, aguardando...');
       return;
     }
+
+    const now = Date.now();
     
+    // Evitar chamadas muito frequentes
+    if (!forceRefresh && lastHistoricoUpdate > 0 && (now - lastHistoricoUpdate) < historicoCacheTimeout) {
+      console.log('📊 Usando cache do histórico (última atualização há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
+      setHistoricoData(historicoCache);
+      return;
+    }
+
+    if (!barbeiroAtual?.id) {
+      console.log('❌ Nenhum barbeiro selecionado para histórico');
+      return;
+    }
+
+    // Verificar cache para evitar chamadas duplicadas
+    if (!forceRefresh && 
+        historicoCache && 
+        (now - lastHistoricoUpdate) < historicoCacheTimeout) {
+      console.log('📊 Usando cache do histórico (última chamada há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
+      setHistoricoData(historicoCache);
+      return;
+    }
+
+    // Verificar se o usuário está autenticado
+    const token = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken');
+    if (!token) {
+      console.log('❌ Usuário não autenticado');
+      return;
+    }
+
     try {
+      historicoCallInProgress.current = true;
+      setLastHistoricoUpdate(now);
       setLoadingHistorico(true);
       console.log('🔍 Carregando histórico para barbeiro:', barbeiroAtual.id);
       
@@ -146,29 +164,30 @@ const FilaManager = ({
       
       console.log('📅 Período do histórico:', { dataInicio, dataFim });
       
-      console.log('🌐 Chamando API:', `/historico?barbeiro_id=${barbeiroAtual.id}&data_inicio=${dataInicio}&data_fim=${dataFim}`);
-      
-
-      
-      const response = await historicoService.obterHistoricoBarbeiro(barbeiroAtual.id, {
+      const response = await historicoService.obterHistorico({
         data_inicio: dataInicio,
-        data_fim: dataFim
+        data_fim: dataFim,
+        barbeiro_id: barbeiroAtual.id
       });
       
-      console.log('📋 Resposta da API histórico:', response);
+      console.log('📊 Resposta do histórico:', response);
       
       if (response && response.data) {
         setHistoricoData(response.data);
+        setHistoricoCache(response.data); // Salvar no cache
       } else {
         setHistoricoData([]);
+        setHistoricoCache([]);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar histórico:', error);
       setHistoricoData([]);
+      setHistoricoCache([]);
     } finally {
       setLoadingHistorico(false);
+      historicoCallInProgress.current = false;
     }
-  };
+  }, []); // Sem dependências para evitar recriações
 
   // Função para detectar clientes com status "próximo" ou "atendendo"
   const detectarClienteProximo = () => {
@@ -189,51 +208,55 @@ const FilaManager = ({
     }
   };
 
-  // Carregar dados iniciais e atualizar periodicamente
-  useEffect(() => {
-    console.log('🔄 useEffect - Carregando fila:', { 
-      barbeariaId: barbeariaAtual?.id, 
-      tipoFila: tipoFilaAtual,
-      barbeiroId: barbeiroAtual?.id,
-      barbeiroNome: barbeiroAtual?.nome
-    });
+  // Funções para atualização manual
+  const handleRefreshFila = () => {
+    console.log('🔄 Atualização manual da fila solicitada');
     loadFilaData(tipoFilaAtual);
+  };
+
+  const handleRefreshHistorico = () => {
+    console.log('🔄 Atualização manual do histórico solicitada');
+    loadHistoricoData(true);
+  };
+
+  // Carregar dados iniciais apenas uma vez
+  useEffect(() => {
+    if (!barbeariaAtual?.id) return;
     
-    // Atualizar a cada 5 minutos apenas se autoRefresh estiver ativo
-    const interval = autoRefresh ? setInterval(() => {
-      console.log('🔄 Atualização automática da fila (5min)');
-      loadFilaData(tipoFilaAtual);
-    }, 300000) : null;
+    console.log('🔄 Carregamento inicial da fila para barbearia:', barbeariaAtual.id);
+    loadFilaData(tipoFilaAtual);
+  }, [barbeariaAtual?.id]); // Apenas quando barbearia mudar
+
+  // Carregar histórico apenas quando barbeiro mudar (e usar cache se disponível)
+  useEffect(() => {
+    if (!barbeiroAtual?.id) return;
     
-    return () => clearInterval(interval);
-  }, [barbeariaAtual?.id, tipoFilaAtual]);
+    // Verificar se já temos cache válido
+    const now = Date.now();
+    if (historicoCache && (now - lastHistoricoUpdate) < historicoCacheTimeout) {
+      console.log('📊 Usando cache do histórico para barbeiro:', barbeiroAtual.id);
+      setHistoricoData(historicoCache);
+      return;
+    }
+    
+    console.log('🔄 Carregamento inicial do histórico para barbeiro:', barbeiroAtual.id);
+    loadHistoricoData(true);
+  }, [barbeiroAtual?.id]); // Apenas quando barbeiro mudar
 
   // Detectar cliente próximo quando os dados da fila mudarem
   useEffect(() => {
-    detectarClienteProximo();
-  }, [filaData]);
-
-  // Carregar histórico quando barbeiro mudar
-  useEffect(() => {
-    if (barbeiroAtual?.id) {
-      loadHistoricoData();
+    if (filaData.fila && filaData.fila.length > 0) {
+      detectarClienteProximo();
     }
-  }, [barbeiroAtual?.id]);
+  }, [filaData.fila]);
 
-  // Recarregar histórico quando solicitado
+  // Recarregar histórico quando solicitado explicitamente
   useEffect(() => {
     if (onHistoricoAtualizado) {
-      loadHistoricoData();
+      console.log('🔄 Recarregando histórico por solicitação explícita');
+      loadHistoricoData(true);
     }
   }, [onHistoricoAtualizado]);
-
-  // Carregar histórico quando a aba mudar para "historico"
-  useEffect(() => {
-    if (abaAtiva === 'historico' && barbeiroAtual?.id) {
-      console.log('📋 Carregando histórico...');
-      loadHistoricoData();
-    }
-  }, [abaAtiva, barbeiroAtual?.id]);
 
   const getFilaBarbearia = () => {
     return filaData.fila || [];
@@ -261,27 +284,7 @@ const FilaManager = ({
 
   const getFilaOrdenadaPorTempo = () => {
     const fila = getFilaBarbearia();
-    
-    return fila
-      .filter(c => c.status === 'aguardando' || !c.status) // Incluir se não tem status ou é 'aguardando'
-      .sort((a, b) => {
-        const tempoA = a.dataEntrada ? new Date(a.dataEntrada).getTime() : a.created_at ? new Date(a.created_at).getTime() : a.id;
-        const tempoB = b.dataEntrada ? new Date(b.dataEntrada).getTime() : b.created_at ? new Date(b.created_at).getTime() : b.id;
-        return tempoA - tempoB;
-      })
-      .map((cliente, index) => {
-        const tempoEntrada = cliente.dataEntrada ? new Date(cliente.dataEntrada).getTime() : 
-                           cliente.created_at ? new Date(cliente.created_at).getTime() : 
-                           Date.now();
-        
-        return {
-          ...cliente,
-          posicaoTempo: index + 1,
-          tempoEspera: Math.floor((Date.now() - tempoEntrada) / 1000 / 60),
-          status: cliente.status || 'aguardando',
-          barbeiro: cliente.barbeiro || 'Fila Geral'
-        };
-      });
+    return ordenarFilaPorTempo(fila);
   };
 
   const getHistoricoAtendimentos = () => {
@@ -333,28 +336,6 @@ const FilaManager = ({
 
   return (
     <div className="space-y-6">
-      {/* Controle de Auto-refresh */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => {
-              console.log('🔄 Recarregamento manual da fila');
-              loadFilaData(tipoFilaAtual);
-            }}
-            variant="outline"
-            size="sm"
-          >
-            🔄 Recarregar
-          </Button>
-          <Button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            variant={autoRefresh ? "default" : "outline"}
-            size="sm"
-          >
-            {autoRefresh ? "⏸️ Pausar Auto-refresh" : "▶️ Ativar Auto-refresh"}
-          </Button>
-        </div>
-      </div>
       {/* Cliente Atual */}
       {atendendoAtual && atendendoAtual.status === 'atendendo' && (
         <Card className="border-green-200 bg-green-50">
@@ -415,12 +396,40 @@ const FilaManager = ({
           setTipoFilaAtual('geral');
         }
       }}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="tempo">Por Tempo</TabsTrigger>
-          <TabsTrigger value="geral">Fila Geral</TabsTrigger>
-          <TabsTrigger value="especifica">Minha Fila</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+          <TabsList className="grid w-full sm:w-auto grid-cols-4">
+            <TabsTrigger value="tempo">Por Tempo</TabsTrigger>
+            <TabsTrigger value="geral">Fila Geral</TabsTrigger>
+            <TabsTrigger value="especifica">Minha Fila</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleRefreshFila}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              className="flex items-center gap-1 flex-1 sm:flex-none"
+            >
+              <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Atualizar Fila</span>
+              <span className="sm:hidden">Fila</span>
+            </Button>
+            
+            <Button
+              onClick={handleRefreshHistorico}
+              variant="outline"
+              size="sm"
+              disabled={loadingHistorico}
+              className="flex items-center gap-1 flex-1 sm:flex-none"
+            >
+              <RefreshCw className={`h-3 w-3 ${loadingHistorico ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Atualizar Histórico</span>
+              <span className="sm:hidden">Histórico</span>
+            </Button>
+          </div>
+        </div>
         
         <TabsContent value="tempo" className="mt-6">
           <Card>
@@ -445,7 +454,7 @@ const FilaManager = ({
               ) : (
                 <div className="space-y-3">
                   {getFilaOrdenadaPorTempo().map((cliente) => {
-                    const podeAtender = cliente.barbeiro === 'Fila Geral' || cliente.barbeiro === 'Geral' || cliente.barbeiro === barbeiroAtual?.nome;
+                    const podeAtender = podeAtenderCliente(cliente, barbeiroAtual?.nome);
                     return (
                       <div 
                         key={cliente.id} 
@@ -460,10 +469,18 @@ const FilaManager = ({
                             {cliente.posicaoTempo}
                           </div>
                           <div>
-                            <p className="font-medium">{cliente.nome}</p>
-                            <p className="text-sm text-gray-600">{cliente.telefone}</p>
+                            <p className="font-medium">{formatarNomeCliente(cliente)}</p>
+                            <p className="text-sm text-gray-600">{formatarTelefoneCliente(cliente)}</p>
                             <p className="text-xs text-gray-500">
-                              {cliente.barbeiro === 'Fila Geral' || cliente.barbeiro === 'Geral' ? 'Fila Geral' : `Específico: ${cliente.barbeiro}`}
+                              {(() => {
+                                if (typeof cliente.barbeiro === 'object' && cliente.barbeiro !== null) {
+                                  return cliente.barbeiro.nome || 'Fila Geral';
+                                } else if (typeof cliente.barbeiro === 'string') {
+                                  return cliente.barbeiro === 'Fila Geral' || cliente.barbeiro === 'Geral' ? 'Fila Geral' : `Específico: ${cliente.barbeiro}`;
+                                } else {
+                                  return 'Fila Geral';
+                                }
+                              })()}
                             </p>
                           </div>
                         </div>

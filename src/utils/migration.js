@@ -1,5 +1,5 @@
 // Utilitário para migração de dados do localStorage para o backend
-import { barbeariasService, filaService } from '@/services/api.js';
+import { barbeariasService, filaService, utilsService } from '@/services/api.js';
 import barbeariasData from '@/data/barbearias.json';
 import filaData from '@/data/fila.json';
 
@@ -280,12 +280,10 @@ export const shouldUseAPI = () => {
   // Verificar se a API está disponível
   return new Promise(async (resolve) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/health`, {
-        method: 'GET',
-        timeout: 5000,
-      });
+      const response = await utilsService.checkHealth();
+
       
-      resolve(response.ok);
+              resolve(response.success);
     } catch (error) {
       console.warn('API não está disponível, usando localStorage');
       resolve(false);

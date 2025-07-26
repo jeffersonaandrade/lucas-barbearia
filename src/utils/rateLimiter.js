@@ -1,3 +1,5 @@
+import { utilsService } from '@/services/api.js';
+
 // Sistema de Rate Limiting para endpoints públicos
 // Protege contra abuso e ataques de força bruta
 
@@ -239,22 +241,9 @@ export const createPublicRateLimitMiddleware = () => {
 // Função para verificar limite no frontend
 export const checkRateLimit = async (endpoint, identifier) => {
   try {
-    const response = await fetch(`/api/rate-limit/check`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        endpoint,
-        identifier
-      })
-    });
-    
-    if (response.ok) {
-      return await response.json();
-    } else {
-      return { allowed: false, remaining: 0 };
-    }
+    // Endpoint de rate limit não implementado no backend
+    console.warn('Endpoint GET /rate-limit/check não implementado no backend');
+    return { allowed: true, remaining: 999 }; // Permitir em caso de erro
   } catch (error) {
     console.error('Erro ao verificar rate limit:', error);
     return { allowed: true, remaining: 999 }; // Permitir em caso de erro

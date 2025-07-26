@@ -185,11 +185,6 @@ export const useClienteFila = (barbeariaId = null) => {
     }
   };
 
-  // Gerar token único
-  const gerarToken = useCallback(() => {
-    return 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  }, []);
-
   // Entrar na fila (CLIENTE)
   const entrarNaFila = useCallback(async (dados) => {
     setLoading(true);
@@ -211,11 +206,11 @@ export const useClienteFila = (barbeariaId = null) => {
       const response = await filaService.entrarNaFila(barbeariaId, dadosCliente);
       
       const cliente = response.cliente || response.data?.cliente || response;
-      let token = response.token || response.data?.token || response.id;
+      const token = response.token || response.data?.token || response.data?.cliente?.token || response.id;
       
       if (!token) {
-        console.log('⚠️ Nenhum token encontrado na resposta, gerando token único...');
-        token = gerarToken();
+        console.error('❌ Nenhum token encontrado na resposta do backend');
+        throw new Error('Token não foi gerado pelo servidor. Tente novamente.');
       }
 
       // Invalidar cache da fila
@@ -243,7 +238,7 @@ export const useClienteFila = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [gerarToken, barbeariaId]);
+  }, [barbeariaId]);
 
   // Sair da fila (CLIENTE)
   const sairDaFila = useCallback(async (token) => {
@@ -368,7 +363,7 @@ export const useClienteFila = (barbeariaId = null) => {
     obterStatusFila,
     obterFilaAtual,
     atualizarPosicao,
-    gerarToken,
+
     
     // Funções auxiliares
     carregarFilaAtual,

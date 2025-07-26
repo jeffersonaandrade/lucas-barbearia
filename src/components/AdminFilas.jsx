@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog.jsx';
+
 import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 import { 
   ArrowLeft, 
@@ -37,6 +38,8 @@ const AdminFilas = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBarbearia, setSelectedBarbearia] = useState('todas');
   const [filas, setFilas] = useState([]);
@@ -68,12 +71,42 @@ const AdminFilas = () => {
       console.log('Carregando filas...');
       const filasPromises = barbeariasArray.map(async (barbearia) => {
         try {
-          const filaData = await filaService.obterFila(barbearia.id);
+          const filaData = await filaService.obterFilaCompleta(barbearia.id);
           console.log(`Fila carregada para barbearia ${barbearia.id}:`, filaData);
+          console.log(`Estrutura da resposta:`, {
+            hasData: !!filaData,
+            hasDataProperty: !!(filaData && filaData.data),
+            hasClientesProperty: !!(filaData && filaData.data && filaData.data.clientes),
+            hasFilaProperty: !!(filaData && filaData.fila),
+            isArray: Array.isArray(filaData),
+            dataIsArray: !!(filaData && Array.isArray(filaData.data))
+          });
+          
+          // Verificar diferentes estruturas possíveis da resposta
+          let clientes = [];
+          if (filaData && filaData.data && filaData.data.clientes) {
+            clientes = filaData.data.clientes;
+          } else if (filaData && filaData.clientes) {
+            clientes = filaData.clientes;
+          } else if (filaData && filaData.data && filaData.data.fila) {
+            clientes = filaData.data.fila;
+          } else if (filaData && filaData.fila) {
+            clientes = filaData.fila;
+          } else if (Array.isArray(filaData)) {
+            clientes = filaData;
+          } else if (filaData && Array.isArray(filaData.data)) {
+            clientes = filaData.data;
+          }
+          
+          // Filtrar apenas clientes com status "aguardando"
+          clientes = clientes.filter(cliente => cliente.status === 'aguardando');
+          
+          console.log(`Clientes encontrados para barbearia ${barbearia.id}:`, clientes.length);
+          
           return {
             barbeariaId: barbearia.id,
             barbeariaNome: barbearia.nome,
-            clientes: filaData.fila || []
+            clientes: clientes
           };
         } catch (error) {
           console.log(`Fila não encontrada para barbearia ${barbearia.id}:`, error.message);
@@ -111,13 +144,7 @@ const AdminFilas = () => {
     return roles[role] || { label: role, color: 'bg-gray-100 text-gray-800' };
   };
 
-  // Verificar se o usuário pode remover clientes de uma barbearia específica
-  const canRemoveFromBarbearia = (barbeariaId) => {
-    if (user?.role === 'admin') return true;
-    if (user?.role === 'gerente' && barbeariaId === 1) return true; // Gerente da barbearia 1
-    if (user?.role === 'barbeiro' && barbeariaId === 2) return true; // Barbeiro da barbearia 2
-    return false;
-  };
+
 
   // Filtrar filas baseado nas permissões do usuário
   const getFilteredFilas = () => {
@@ -142,14 +169,51 @@ const AdminFilas = () => {
       filasFiltradas = filasFiltradas.map(fila => ({
         ...fila,
         clientes: fila.clientes.filter(cliente =>
-          cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          cliente.telefone.includes(searchTerm) ||
-          cliente.token.toLowerCase().includes(searchTerm.toLowerCase())
+                  cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cliente.telefone.includes(searchTerm) ||
+        cliente.id.toLowerCase().includes(searchTerm.toLowerCase())
         )
       })).filter(fila => fila.clientes.length > 0);
     }
 
     return filasFiltradas;
+  };
+
+  // Verificar se o usuário pode remover clientes de uma barbearia específica
+  const canRemoveFromBarbearia = (barbeariaId) => {
+    if (user?.role === 'admin') return true;
+    if (user?.role === 'gerente' && barbeariaId === 1) return true; // Gerente da barbearia 1
+    if (user?.role === 'barbeiro' && barbeariaId === 2) return true; // Barbeiro da barbearia 2
+    return false;
+  };
+
+  // Calcular tempo de espera e cor
+  const getTempoEspera = (cliente) => {
+    const dataEntrada = cliente.data_entrada || cliente.created_at;
+    if (!dataEntrada) return { tempo: 'N/A', cor: 'text-gray-500' };
+    
+    const agora = new Date();
+    const entrada = new Date(dataEntrada);
+    const diffMs = agora - entrada;
+    const diffMinutos = Math.floor(diffMs / (1000 * 60));
+    const diffHoras = diffMinutos / 60;
+    
+    let cor = 'text-green-600'; // Menos de 0.75h (45 min)
+    if (diffHoras >= 1) {
+      cor = 'text-red-600'; // Mais de 1h
+    } else if (diffHoras >= 0.75) {
+      cor = 'text-yellow-600'; // Entre 0.75h e 1h
+    }
+    
+    // Formatar tempo: mostrar horas com 1 casa decimal
+    const tempoFormatado = diffHoras < 1 
+      ? `${diffMinutos} min` 
+      : `${diffHoras.toFixed(1)}h`;
+    
+    return {
+      tempo: tempoFormatado,
+      cor: cor
+    };
   };
 
   const handleRemoveCliente = async (cliente, barbeariaId) => {
@@ -160,8 +224,16 @@ const AdminFilas = () => {
     try {
       console.log(`Removendo cliente ${cliente.id} da barbearia ${barbeariaId}`);
       
-      // Remover cliente do backend
-      await filaService.removerCliente(barbeariaId, cliente.id);
+      // Remover cliente do backend baseado no role do usuário
+      if (user?.role === 'admin') {
+        // Admin usa endpoint específico
+        await filaService.removerClienteAdmin(cliente.id);
+        console.log(`Admin removeu cliente ${cliente.id} da barbearia ${barbeariaId}`);
+      } else {
+        // Barbeiro/Gerente usa endpoint padrão
+        await filaService.removerCliente(cliente.id);
+        console.log(`Barbeiro/Gerente removeu cliente ${cliente.id}`);
+      }
       
       // Recarregar dados para garantir sincronização
       await carregarDados();
@@ -331,7 +403,7 @@ const AdminFilas = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Buscar por nome, telefone ou token..."
+                  placeholder="Buscar por nome, telefone ou ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -418,6 +490,7 @@ const AdminFilas = () => {
                     <div className="space-y-3">
                       {fila.clientes.map(cliente => {
                         const statusInfo = getStatusDisplay(cliente.status);
+                        const tempoEspera = getTempoEspera(cliente);
                         const canRemove = canRemoveFromBarbearia(fila.barbeariaId);
                         
                         return (
@@ -436,13 +509,15 @@ const AdminFilas = () => {
                                     {statusInfo.label}
                                   </Badge>
                                   <p className="text-xs text-gray-500">
-                                    Barbeiro: {cliente.barbeiro}
+                                    Barbeiro: {typeof cliente.barbeiro === 'object' ? cliente.barbeiro?.nome || 'Fila Geral' : cliente.barbeiro || 'Fila Geral'}
                                   </p>
                                 </div>
                               </div>
                               <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                                <span>Token: {cliente.token}</span>
-                                <span>Entrada: {cliente.horarioEntrada}</span>
+                                <span>Posição: {cliente.posicao}</span>
+                                <span className={`font-medium ${tempoEspera.cor}`}>
+                                  Espera: {tempoEspera.tempo}
+                                </span>
                               </div>
                             </div>
                             
@@ -467,13 +542,17 @@ const AdminFilas = () => {
                                         <br />
                                         <strong>Telefone:</strong> {cliente.telefone}
                                         <br />
-                                        <strong>Token:</strong> {cliente.token}
+                                        <strong>ID:</strong> {cliente.id}
                                         <br />
                                         <strong>Barbearia:</strong> {fila.barbeariaNome}
+                                        <br />
+                                        <strong>Tempo de espera:</strong> {tempoEspera.tempo}
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogCancel>
+                                        Cancelar
+                                      </AlertDialogCancel>
                                       <AlertDialogAction
                                         onClick={() => handleRemoveCliente(cliente, fila.barbeariaId)}
                                         className="bg-red-600 hover:bg-red-700"

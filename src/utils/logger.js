@@ -1,3 +1,5 @@
+import { utilsService } from '@/services/api.js';
+
 // Sistema de logs para monitoramento
 // Registra eventos importantes para debugging e auditoria
 
@@ -214,13 +216,8 @@ class Logger {
    */
   async sendToServer(logEntry) {
     try {
-      await fetch('/api/logs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(logEntry)
-      });
+      // Endpoint de logs não implementado no backend
+      console.warn('Endpoint POST /logs não implementado no backend');
     } catch (error) {
       // Não logar erro de envio de log para evitar loop infinito
       console.warn('Falha ao enviar log para servidor:', error);

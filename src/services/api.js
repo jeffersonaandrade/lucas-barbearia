@@ -14,7 +14,12 @@ class ApiService {
       'Content-Type': 'application/json',
     };
 
-    if (this.token) {
+    // Sempre verificar o token atual no sessionStorage
+    const currentToken = sessionStorage.getItem('adminToken');
+    if (currentToken) {
+      this.token = currentToken; // Atualizar token interno se necessário
+      headers['Authorization'] = `Bearer ${currentToken}`;
+    } else if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
@@ -34,6 +39,14 @@ class ApiService {
       headers: this.getHeaders(),
       ...options,
     };
+
+    // Debug: verificar se o token está sendo enviado
+    const authHeader = config.headers['Authorization'];
+    console.log(`🔐 API Request to ${endpoint}:`, {
+      url,
+      hasToken: !!authHeader,
+      tokenPreview: authHeader ? `${authHeader.substring(0, 20)}...` : 'No token'
+    });
 
     try {
       const response = await fetch(url, config);
@@ -61,15 +74,23 @@ class ApiService {
       ...options,
     };
 
+    console.log('🌐 publicRequest URL:', url);
+    console.log('⚙️ publicRequest config:', config);
+
     try {
       const response = await fetch(url, config);
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('❌ HTTP Error:', errorData);
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const jsonResponse = await response.json();
+      console.log('📦 publicRequest JSON response:', jsonResponse);
+      return jsonResponse;
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
       throw error;
@@ -96,10 +117,18 @@ class ApiService {
 
   // POST request público (sem autenticação)
   async publicPost(endpoint, data) {
-    return this.publicRequest(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    console.log('📤 publicPost chamado:', endpoint, data);
+    try {
+      const response = await this.publicRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      console.log('📦 publicPost response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ publicPost error:', error);
+      throw error;
+    }
   }
 
   // PUT request
@@ -190,50 +219,69 @@ export const barbeariasService = {
     return api.delete(`/barbearias/${id}`);
   },
 
-  // Chamar próximo cliente (BARBEIRO)
-  async chamarProximo(barbeariaId) {
-    return api.post(`/barbearias/${barbeariaId}/fila/proximo`);
-  },
-
-  // Listar barbeiros (MISTO)
-  async listarBarbeiros(filtros = {}) {
-    const params = new URLSearchParams();
-    
-    // Parâmetros suportados
-    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
-    if (filtros.ativo) params.append('ativo', filtros.ativo);
-    if (filtros.disponivel) params.append('disponivel', filtros.disponivel);
-    if (filtros.page) params.append('page', filtros.page);
-    if (filtros.limit) params.append('limit', filtros.limit);
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/users/barbeiros?${queryString}` : '/users/barbeiros';
-    
-    return api.get(endpoint);
+  // Verificar status da barbearia (PÚBLICO)
+  async verificarStatus(barbeariaId) {
+    console.log('🔍 Verificando status da barbearia:', barbeariaId);
+    return api.publicGet(`/barbearias/${barbeariaId}/status`);
   },
 
   // Listar barbeiros (PÚBLICO - para clientes escolherem)
   async listarBarbeirosPublicos(barbeariaId) {
-    return api.publicGet(`/users/barbeiros?barbearia_id=${barbeariaId}&ativo=true&disponivel=true`);
+    const params = new URLSearchParams();
+    params.append('status', 'ativo');
+    params.append('public', 'true');
+    params.append('barbearia_id', barbeariaId);
+    
+    const queryString = params.toString();
+    const endpoint = `/users/barbeiros?${queryString}`;
+    
+    console.log('🔗 Chamando endpoint de barbeiros públicos:', endpoint);
+    
+    try {
+      const response = await api.publicGet(endpoint);
+      console.log('📦 Resposta bruta da API de barbeiros:', response);
+      console.log('🔍 Estrutura da resposta:', {
+        hasData: !!response?.data,
+        hasBarbeiros: !!response?.data?.barbeiros,
+        hasBarbeirosDirect: !!response?.barbeiros,
+        isArray: Array.isArray(response),
+        isDataArray: Array.isArray(response?.data)
+      });
+      return response;
+    } catch (error) {
+      console.error('❌ Erro ao buscar barbeiros:', error);
+      throw error;
+    }
   },
 
-  // Ativar barbeiro (ADMIN/GERENTE)
-  async ativarBarbeiro(barbeariaId, barbeiroId) {
-    return api.post(`/users/barbeiros/ativar`, { barbearia_id: barbeariaId, barbeiro_id: barbeiroId });
-  },
-
-  // Desativar barbeiro (ADMIN/GERENTE)
-  async desativarBarbeiro(barbeariaId, barbeiroId) {
-    return api.post(`/users/barbeiros/desativar`, { barbearia_id: barbeariaId, barbeiro_id: barbeiroId });
+  // Listar barbeiros ativos (PÚBLICO - para validação de disponibilidade)
+  async listarBarbeirosAtivos(barbeariaId = null) {
+    const params = new URLSearchParams();
+    params.append('status', 'ativo');
+    params.append('public', 'true');
+    
+    if (barbeariaId) {
+      params.append('barbearia_id', barbeariaId);
+    }
+    
+    const queryString = params.toString();
+    const endpoint = `/users/barbeiros?${queryString}`;
+    
+    return api.publicGet(endpoint);
   }
 };
 
 export const filaService = {
   // Cliente entra na fila (SEM autenticação)
-  async entrarNaFila(barbeariaId, dadosCliente) {
+  async entrarNaFila(dadosCliente) {
+    return api.publicPost(`/fila/entrar`, dadosCliente);
+  },
+
+  // Cliente entra na fila (LEGACY - manter compatibilidade)
+  async entrarNaFilaLegacy(barbeariaId, dadosCliente) {
     return api.publicPost(`/fila/entrar`, {
       ...dadosCliente,
-      barbearia_id: barbeariaId // Garantir que o barbearia_id seja o correto
+      barbearia_id: barbeariaId
     });
   },
 
@@ -242,19 +290,29 @@ export const filaService = {
     return api.get(`/fila/${barbeariaId}`);
   },
 
-  // Obter fila gerente (GERENTE)
-  async obterFilaGerente(barbeariaId) {
-    return api.get(`/fila-gerente/${barbeariaId}`);
-  },
-
-  // Obter estatísticas públicas (PÚBLICO)
+  // Obter fila pública (CLIENTES)
   async obterFilaPublica(barbeariaId) {
     return api.publicGet(`/fila-publica/${barbeariaId}`);
   },
 
   // Obter status do cliente (SEM autenticação)
-  async obterStatusCliente(token) {
-    return api.publicGet(`/fila/status/${token}`);
+  async obterStatusCliente(token, barbeariaId = null) {
+    // Se não tem barbeariaId, tentar pegar do localStorage
+    if (!barbeariaId) {
+      barbeariaId = localStorage.getItem('fila_barbearia_id');
+    }
+    
+    if (!barbeariaId) {
+      throw new Error('Barbearia ID não encontrado');
+    }
+    
+    return api.publicGet(`/fila/${barbeariaId}/status/${token}`);
+  },
+
+  // Cliente sair da fila (SEM autenticação) - NÃO IMPLEMENTADO NO BACKEND
+  async sairDaFila(barbeariaId, token) {
+    console.warn('Endpoint DELETE /fila/:barbeariaId/sair/:token não implementado no backend');
+    throw new Error('Funcionalidade de sair da fila não implementada no backend');
   },
 
   // Chamar próximo cliente (BARBEIRO)
@@ -264,113 +322,41 @@ export const filaService = {
 
   // Iniciar atendimento (BARBEIRO)
   async iniciarAtendimento(clienteId) {
-    return api.post(`/fila/iniciar/${clienteId}`);
+    return api.post(`/fila/iniciar-atendimento/${clienteId}`);
   },
 
   // Finalizar atendimento (BARBEIRO)
-  async finalizarAtendimento(clienteId, observacoes = '') {
-    return api.post(`/fila/finalizar/${clienteId}`, { observacoes });
+  async finalizarAtendimento(clienteId) {
+    return api.post(`/fila/finalizar-atendimento/${clienteId}`);
   },
 
   // Remover cliente da fila (BARBEIRO)
   async removerCliente(clienteId) {
-    return api.delete(`/fila/remover/${clienteId}`);
+    return api.post(`/fila/remover/${clienteId}`);
   },
 
-  // Obter fila (BARBEIRO)
-  async obterFila(barbeariaId) {
-    return api.get(`/fila/${barbeariaId}`);
+  // Remover cliente da fila (ADMIN)
+  async removerClienteAdmin(clienteId) {
+    // Enviar POST com body vazio para evitar erro do Fastify
+    return api.post(`/fila/admin/remover/${clienteId}`, {});
   },
 
-  // Cliente sair da fila (SEM autenticação)
-  async sairDaFila(barbeariaId, token) {
-    return api.publicPost(`/fila/sair`, { barbearia_id: barbeariaId, token });
+  // Buscar estatísticas da fila
+  async getEstatisticas(barbeariaId) {
+    return api.get(`/fila/${barbeariaId}/estatisticas`);
   },
 
   // Adicionar cliente manualmente (BARBEIRO)
   async adicionarClienteManual(barbeariaId, dadosCliente) {
-    return api.post(`/fila/adicionar-manual`, {
+    return api.publicPost(`/fila/entrar`, {
       ...dadosCliente,
       barbearia_id: barbeariaId
     });
   }
 };
 
-export const avaliacoesService = {
-  // Enviar avaliação (PÚBLICO)
-  async enviarAvaliacao(dadosAvaliacao) {
-    return api.publicPost('/avaliacoes', dadosAvaliacao);
-  },
 
-  // Listar avaliações (com filtros) - ADMIN/GERENTE
-  async listarAvaliacoes(filtros = {}) {
-    const params = new URLSearchParams();
-    
-    // Parâmetros suportados
-    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
-    if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
-    if (filtros.page) params.append('page', filtros.page);
-    if (filtros.limit) params.append('limit', filtros.limit);
-    if (filtros.rating) params.append('rating', filtros.rating);
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/avaliacoes?${queryString}` : '/avaliacoes';
-    
-    return api.get(endpoint);
-  }
-};
 
-export const historicoService = {
-  // Obter histórico de atendimentos (ADMIN/GERENTE)
-  async obterHistorico(filtros = {}) {
-    const params = new URLSearchParams();
-    
-    // Parâmetros suportados
-    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
-    if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
-    if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-    if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
-    if (filtros.limit) params.append('limit', filtros.limit);
-    if (filtros.offset) params.append('offset', filtros.offset);
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/historico?${queryString}` : '/historico';
-    
-    return api.get(endpoint);
-  },
-
-  // Obter relatórios e estatísticas (ADMIN/GERENTE)
-  async obterRelatorios(filtros = {}) {
-    const params = new URLSearchParams();
-    
-    // Parâmetros suportados
-    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
-    if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
-    if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-    if (filtros.tipo) params.append('tipo', filtros.tipo); // diario, semanal, mensal
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/historico/relatorios?${queryString}` : '/historico/relatorios';
-    
-    return api.get(endpoint);
-  },
-
-  // MÉTODOS LEGACY (mantidos para compatibilidade, mas deprecated)
-  async obterHistoricoBarbearia(barbeariaId, filtros = {}) {
-    console.warn('DEPRECATED: Use obterHistorico({ barbearia_id: barbeariaId, ...filtros }) instead');
-    return this.obterHistorico({ barbearia_id: barbeariaId, ...filtros });
-  },
-
-  async obterHistoricoBarbeiro(barbeiroId, filtros = {}) {
-    console.warn('DEPRECATED: Use obterHistorico({ barbeiro_id: barbeiroId, ...filtros }) instead');
-    return this.obterHistorico({ barbeiro_id: barbeiroId, ...filtros });
-  },
-
-  async obterRelatoriosBarbearia(barbeariaId, filtros = {}) {
-    console.warn('DEPRECATED: Use obterRelatorios({ barbearia_id: barbeariaId, ...filtros }) instead');
-    return this.obterRelatorios({ barbearia_id: barbeariaId, ...filtros });
-  },
-};
 
 export const usuariosService = {
   // Listar usuários (admin)
@@ -406,34 +392,102 @@ export const usuariosService = {
 
   // Atualizar status do barbeiro (ativar/desativar)
   async atualizarStatusBarbeiro(acao, dados) {
-    if (acao === 'ativar') {
-      return api.post('/users/barbeiros/ativar', dados);
-    } else if (acao === 'desativar') {
-      return api.post('/users/barbeiros/desativar', dados);
-    }
-    throw new Error('Ação inválida: deve ser "ativar" ou "desativar"');
+    const payload = {
+      barbearia_id: dados.barbearia_id,
+      ativo: acao === 'ativar'
+    };
+    
+    return api.post('/users/barbeiros/alterar-status', payload);
   },
 
   // Obter status do barbeiro atual
   async obterStatusBarbeiro() {
     return api.get('/users/barbeiros/meu-status');
+  }
+};
+
+export const avaliacoesService = {
+  // Enviar avaliação (PÚBLICO)
+  async enviarAvaliacao(dadosAvaliacao) {
+    return api.publicPost('/avaliacoes', dadosAvaliacao);
   },
 
-  // MÉTODOS LEGACY (mantidos para compatibilidade, mas deprecated)
-  async listarBarbeirosLegacy() {
-    console.warn('DEPRECATED: Use listarUsuarios({ role: "barbeiro" }) instead');
-    return this.listarUsuarios({ role: 'barbeiro' });
+  // Listar avaliações (com filtros) - ADMIN/GERENTE
+  async listarAvaliacoes(filtros = {}) {
+    const params = new URLSearchParams();
+    
+    // Parâmetros suportados
+    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
+    if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
+    if (filtros.page) params.append('page', filtros.page);
+    if (filtros.limit) params.append('limit', filtros.limit);
+    if (filtros.rating) params.append('rating', filtros.rating);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/avaliacoes?${queryString}` : '/avaliacoes';
+    
+    return api.get(endpoint);
+  }
+};
+
+export const historicoService = {
+  // Obter histórico (com filtros) - ADMIN/GERENTE
+  async obterHistorico(filtros = {}) {
+    const params = new URLSearchParams();
+    
+    // Parâmetros suportados
+    if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
+    if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
+    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
+    if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
+    if (filtros.page) params.append('page', filtros.page);
+    if (filtros.limit) params.append('limit', filtros.limit);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/historico?${queryString}` : '/historico';
+    
+    return api.get(endpoint);
   },
 
-  async listarBarbeirosDisponiveisLegacy(barbeariaId) {
-    console.warn('DEPRECATED: Use barbeariasService.listarBarbeiros({ barbearia_id: barbeariaId, status: "disponivel" }) instead');
-    return barbeariasService.listarBarbeiros({ barbearia_id: barbeariaId, status: 'disponivel' });
-  },
+  // Obter relatórios (com filtros) - ADMIN/GERENTE
+  async obterRelatorios(filtros = {}) {
+    const params = new URLSearchParams();
+    
+    // Parâmetros suportados
+    if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
+    if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
+    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
+    if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
+    if (filtros.tipo) params.append('tipo', filtros.tipo);
+    if (filtros.page) params.append('page', filtros.page);
+    if (filtros.limit) params.append('limit', filtros.limit);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/historico/relatorios?${queryString}` : '/historico/relatorios';
+    
+    return api.get(endpoint);
+  }
+};
 
-  async listarBarbeirosAtivosLegacy(barbeariaId) {
-    console.warn('DEPRECATED: Use barbeariasService.listarBarbeiros({ barbearia_id: barbeariaId, status: "ativo" }) instead');
-    return barbeariasService.listarBarbeiros({ barbearia_id: barbeariaId, status: 'ativo' });
-  },
+// Serviços utilitários centralizados
+export const utilsService = {
+  // Verificar saúde da API
+  async checkHealth() {
+    return api.publicGet('/health');
+  }
+};
+
+// Serviço de desenvolvimento (bypass)
+export const devService = {
+  // Entrar na fila diretamente (para testes)
+  async enterQueueDirectly(barbeariaId, dadosCliente) {
+    return api.publicPost('/fila/entrar', {
+      nome: dadosCliente.nome,
+      telefone: dadosCliente.telefone,
+      barbearia_id: barbeariaId,
+      barbeiro_id: dadosCliente.barbeiro === 'Fila Geral' ? null : dadosCliente.barbeiro
+    });
+  }
 };
 
 // Exportar instância da API para uso direto

@@ -274,34 +274,6 @@ const AdminDashboardBarbeiro = ({
           </CardContent>
         </Card>
 
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <DashboardCard
-            title="Total na Fila"
-            value={estatisticas.total || 0}
-            icon={Users}
-            color="blue"
-          />
-          <DashboardCard
-            title="Aguardando"
-            value={estatisticas.aguardando || 0}
-            icon={Clock}
-            color="yellow"
-          />
-          <DashboardCard
-            title="Atendendo"
-            value={estatisticas.atendendo || 0}
-            icon={UserCheck}
-            color="green"
-          />
-          <DashboardCard
-            title="Tempo Médio"
-            value={`${estatisticas.tempoMedio || 15} min`}
-            icon={CheckSquare}
-            color="purple"
-          />
-        </div>
-
         {/* Ações Rápidas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Button 
@@ -356,13 +328,6 @@ const AdminDashboardBarbeiro = ({
           atendendoAtual={atendendoAtual}
           setAtendendoAtual={setAtendendoAtual}
           onHistoricoAtualizado={() => setHistoricoAtualizado(true)}
-        />
-
-        {/* Gerenciador de Estatísticas */}
-        <StatsManager
-          barbeariaAtual={barbeariaAtual}
-          estatisticas={estatisticas}
-          historicoAtualizado={historicoAtualizado}
         />
       </div>
     </div>

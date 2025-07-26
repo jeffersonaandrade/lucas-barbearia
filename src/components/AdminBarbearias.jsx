@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea.jsx';
 import { useAuthBackend } from '@/hooks/useAuthBackend.js';
 import AdminLayout from '@/components/ui/admin-layout.jsx';
 import AdminModal from '@/components/ui/admin-modal.jsx';
-import { barbeariasService, authService } from '@/services/api.js';
+import { barbeariasService } from '@/services/api.js';
 import { 
   Building2, 
   Plus, 
@@ -25,68 +25,11 @@ import {
   MessageCircle
 } from 'lucide-react';
 
-// Funções de validação e formatação
-const formatarTelefone = (telefone) => {
-  if (!telefone) return '';
-  // Remove parênteses, hífens, espaços e caracteres especiais
-  return telefone.replace(/[\(\)\-\s\.]/g, '');
-};
-
-const validarTelefone = (telefone) => {
-  if (!telefone) return true; // Opcional
-  const telefoneLimpo = formatarTelefone(telefone);
-  const regex = /^\+?[1-9]\d{1,14}$/;
-  return regex.test(telefoneLimpo);
-};
-
-const validarInstagram = (instagram) => {
-  if (!instagram) return true; // Opcional
-  const regex = /^[a-zA-Z0-9._]+$/;
-  return regex.test(instagram);
-};
-
-const validarNome = (nome) => {
-  return nome && nome.length >= 2 && nome.length <= 255;
-};
-
-const validarEndereco = (endereco) => {
-  return endereco && endereco.length >= 10;
-};
-
-const validarServicos = (servicos) => {
-  if (!Array.isArray(servicos) || servicos.length === 0) return false;
-  
-  return servicos.every(servico => 
-    servico.nome && 
-    servico.nome.trim() && 
-    servico.preco > 0 && 
-    servico.duracao > 0
-  );
-};
-
-const validarHorario = (horario) => {
-  const dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
-  
-  return dias.every(dia => {
-    const config = horario[dia];
-    if (!config || typeof config.aberto !== 'boolean') return false;
-    
-    if (config.aberto) {
-      // Se está aberto, deve ter início e fim
-      return config.inicio && config.fim && 
-             /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(config.inicio) &&
-             /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(config.fim);
-    }
-    
-    return true; // Se está fechado, não precisa de horários
-  });
-};
-
 const AdminBarbearias = () => {
   const { user, logout } = useAuthBackend();
   const navigate = useNavigate();
   const [barbearias, setBarbearias] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingBarbearia, setEditingBarbearia] = useState(null);
@@ -99,20 +42,21 @@ const AdminBarbearias = () => {
     telefone: '',
     whatsapp: '',
     instagram: '',
-    horario: {
-      segunda: { aberto: true, inicio: '09:00', fim: '19:00' },
-      terca: { aberto: true, inicio: '09:00', fim: '19:00' },
-      quarta: { aberto: true, inicio: '09:00', fim: '19:00' },
-      quinta: { aberto: true, inicio: '09:00', fim: '19:00' },
-      sexta: { aberto: true, inicio: '09:00', fim: '19:00' },
-      sabado: { aberto: true, inicio: '08:00', fim: '19:00' },
-      domingo: { aberto: false }
-    },
+    ativa: true,
     configuracoes: {
       tempo_medio_atendimento: 40,
       max_clientes_fila: 30,
-      permitir_agendamento: true,
-      mostrar_tempo_estimado: true
+      permitir_agendamento: false,
+      mostrar_tempo_estimado: false
+    },
+    horario: {
+      segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+      terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+      quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+      quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+      sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+      sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+      domingo: { aberto: false, inicio: '', fim: '' }
     },
     servicos: [
       {
@@ -131,39 +75,24 @@ const AdminBarbearias = () => {
   });
 
   useEffect(() => {
-    // Log do estado do usuário
-    console.log('Estado do usuário:', user);
-    console.log('Token no sessionStorage:', sessionStorage.getItem('adminToken'));
-    console.log('Role no sessionStorage:', sessionStorage.getItem('userRole'));
-    
-    // Carregar barbearias do backend
+    // Carregar barbearias da API
     const carregarBarbearias = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const barbeariasData = await barbeariasService.listarBarbearias();
-        console.log('Dados recebidos do backend:', barbeariasData);
-        console.log('Tipo dos dados:', typeof barbeariasData);
-        console.log('É array?', Array.isArray(barbeariasData));
-        
-        // Extrair o array de barbearias da resposta
-        const barbeariasArray = (barbeariasData && barbeariasData.data && Array.isArray(barbeariasData.data)) 
-          ? barbeariasData.data 
-          : [];
-        
-        console.log('Barbearias extraídas:', barbeariasArray);
-        setBarbearias(barbeariasArray);
-        console.log('Barbearias definidas no estado:', barbeariasArray);
+        const response = await barbeariasService.listarBarbearias();
+        console.log('Resposta da API:', response); // Debug
+        setBarbearias(response.data || []);
       } catch (error) {
         console.error('Erro ao carregar barbearias:', error);
-        setError('Erro ao carregar barbearias do servidor');
-        setBarbearias([]); // Garantir que seja um array vazio em caso de erro
+        setError('Erro ao carregar barbearias. Tente novamente.');
+        setBarbearias([]);
       } finally {
         setLoading(false);
       }
     };
 
     carregarBarbearias();
-  }, [user]);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -174,90 +103,8 @@ const AdminBarbearias = () => {
   };
 
   const handleAddBarbearia = async () => {
-    console.log('handleAddBarbearia chamado - editingBarbearia:', editingBarbearia);
-    
-    // Verificar se o usuário está logado
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) {
-      setError('Você precisa estar logado para criar uma barbearia.');
-      return;
-    }
-    
-    // Verificar se o usuário tem role de admin
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      setError('Você precisa ter permissão de administrador para criar barbearias.');
-      return;
-    }
-    
-    console.log('Token encontrado:', token.substring(0, 20) + '...');
-    console.log('Role do usuário:', userRole);
-    console.log('Estado do usuário do hook:', user);
-    
-    // Verificar se o token não está expirado
-    try {
-      const tokenParts = token.split('.');
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        const now = Math.floor(Date.now() / 1000);
-        if (payload.exp < now) {
-          setError('Token expirado. Faça login novamente.');
-          return;
-        }
-        console.log('Token válido até:', new Date(payload.exp * 1000).toLocaleString());
-        console.log('Payload completo do token:', payload);
-      }
-    } catch (error) {
-      console.log('Erro ao verificar expiração do token:', error);
-    }
-    
-    // Testar autenticação antes de criar barbearia
-    try {
-      console.log('Testando autenticação...');
-      const currentUser = await authService.getCurrentUser();
-      console.log('Usuário atual validado:', currentUser);
-    } catch (error) {
-      console.error('Erro na validação do usuário:', error);
-      setError('Erro na validação da autenticação. Faça login novamente.');
-      return;
-    }
-    
-    // Validações obrigatórias
-    if (!validarNome(formData.nome)) {
-      setError('Nome deve ter entre 2 e 255 caracteres.');
-      return;
-    }
-    
-    if (!validarEndereco(formData.endereco)) {
-      setError('Endereço deve ter pelo menos 10 caracteres.');
-      return;
-    }
-    
-    // Validações de formato
-    if (!validarTelefone(formData.telefone)) {
-      setError('Telefone deve estar no formato: 11999999999 ou +5511999999999 (sem parênteses ou hífens).');
-      return;
-    }
-    
-    if (!validarTelefone(formData.whatsapp)) {
-      setError('WhatsApp deve estar no formato: 11999999999 ou +5511999999999 (sem parênteses ou hífens).');
-      return;
-    }
-    
-    if (!validarInstagram(formData.instagram)) {
-      setError('Instagram deve conter apenas letras, números, pontos e underscores (ex: lucasbarbearia).');
-      return;
-    }
-    
-    // Validar horário
-    if (!validarHorario(formData.horario)) {
-      setError('Horário de funcionamento inválido. Verifique se todos os dias abertos têm horários válidos.');
-      return;
-    }
-    
-    // Validar serviços
-    if (!validarServicos(formData.servicos)) {
-      setError('Por favor, adicione pelo menos um serviço válido com nome, preço e duração.');
+    if (!formData.nome || !formData.endereco || !formData.telefone) {
+      setError('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -265,61 +112,45 @@ const AdminBarbearias = () => {
     setError('');
 
     try {
-      // Formatar dados antes de enviar
-      const dadosFormatados = {
-        ...formData,
-        telefone: formatarTelefone(formData.telefone),
-        whatsapp: formatarTelefone(formData.whatsapp),
-        instagram: formData.instagram ? formData.instagram.replace('@', '') : '',
+      // Preparar dados para a API
+      const dadosBarbearia = {
+        nome: formData.nome,
+        endereco: formData.endereco,
+        telefone: formData.telefone,
+        whatsapp: formData.whatsapp || '',
+        instagram: formData.instagram || '',
+        ativo: formData.ativa,
         configuracoes: {
-          tempo_medio_atendimento: formData.configuracoes.tempo_medio_atendimento || 30,
-          max_clientes_fila: formData.configuracoes.max_clientes_fila || 50,
-          permitir_agendamento: formData.configuracoes.permitir_agendamento || false,
-          mostrar_tempo_estimado: formData.configuracoes.mostrar_tempo_estimado !== false
-        }
+          tempo_medio_atendimento: formData.configuracoes?.tempo_medio_atendimento || 40,
+          max_clientes_fila: formData.configuracoes?.max_clientes_fila || 30,
+          permitir_agendamento: formData.configuracoes?.permitir_agendamento || false,
+          mostrar_tempo_estimado: formData.configuracoes?.mostrar_tempo_estimado || false
+        },
+        horario: formData.horario || {
+          segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+          terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+          domingo: { aberto: false, inicio: '', fim: '' }
+        },
+        servicos: formData.servicos || []
       };
+
+      const response = await barbeariasService.criarBarbearia(dadosBarbearia);
+      console.log('Barbearia criada:', response); // Debug
       
-      console.log('Dados sendo enviados para o backend:', dadosFormatados);
-      const response = await barbeariasService.criarBarbearia(dadosFormatados);
-      console.log('Resposta do backend:', response);
+      // Recarregar lista de barbearias
+      const barbeariasResponse = await barbeariasService.listarBarbearias();
+      setBarbearias(barbeariasResponse.data || []);
       
-      // Extrair a barbearia da resposta
-      const novaBarbearia = response.data || response;
-      console.log('Barbearia extraída:', novaBarbearia);
-      
-      setBarbearias(prev => {
-        const prevArray = Array.isArray(prev) ? prev : [];
-        return [...prevArray, novaBarbearia];
-      });
       setSuccess('Barbearia criada com sucesso!');
       setShowAddDialog(false);
       resetForm();
-      
-      // Recarregar a lista de barbearias para garantir sincronização
-      try {
-        const barbeariasData = await barbeariasService.listarBarbearias();
-        const barbeariasArray = (barbeariasData && barbeariasData.data && Array.isArray(barbeariasData.data)) 
-          ? barbeariasData.data 
-          : [];
-        setBarbearias(barbeariasArray);
-        console.log('Lista de barbearias atualizada:', barbeariasArray);
-        console.log('Estado atual das barbearias:', barbeariasArray);
-      } catch (error) {
-        console.error('Erro ao recarregar barbearias:', error);
-        // Em caso de erro, manter a barbearia criada no estado
-        setBarbearias(prev => {
-          const prevArray = Array.isArray(prev) ? prev : [];
-          return [...prevArray, novaBarbearia];
-        });
-      }
     } catch (error) {
       console.error('Erro ao criar barbearia:', error);
-      console.error('Detalhes do erro:', {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
-      setError(`Erro ao criar barbearia: ${error.message}`);
+      setError('Erro ao criar barbearia. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -328,25 +159,26 @@ const AdminBarbearias = () => {
   const handleEditBarbearia = (barbearia) => {
     setEditingBarbearia(barbearia);
     setFormData({
-      nome: barbearia.nome,
-      endereco: barbearia.endereco,
-      telefone: barbearia.telefone,
+      nome: barbearia.nome || '',
+      endereco: barbearia.endereco || '',
+      telefone: barbearia.telefone || '',
       whatsapp: barbearia.whatsapp || '',
       instagram: barbearia.instagram || '',
-      horario: barbearia.horario || {
-        segunda: { aberto: true, inicio: '09:00', fim: '19:00' },
-        terca: { aberto: true, inicio: '09:00', fim: '19:00' },
-        quarta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        quinta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        sexta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        sabado: { aberto: true, inicio: '08:00', fim: '19:00' },
-        domingo: { aberto: false }
+      ativa: barbearia.ativo !== false, // true se ativo for true ou undefined
+      configuracoes: {
+        tempo_medio_atendimento: barbearia.configuracoes?.tempo_medio_atendimento || 40,
+        max_clientes_fila: barbearia.configuracoes?.max_clientes_fila || 30,
+        permitir_agendamento: barbearia.configuracoes?.permitir_agendamento || false,
+        mostrar_tempo_estimado: barbearia.configuracoes?.mostrar_tempo_estimado || false
       },
-      configuracoes: barbearia.configuracoes || {
-        tempo_medio_atendimento: 40,
-        max_clientes_fila: 30,
-        permitir_agendamento: true,
-        mostrar_tempo_estimado: true
+      horario: barbearia.horario || {
+        segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+        terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+        quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+        domingo: { aberto: false, inicio: '', fim: '' }
       },
       servicos: barbearia.servicos || [
         {
@@ -367,61 +199,8 @@ const AdminBarbearias = () => {
   };
 
   const handleUpdateBarbearia = async () => {
-    console.log('handleUpdateBarbearia chamado - editingBarbearia:', editingBarbearia);
-    
-    // Verificar se o usuário está logado
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) {
-      setError('Você precisa estar logado para atualizar uma barbearia.');
-      return;
-    }
-    
-    // Verificar se o usuário tem role de admin
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      setError('Você precisa ter permissão de administrador para atualizar barbearias.');
-      return;
-    }
-    
-    console.log('Token encontrado para atualização:', token.substring(0, 20) + '...');
-    console.log('Role do usuário:', userRole);
-    
-    // Validações obrigatórias
-    if (!validarNome(formData.nome)) {
-      setError('Nome deve ter entre 2 e 255 caracteres.');
-      return;
-    }
-    
-    if (!validarEndereco(formData.endereco)) {
-      setError('Endereço deve ter pelo menos 10 caracteres.');
-      return;
-    }
-    
-    // Validações de formato
-    if (!validarTelefone(formData.telefone)) {
-      setError('Telefone deve estar no formato: 11999999999 ou +5511999999999 (sem parênteses ou hífens).');
-      return;
-    }
-    
-    if (!validarTelefone(formData.whatsapp)) {
-      setError('WhatsApp deve estar no formato: 11999999999 ou +5511999999999 (sem parênteses ou hífens).');
-      return;
-    }
-    
-    if (!validarInstagram(formData.instagram)) {
-      setError('Instagram deve conter apenas letras, números, pontos e underscores (ex: lucasbarbearia).');
-      return;
-    }
-    
-    // Validar horário
-    if (!validarHorario(formData.horario)) {
-      setError('Horário de funcionamento inválido. Verifique se todos os dias abertos têm horários válidos.');
-      return;
-    }
-    
-    // Validar serviços
-    if (!validarServicos(formData.servicos)) {
-      setError('Por favor, adicione pelo menos um serviço válido com nome, preço e duração.');
+    if (!formData.nome || !formData.endereco || !formData.telefone) {
+      setError('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -429,26 +208,38 @@ const AdminBarbearias = () => {
     setError('');
 
     try {
-      // Formatar dados antes de enviar
-      const dadosFormatados = {
-        ...formData,
-        telefone: formatarTelefone(formData.telefone),
-        whatsapp: formatarTelefone(formData.whatsapp),
-        instagram: formData.instagram ? formData.instagram.replace('@', '') : '',
+      // Preparar dados para a API
+      const dadosBarbearia = {
+        nome: formData.nome,
+        endereco: formData.endereco,
+        telefone: formData.telefone,
+        whatsapp: formData.whatsapp || '',
+        instagram: formData.instagram || '',
+        ativo: formData.ativa,
         configuracoes: {
-          tempo_medio_atendimento: formData.configuracoes.tempo_medio_atendimento || 30,
-          max_clientes_fila: formData.configuracoes.max_clientes_fila || 50,
-          permitir_agendamento: formData.configuracoes.permitir_agendamento || false,
-          mostrar_tempo_estimado: formData.configuracoes.mostrar_tempo_estimado !== false
-        }
+          tempo_medio_atendimento: formData.configuracoes?.tempo_medio_atendimento || 40,
+          max_clientes_fila: formData.configuracoes?.max_clientes_fila || 30,
+          permitir_agendamento: formData.configuracoes?.permitir_agendamento || false,
+          mostrar_tempo_estimado: formData.configuracoes?.mostrar_tempo_estimado || false
+        },
+        horario: formData.horario || {
+          segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+          terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+          domingo: { aberto: false, inicio: '', fim: '' }
+        },
+        servicos: formData.servicos || []
       };
+
+              await barbeariasService.atualizarBarbearia(editingBarbearia.id, dadosBarbearia);
       
-      const barbeariaAtualizada = await barbeariasService.atualizarBarbearia(editingBarbearia.id, dadosFormatados);
-      setBarbearias(prev => prev.map(barbearia => 
-        barbearia.id === editingBarbearia.id 
-          ? barbeariaAtualizada
-          : barbearia
-      ));
+      // Recarregar lista de barbearias
+      const barbeariasResponse = await barbeariasService.listarBarbearias();
+      setBarbearias(barbeariasResponse.data || []);
+      
       setSuccess('Barbearia atualizada com sucesso!');
       setShowAddDialog(false);
       resetForm();
@@ -466,8 +257,12 @@ const AdminBarbearias = () => {
     }
 
     try {
-      await barbeariasService.removerBarbearia(barbeariaId);
-      setBarbearias(prev => prev.filter(barbearia => barbearia.id !== barbeariaId));
+              await barbeariasService.removerBarbearia(barbeariaId);
+      
+      // Recarregar lista de barbearias
+      const barbeariasResponse = await barbeariasService.listarBarbearias();
+      setBarbearias(barbeariasResponse.data || []);
+      
       setSuccess('Barbearia excluída com sucesso!');
     } catch (error) {
       console.error('Erro ao excluir barbearia:', error);
@@ -482,20 +277,21 @@ const AdminBarbearias = () => {
       telefone: '',
       whatsapp: '',
       instagram: '',
-      horario: {
-        segunda: { aberto: true, inicio: '09:00', fim: '19:00' },
-        terca: { aberto: true, inicio: '09:00', fim: '19:00' },
-        quarta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        quinta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        sexta: { aberto: true, inicio: '09:00', fim: '19:00' },
-        sabado: { aberto: true, inicio: '08:00', fim: '19:00' },
-        domingo: { aberto: false }
-      },
+      ativa: true,
       configuracoes: {
         tempo_medio_atendimento: 40,
         max_clientes_fila: 30,
-        permitir_agendamento: true,
-        mostrar_tempo_estimado: true
+        permitir_agendamento: false,
+        mostrar_tempo_estimado: false
+      },
+      horario: {
+        segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+        terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+        quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+        sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+        domingo: { aberto: false, inicio: '', fim: '' }
       },
       servicos: [
         {
@@ -516,47 +312,10 @@ const AdminBarbearias = () => {
     setError('');
   };
 
-  const filteredBarbearias = (Array.isArray(barbearias) ? barbearias : []).filter(barbearia => 
+  const filteredBarbearias = barbearias.filter(barbearia => 
     barbearia.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     barbearia.endereco.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Verificação de segurança para evitar erros de renderização
-  if (!Array.isArray(barbearias)) {
-    console.error('Barbearias não é um array:', barbearias);
-    setBarbearias([]);
-  }
-
-  // Mostrar loading enquanto carrega dados iniciais
-  if (loading && (!Array.isArray(barbearias) || barbearias.length === 0)) {
-    return (
-      <AdminLayout onLogout={handleLogout} onBack={handleBack}>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <p>Carregando barbearias...</p>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  // Fallback para erro de renderização
-  if (error && error.includes('render')) {
-    return (
-      <AdminLayout onLogout={handleLogout} onBack={handleBack}>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Erro de Renderização</h3>
-            <p className="text-gray-600 mb-4">Ocorreu um erro ao renderizar a página</p>
-            <Button onClick={() => window.location.reload()}>
-              Recarregar Página
-            </Button>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout 
@@ -578,28 +337,14 @@ const AdminBarbearias = () => {
         
         <AdminModal
           trigger={
-            <Button 
-              className="flex items-center space-x-2"
-              onClick={() => {
-                console.log('Abrindo modal para nova barbearia');
-                setEditingBarbearia(null);
-                resetForm();
-                setShowAddDialog(true);
-                console.log('Estado editingBarbearia limpo:', null);
-              }}
-            >
+            <Button className="flex items-center space-x-2">
               <Plus className="w-4 h-4" />
               <span>Nova Barbearia</span>
             </Button>
           }
           title={editingBarbearia ? 'Editar Barbearia' : 'Adicionar Nova Barbearia'}
           open={showAddDialog}
-          onOpenChange={(open) => {
-            setShowAddDialog(open);
-            if (!open) {
-              resetForm();
-            }
-          }}
+          onOpenChange={setShowAddDialog}
           onCancel={() => {
             setShowAddDialog(false);
             resetForm();
@@ -608,8 +353,8 @@ const AdminBarbearias = () => {
           confirmText={editingBarbearia ? 'Atualizar' : 'Criar'}
           loading={loading}
         >
-          <div className="space-y-2 sm:space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+          <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="nome" className="text-sm font-medium">Nome da Barbearia *</Label>
                 <Input
@@ -627,13 +372,24 @@ const AdminBarbearias = () => {
                   id="telefone"
                   value={formData.telefone}
                   onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-                  placeholder="11999999999 (sem parênteses ou hífens)"
+                  placeholder="(81) 3333-4444"
                   className="mt-1"
                 />
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
+            <div>
+              <Label htmlFor="endereco" className="text-sm font-medium">Endereço Completo *</Label>
+              <Input
+                id="endereco"
+                value={formData.endereco}
+                onChange={(e) => setFormData({...formData, endereco: e.target.value})}
+                placeholder="Rua, número, bairro, cidade/estado"
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="whatsapp" className="text-sm font-medium">WhatsApp</Label>
                 <Input
@@ -658,24 +414,11 @@ const AdminBarbearias = () => {
             </div>
             
             <div>
-              <Label htmlFor="endereco" className="text-sm font-medium">Endereço Completo *</Label>
-              <Input
-                id="endereco"
-                value={formData.endereco}
-                onChange={(e) => setFormData({...formData, endereco: e.target.value})}
-                placeholder="Rua, número, bairro, cidade/estado"
-                className="mt-1"
-              />
-            </div>
-            
-
-            
-            <div>
               <Label className="text-sm font-medium">Configurações da Barbearia</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4 mt-1">
-              <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-1">
+                <div>
                   <Label htmlFor="tempo_medio" className="text-xs font-medium">Tempo Médio de Atendimento (min)</Label>
-                <Input
+                  <Input
                     id="tempo_medio"
                     type="number"
                     value={formData.configuracoes.tempo_medio_atendimento}
@@ -687,15 +430,15 @@ const AdminBarbearias = () => {
                       }
                     })}
                     placeholder="40"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
                   <Label htmlFor="max_clientes" className="text-xs font-medium">Máximo de Clientes na Fila</Label>
-                <Input
+                  <Input
                     id="max_clientes"
-                  type="number"
+                    type="number"
                     value={formData.configuracoes.max_clientes_fila}
                     onChange={(e) => setFormData({
                       ...formData, 
@@ -705,8 +448,8 @@ const AdminBarbearias = () => {
                       }
                     })}
                     placeholder="30"
-                  className="mt-1"
-                />
+                    className="mt-1"
+                  />
                 </div>
               </div>
               
@@ -747,124 +490,98 @@ const AdminBarbearias = () => {
               </div>
             </div>
             
-            <div>
-              <Label className="text-sm font-medium">Horário de Funcionamento</Label>
-              <div className="space-y-2 mt-1">
-                {Object.entries(formData.horario).map(([dia, config]) => (
-                  <div key={dia} className="flex items-center space-x-3 p-2 border rounded">
-                    <input
-                      type="checkbox"
-                      id={`${dia}_aberto`}
-                      checked={config.aberto}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        horario: {
-                          ...formData.horario,
-                          [dia]: {
-                            ...config,
-                            aberto: e.target.checked
-                          }
-                        }
-                      })}
-                      className="rounded border-gray-300"
-                    />
-                    <Label htmlFor={`${dia}_aberto`} className="text-sm capitalize w-20">
-                      {dia === 'segunda' ? 'Segunda' : 
-                       dia === 'terca' ? 'Terça' : 
-                       dia === 'quarta' ? 'Quarta' : 
-                       dia === 'quinta' ? 'Quinta' : 
-                       dia === 'sexta' ? 'Sexta' : 
-                       dia === 'sabado' ? 'Sábado' : 'Domingo'}
-                    </Label>
-                    
-                    {config.aberto && (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          type="time"
-                          value={config.inicio}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            horario: {
-                              ...formData.horario,
-                              [dia]: {
-                                ...config,
-                                inicio: e.target.value
-                              }
-                            }
-                          })}
-                          className="w-24"
-                        />
-                        <span className="text-sm">às</span>
-              <Input
-                          type="time"
-                          value={config.fim}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            horario: {
-                              ...formData.horario,
-                              [dia]: {
-                                ...config,
-                                fim: e.target.value
-                              }
-                            }
-                          })}
-                          className="w-24"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center space-x-2 pt-2">
+              <input
+                type="checkbox"
+                id="ativa"
+                checked={formData.ativa}
+                onChange={(e) => setFormData({...formData, ativa: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="ativa" className="text-sm">Barbearia ativa</Label>
             </div>
             
-            <div>
-              <Label className="text-sm font-medium">Serviços</Label>
-              <div className="space-y-2 mt-1">
+            {/* Seção de Serviços */}
+            <div className="border-t pt-4">
+              <Label className="text-sm font-medium">Serviços da Barbearia</Label>
+              <div className="space-y-3 mt-2">
                 {formData.servicos.map((servico, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-2 border rounded">
-                    <Input
-                      placeholder="Nome do serviço"
-                      value={servico.nome}
-                      onChange={(e) => {
-                        const novosServicos = [...formData.servicos];
-                        novosServicos[index].nome = e.target.value;
-                        setFormData({...formData, servicos: novosServicos});
-                      }}
-                      className="text-xs"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Preço"
-                      value={servico.preco}
-                      onChange={(e) => {
-                        const novosServicos = [...formData.servicos];
-                        novosServicos[index].preco = parseFloat(e.target.value);
-                        setFormData({...formData, servicos: novosServicos});
-                      }}
-                      className="text-xs"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Duração (min)"
-                      value={servico.duracao}
-                      onChange={(e) => {
-                        const novosServicos = [...formData.servicos];
-                        novosServicos[index].duracao = parseInt(e.target.value);
-                        setFormData({...formData, servicos: novosServicos});
-                      }}
-                      className="text-xs"
-                    />
-                    <div className="flex items-center space-x-1">
+                  <div key={index} className="border rounded-lg p-3 sm:p-4 bg-gray-50">
+                    {/* Nome do Serviço */}
+                    <div className="mb-3">
+                      <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                        Nome do Serviço *
+                      </Label>
                       <Input
-                        placeholder="Descrição"
+                        placeholder="Ex: Corte Masculino Premium"
+                        value={servico.nome}
+                        onChange={(e) => {
+                          const novosServicos = [...formData.servicos];
+                          novosServicos[index].nome = e.target.value;
+                          setFormData({...formData, servicos: novosServicos});
+                        }}
+                        className="text-sm h-9"
+                      />
+                    </div>
+                    
+                    {/* Preço e Duração em linha */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                          Preço (R$) *
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="35.00"
+                          value={servico.preco}
+                          onChange={(e) => {
+                            const novosServicos = [...formData.servicos];
+                            novosServicos[index].preco = parseFloat(e.target.value) || 0;
+                            setFormData({...formData, servicos: novosServicos});
+                          }}
+                          className="text-sm h-9"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                          Duração (min) *
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="40"
+                          value={servico.duracao}
+                          onChange={(e) => {
+                            const novosServicos = [...formData.servicos];
+                            novosServicos[index].duracao = parseInt(e.target.value) || 30;
+                            setFormData({...formData, servicos: novosServicos});
+                          }}
+                          className="text-sm h-9"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Descrição */}
+                    <div className="mb-3">
+                      <Label className="text-xs font-medium text-gray-700 mb-1 block">
+                        Descrição (opcional)
+                      </Label>
+                      <Input
+                        placeholder="Ex: Corte com técnicas avançadas"
                         value={servico.descricao}
                         onChange={(e) => {
                           const novosServicos = [...formData.servicos];
                           novosServicos[index].descricao = e.target.value;
                           setFormData({...formData, servicos: novosServicos});
                         }}
-                        className="text-xs"
+                        className="text-sm h-9"
                       />
+                    </div>
+                    
+                    {/* Botão Excluir */}
+                    <div className="flex justify-end">
                       <Button
                         type="button"
                         variant="outline"
@@ -873,9 +590,10 @@ const AdminBarbearias = () => {
                           const novosServicos = formData.servicos.filter((_, i) => i !== index);
                           setFormData({...formData, servicos: novosServicos});
                         }}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Remover
                       </Button>
                     </div>
                   </div>
@@ -901,7 +619,6 @@ const AdminBarbearias = () => {
                 </Button>
               </div>
             </div>
-            
           </div>
         </AdminModal>
       </div>
@@ -941,8 +658,8 @@ const AdminBarbearias = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-semibold text-lg">{barbearia.nome}</h3>
-                      <Badge className="bg-green-100 text-green-800">
-                        Ativa
+                      <Badge className={barbearia.ativo !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                        {barbearia.ativo !== false ? 'Ativa' : 'Inativa'}
                       </Badge>
                     </div>
                     
@@ -972,17 +689,17 @@ const AdminBarbearias = () => {
                       )}
                       
                       {barbearia.configuracoes && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4" />
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4" />
                           <span>Tempo médio: {barbearia.configuracoes.tempo_medio_atendimento}min • Máx. fila: {barbearia.configuracoes.max_clientes_fila}</span>
-                      </div>
+                        </div>
                       )}
                       
                       {barbearia.servicos && barbearia.servicos.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4" />
+                        <div className="flex items-center space-x-2">
+                          <Users className="w-4 h-4" />
                           <span>{barbearia.servicos.length} serviços disponíveis</span>
-                      </div>
+                        </div>
                       )}
                       
                       <span>Criada em: {barbearia.createdAt ? new Date(barbearia.createdAt).toLocaleDateString('pt-BR') : 'Data não informada'}</span>

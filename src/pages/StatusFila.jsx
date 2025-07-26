@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { useFilaBackend } from '@/hooks/useFilaBackend.js';
+import { FilaList } from '@/components/ui/fila-list.jsx';
+import { FilaStats } from '@/components/ui/fila-stats.jsx';
+import { useFilaStats } from '@/hooks/useFilaStats.js';
 
 const StatusFila = () => {
   const navigate = useNavigate();
@@ -15,11 +18,14 @@ const StatusFila = () => {
     fila, 
     loading, 
     error, 
-    estatisticas, 
+    estatisticas: estatisticasAPI, 
     sairDaFila, 
     atualizarPosicao,
     barbeariaInfo
   } = useFilaBackend(parseInt(id));
+  
+  // Usar hook customizado para estatísticas
+  const estatisticas = useFilaStats(fila, estatisticasAPI);
   
   const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -276,7 +282,11 @@ const StatusFila = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Barbeiro</p>
-                    <p className="font-semibold text-foreground">{clienteAtual.barbeiro}</p>
+                    <p className="font-semibold text-foreground">
+                      {typeof clienteAtual.barbeiro === 'object' 
+                        ? clienteAtual.barbeiro.nome 
+                        : clienteAtual.barbeiro || 'Fila Geral'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Token</p>
@@ -327,79 +337,33 @@ const StatusFila = () => {
             {/* Status e Fila */}
             <div className="lg:col-span-2 space-y-6">
               {/* Lista da Fila */}
-              <Card className="bg-card border border-border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Fila Atual</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {fila.map((pessoa, index) => (
-                      <div
-                        key={pessoa.id}
-                        className={`flex items-center justify-between p-4 rounded-lg ${
-                          pessoa.token === clienteAtual.token
-                            ? 'bg-primary/20 border border-primary/40'
-                            : 'bg-secondary'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className="w-8 h-8 bg-gray-200 text-gray-800 rounded-full flex items-center justify-center text-sm font-bold">
-                            {pessoa.posicao}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">
-                              {pessoa.nome}
-                              {pessoa.token === clienteAtual.token && (
-                                <span className="ml-2 text-xs text-primary">(Você)</span>
-                              )}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{pessoa.barbeiro}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`${getStatusColor(pessoa.status)} text-white`}>
-                            {getStatusText(pessoa.status)}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {pessoa.tempoEstimado} min
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <FilaList
+                fila={fila || []}
+                title="Fila Atual"
+                filterStatus="aguardando"
+                showBarbeiro={true}
+                showPosition={true}
+                showTime={true}
+                showStatus={true}
+                showActions={false}
+                highlightCurrentUser={true}
+                currentUserToken={clienteAtual?.token}
+                emptyMessage="Nenhum cliente aguardando."
+                loading={loading}
+              />
 
               {/* Estatísticas */}
-              <Card className="bg-card border border-border shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Estatísticas Gerais</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-secondary rounded-lg">
-                      <Users className="w-6 h-6 text-primary mx-auto mb-2" />
-                      <div className="text-lg font-bold text-foreground">{estatisticas.total}</div>
-                      <div className="text-xs text-muted-foreground">Total</div>
-                    </div>
-                    <div className="text-center p-4 bg-secondary rounded-lg">
-                      <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-2" />
-                      <div className="text-lg font-bold text-foreground">{estatisticas.atendendo}</div>
-                      <div className="text-xs text-muted-foreground">Atendendo</div>
-                    </div>
-                    <div className="text-center p-4 bg-secondary rounded-lg">
-                      <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-                      <div className="text-lg font-bold text-foreground">{estatisticas.proximo}</div>
-                      <div className="text-xs text-muted-foreground">Próximo</div>
-                    </div>
-                    <div className="text-center p-4 bg-secondary rounded-lg">
-                      <Clock className="w-6 h-6 text-primary mx-auto mb-2" />
-                      <div className="text-lg font-bold text-foreground">{estatisticas.tempoMedio}</div>
-                      <div className="text-xs text-muted-foreground">Min. médio</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <FilaStats
+                estatisticas={estatisticas}
+                title="Estatísticas Gerais"
+                showTotal={true}
+                showAguardando={true}
+                showAtendendo={true}
+                showProximo={true}
+                showTempoMedio={true}
+                showBarbeirosDisponiveis={true}
+                variant="default"
+              />
             </div>
           </div>
         </div>

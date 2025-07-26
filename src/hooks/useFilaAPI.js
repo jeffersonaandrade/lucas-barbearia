@@ -156,11 +156,6 @@ export const useFilaAPI = (barbeariaId = null) => {
     }
   };
 
-  // Gerar token único
-  const gerarToken = useCallback(() => {
-    return 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  }, []);
-
   // Entrar na fila
   const entrarNaFila = useCallback(async (dados) => {
     setLoading(true);
@@ -170,33 +165,41 @@ export const useFilaAPI = (barbeariaId = null) => {
       const dadosCliente = {
         nome: dados.nome,
         telefone: dados.telefone,
-        barbeiro_id: dados.barbeiro === 'Fila Geral' ? null : dados.barbeiro,
-        token: gerarToken()
+        barbeiro_id: dados.barbeiro === 'Fila Geral' ? null : dados.barbeiro
       };
 
       const response = await filaService.entrarNaFila(barbeariaId, dadosCliente);
+
+      // Extrair dados da resposta
+      const cliente = response.cliente || response.data?.cliente || response;
+      const token = response.token || response.data?.token || response.data?.cliente?.token || response.id;
+
+      if (!token) {
+        console.error('❌ Nenhum token encontrado na resposta do backend');
+        throw new Error('Token não foi gerado pelo servidor. Tente novamente.');
+      }
 
       // Atualizar estado local
       await carregarFilaAtual();
 
       // Salvar no localStorage para compatibilidade
       console.log('💾 Salvando dados no localStorage...');
-      console.log('🎫 Token:', response.token);
-      console.log('📋 Cliente:', response.cliente);
+      console.log('🎫 Token:', token);
+      console.log('📋 Cliente:', cliente);
       console.log('🏪 Barbearia ID:', barbeariaId);
       
-      localStorage.setItem('fila_token', response.token);
-      localStorage.setItem('cliente_data', JSON.stringify(response.cliente));
+      localStorage.setItem('fila_token', token);
+      localStorage.setItem('cliente_data', JSON.stringify(cliente));
       localStorage.setItem('fila_barbearia_id', barbeariaId.toString());
       localStorage.setItem('fila_timestamp', Date.now().toString());
 
       console.log('✅ Dados salvos no localStorage');
-      setClienteAtual(response.cliente);
+      setClienteAtual(cliente);
 
       return { 
-        token: response.token, 
-        posicao: response.cliente.posicao, 
-        tempoEstimado: response.cliente.tempo_estimado 
+        token: token, 
+        posicao: cliente?.posicao || cliente?.position || 1, 
+        tempoEstimado: cliente?.tempo_estimado || cliente?.estimated_time || 15 
       };
     } catch (err) {
       setError('Erro ao entrar na fila. Tente novamente.');
@@ -204,7 +207,7 @@ export const useFilaAPI = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [gerarToken, barbeariaId]);
+  }, [barbeariaId]);
 
   // Sair da fila
   const sairDaFila = useCallback(async (token) => {
@@ -309,7 +312,7 @@ export const useFilaAPI = (barbeariaId = null) => {
 
   const finalizarAtendimento = useCallback(async (clienteId) => {
     try {
-      await filaService.finalizarAtendimento(barbeariaId, clienteId);
+      await filaService.finalizarAtendimento(clienteId);
       await carregarFilaAtual();
     } catch (err) {
       setError('Erro ao finalizar atendimento.');
@@ -329,7 +332,7 @@ export const useFilaAPI = (barbeariaId = null) => {
 
   const removerCliente = useCallback(async (clienteId) => {
     try {
-      await filaService.removerCliente(barbeariaId, clienteId);
+      await filaService.removerCliente(clienteId);
       await carregarFilaAtual();
     } catch (err) {
       setError('Erro ao remover cliente.');
@@ -353,7 +356,7 @@ export const useFilaAPI = (barbeariaId = null) => {
     obterStatusFila,
     obterFilaAtual,
     atualizarPosicao,
-    gerarToken,
+
     
     // Funções para admin/barbeiro
     chamarProximo,

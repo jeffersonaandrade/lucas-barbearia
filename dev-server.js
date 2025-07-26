@@ -222,8 +222,8 @@ app.post('/api/fila/entrar', (req, res) => {
     return res.status(404).json({ message: 'Barbearia não encontrada' });
   }
   
-  // Gerar token único
-  const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  // Gerar token único (formato do backend)
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
   // Gerar nova posição
   const novaPosicao = filas[barbearia_id].fila.length + 1;
@@ -314,6 +314,239 @@ app.delete('/api/fila/:barbeariaId/sair/:token', (req, res) => {
   res.json({ message: 'Cliente removido da fila com sucesso' });
 });
 
+// Remover cliente da fila (BARBEIRO)
+app.post('/api/fila/remover/:clienteId', (req, res) => {
+  const clienteId = req.params.clienteId;
+  
+  console.log(`🔧 Removendo cliente ${clienteId} via endpoint /fila/remover`);
+  
+  // Procurar o cliente em todas as filas
+  let clienteEncontrado = false;
+  
+  for (const barbeariaId in filas) {
+    const fila = filas[barbeariaId];
+    const index = fila.fila.findIndex(c => c.id.toString() === clienteId || c.id === parseInt(clienteId));
+    
+    if (index !== -1) {
+      // Remover da fila
+      fila.fila.splice(index, 1);
+      
+      // Reordenar posições
+      fila.fila.forEach((cliente, i) => {
+        cliente.posicao = i + 1;
+      });
+      
+      // Atualizar estatísticas
+      fila.estatisticas.total = fila.fila.length;
+      fila.estatisticas.aguardando = fila.fila.filter(c => c.status === 'aguardando').length;
+      
+      clienteEncontrado = true;
+      console.log(`✅ Cliente ${clienteId} removido da barbearia ${barbeariaId}`);
+      break;
+    }
+  }
+  
+  if (!clienteEncontrado) {
+    return res.status(404).json({ message: 'Cliente não encontrado' });
+  }
+  
+  res.json({ message: 'Cliente removido da fila com sucesso' });
+});
+
+// Remover cliente da fila (ADMIN)
+app.post('/api/fila/admin/remover/:clienteId', (req, res) => {
+  const clienteId = req.params.clienteId;
+  
+  console.log(`👑 Admin removendo cliente ${clienteId} via endpoint /fila/admin/remover`);
+  
+  // Procurar o cliente em todas as filas
+  let clienteEncontrado = false;
+  
+  for (const barbeariaId in filas) {
+    const fila = filas[barbeariaId];
+    const index = fila.fila.findIndex(c => c.id.toString() === clienteId || c.id === parseInt(clienteId));
+    
+    if (index !== -1) {
+      // Remover da fila
+      fila.fila.splice(index, 1);
+      
+      // Reordenar posições
+      fila.fila.forEach((cliente, i) => {
+        cliente.posicao = i + 1;
+      });
+      
+      // Atualizar estatísticas
+      fila.estatisticas.total = fila.fila.length;
+      fila.estatisticas.aguardando = fila.fila.filter(c => c.status === 'aguardando').length;
+      
+      clienteEncontrado = true;
+      console.log(`✅ Admin removeu cliente ${clienteId} da barbearia ${barbeariaId}`);
+      break;
+    }
+  }
+  
+  if (!clienteEncontrado) {
+    return res.status(404).json({ message: 'Cliente não encontrado' });
+  }
+  
+  res.json({ message: 'Cliente removido da fila com sucesso' });
+});
+
+// Endpoint específico para estatísticas da fila
+app.get('/api/fila/:barbeariaId/estatisticas', (req, res) => {
+  const barbeariaId = parseInt(req.params.barbeariaId);
+  
+  if (!filas[barbeariaId]) {
+    return res.status(404).json({ message: 'Barbearia não encontrada' });
+  }
+  
+  const fila = filas[barbeariaId];
+  const clientes = fila.fila || [];
+  
+  // Buscar barbeiros da barbearia
+  const barbeiros = getBarbeirosBarbearia(barbeariaId);
+  const barbeirosAtendendo = barbeiros.filter(b => b.disponivel && b.ativo).length;
+  
+  // Calcular estatísticas em tempo real
+  const estatisticas = {
+    // Estatísticas da fila atual
+    total: clientes.length,
+    aguardando: clientes.filter(c => c.status === 'aguardando').length,
+    atendendo: clientes.filter(c => c.status === 'em_atendimento' || c.status === 'atendendo').length,
+    proximo: clientes.filter(c => c.status === 'próximo' || c.status === 'proximo').length,
+    finalizado: clientes.filter(c => c.status === 'finalizado' || c.status === 'concluido').length,
+    
+    // Estatísticas de barbeiros
+    barbeirosTotal: barbeiros.length,
+    barbeirosAtendendo: barbeirosAtendendo,
+    barbeirosDisponiveis: barbeiros.filter(b => b.disponivel && b.ativo).length,
+    
+    // Tempos
+    tempoMedioEspera: calcularTempoMedioEspera(clientes),
+    tempoMedioAtendimento: calcularTempoMedioAtendimento(clientes),
+    tempoEstimadoProximo: calcularTempoEstimadoProximo(clientes),
+    
+    // Estatísticas das últimas 24h
+    ultimas24h: calcularEstatisticas24h(barbeariaId),
+    
+    // Informações gerais
+    barbeariaId: barbeariaId,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log(`📊 Estatísticas da barbearia ${barbeariaId}:`, estatisticas);
+  
+  res.json(estatisticas);
+});
+
+// Função para calcular tempo médio de espera
+function calcularTempoMedio(clientes) {
+  const clientesAguardando = clientes.filter(c => c.status === 'aguardando');
+  if (clientesAguardando.length === 0) return 0;
+  
+  const agora = new Date();
+  const temposEspera = clientesAguardando.map(cliente => {
+    const entrada = new Date(cliente.data_entrada || cliente.created_at);
+    return Math.floor((agora - entrada) / (1000 * 60)); // em minutos
+  });
+  
+  const tempoMedio = temposEspera.reduce((acc, tempo) => acc + tempo, 0) / temposEspera.length;
+  return Math.round(tempoMedio);
+}
+
+// Função para calcular tempo estimado para o próximo cliente
+function calcularTempoEstimadoProximo(clientes) {
+  const proximoCliente = clientes.find(c => c.status === 'aguardando');
+  if (!proximoCliente) return 0;
+  
+  const agora = new Date();
+  const entrada = new Date(proximoCliente.data_entrada || proximoCliente.created_at);
+  const tempoEspera = Math.floor((agora - entrada) / (1000 * 60));
+  
+  return tempoEspera + 15; // 15 min para o atendimento
+}
+
+// Endpoint para inicializar dados de teste
+app.post('/api/test/init-data', (req, res) => {
+  // Criar uma barbearia de teste se não existir
+  if (barbearias.length === 0) {
+    const barbeariaTeste = {
+      id: 1,
+      nome: "Barbearia Teste",
+      endereco: "Rua Teste, 123",
+      telefone: "(11) 99999-9999",
+      email: "teste@barbearia.com",
+      horario: {
+        segunda: { aberto: true, inicio: "09:00", fim: "18:00" },
+        terca: { aberto: true, inicio: "09:00", fim: "18:00" },
+        quarta: { aberto: true, inicio: "09:00", fim: "18:00" },
+        quinta: { aberto: true, inicio: "09:00", fim: "18:00" },
+        sexta: { aberto: true, inicio: "09:00", fim: "18:00" },
+        sabado: { aberto: true, inicio: "08:00", fim: "17:00" },
+        domingo: { aberto: false, inicio: "", fim: "" }
+      },
+      servicos: [
+        { nome: "Corte Masculino", preco: "R$ 35", duracao: "30 min" },
+        { nome: "Barba", preco: "R$ 25", duracao: "20 min" },
+        { nome: "Corte + Barba", preco: "R$ 50", duracao: "45 min" }
+      ],
+      ativo: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    barbearias.push(barbeariaTeste);
+    
+    // Inicializar fila com dados de teste
+    filas[barbeariaTeste.id] = {
+      fila: [
+        {
+          id: 1,
+          nome: "João Silva",
+          telefone: "(11) 99999-0001",
+          token: "token_teste_1",
+          posicao: 1,
+          status: "aguardando",
+          barbeiro: "Fila Geral",
+          tempo_estimado: 15,
+          data_entrada: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min atrás
+        },
+        {
+          id: 2,
+          nome: "Pedro Santos",
+          telefone: "(11) 99999-0002",
+          token: "token_teste_2",
+          posicao: 2,
+          status: "aguardando",
+          barbeiro: "Fila Geral",
+          tempo_estimado: 30,
+          data_entrada: new Date(Date.now() - 15 * 60 * 1000).toISOString() // 15 min atrás
+        },
+        {
+          id: 3,
+          nome: "Carlos Oliveira",
+          telefone: "(11) 99999-0003",
+          token: "token_teste_3",
+          posicao: 3,
+          status: "em_atendimento",
+          barbeiro: "João Silva",
+          tempo_estimado: 45,
+          data_entrada: new Date(Date.now() - 45 * 60 * 1000).toISOString() // 45 min atrás
+        }
+      ],
+      estatisticas: { total: 3, atendendo: 1, proximo: 0, aguardando: 2, tempoMedio: 30 }
+    };
+    
+    console.log("✅ Dados de teste inicializados!");
+  }
+  
+  res.json({ 
+    message: 'Dados de teste inicializados com sucesso!',
+    barbearias: barbearias.length,
+    filas: Object.keys(filas).length
+  });
+});
+
 // Rota de teste
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -339,5 +572,9 @@ app.listen(PORT, () => {
   console.log(`   POST /api/fila/entrar`);
   console.log(`   GET  /api/fila/:barbeariaId/status/:token`);
   console.log(`   DELETE /api/fila/:barbeariaId/sair/:token`);
+  console.log(`   POST /api/fila/remover/:clienteId`);
+  console.log(`   POST /api/fila/admin/remover/:clienteId`);
+  console.log(`   GET  /api/fila/:barbeariaId/estatisticas`);
+  console.log(`   POST /api/test/init-data`);
   console.log(`   GET  /api/health`);
 }); 

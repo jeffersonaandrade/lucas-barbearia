@@ -1,259 +1,165 @@
 import { useState, useEffect } from 'react';
+import { barbeariasService } from '@/services/api.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { Badge } from '@/components/ui/badge.jsx';
-import { authService } from '@/services/api.js';
-import { 
-  Wifi, 
-  WifiOff, 
-  CheckCircle, 
-  XCircle, 
-  Loader2,
-  RefreshCw,
-  TestTube,
-  UserCheck
-} from 'lucide-react';
 
 const ApiTest = () => {
-  const [status, setStatus] = useState('checking');
+  const [barbearias, setBarbearias] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [testResults, setTestResults] = useState({});
   const [error, setError] = useState('');
+  const [rawResponse, setRawResponse] = useState('');
 
-  const testLogin = async () => {
+  const testarAPI = async () => {
     setLoading(true);
     setError('');
-    
-    try {
-      console.log('🔐 Testando login...');
-      
-      const loginResult = await authService.login('admin@lucasbarbearia.com', 'admin123');
-      
-      console.log('✅ Login bem-sucedido:', loginResult);
-      
-      setStatus('available');
-      setTestResults(prev => ({
-        ...prev,
-        login: {
-          status: 'success',
-          data: loginResult,
-          timestamp: new Date().toISOString()
-        }
-      }));
+    setRawResponse('');
 
-    } catch (error) {
-      console.error('❌ Erro no login:', error);
-      setStatus('unavailable');
-      setError(`Erro no login: ${error.message}`);
+    try {
+      console.log('🔄 Testando API de barbearias...');
+      const response = await barbeariasService.listarBarbearias();
       
-      setTestResults(prev => ({
-        ...prev,
-        login: {
-          status: 'error',
-          error: error.message,
-          timestamp: new Date().toISOString()
-        }
-      }));
+      console.log('✅ Resposta completa da API:', response);
+      setRawResponse(JSON.stringify(response, null, 2));
+      
+      if (response.data && Array.isArray(response.data)) {
+        setBarbearias(response.data);
+        console.log(`📊 Encontradas ${response.data.length} barbearias`);
+      } else {
+        console.log('⚠️ Resposta não tem formato esperado:', response);
+        setError('Resposta da API não tem formato esperado');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao testar API:', error);
+      setError(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const testCurrentUser = async () => {
+  const testarCriarBarbearia = async () => {
     setLoading(true);
     setError('');
-    
-    try {
-      console.log('👤 Testando verificação de usuário atual...');
-      
-      const userResult = await authService.getCurrentUser();
-      
-      console.log('✅ Usuário atual:', userResult);
-      
-      setTestResults(prev => ({
-        ...prev,
-        currentUser: {
-          status: 'success',
-          data: userResult,
-          timestamp: new Date().toISOString()
-        }
-      }));
 
-    } catch (error) {
-      console.error('❌ Erro ao verificar usuário:', error);
-      setError(`Erro ao verificar usuário: ${error.message}`);
+    try {
+      const novaBarbearia = {
+        nome: 'Barbearia Teste API',
+        endereco: 'Rua Teste, 123 - Teste',
+        telefone: '11999999999',
+        whatsapp: '11999999999',
+        instagram: 'teste',
+        ativo: true,
+        configuracoes: {
+          tempo_medio_atendimento: 30,
+          max_clientes_fila: 20,
+          permitir_agendamento: false,
+          mostrar_tempo_estimado: true
+        },
+        horario: {
+          segunda: { aberto: true, inicio: '08:00', fim: '18:00' },
+          terca: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quarta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          quinta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sexta: { aberto: true, inicio: '08:00', fim: '18:00' },
+          sabado: { aberto: true, inicio: '08:00', fim: '18:00' },
+          domingo: { aberto: false, inicio: '', fim: '' }
+        },
+        servicos: [
+          {
+            nome: 'Corte Teste',
+            preco: 25.00,
+            duracao: 30,
+            descricao: 'Corte para teste'
+          }
+        ]
+      };
+
+      console.log('🔄 Criando barbearia de teste...');
+      const response = await barbeariasService.criarBarbearia(novaBarbearia);
+      console.log('✅ Barbearia criada:', response);
       
-      setTestResults(prev => ({
-        ...prev,
-        currentUser: {
-          status: 'error',
-          error: error.message,
-          timestamp: new Date().toISOString()
-        }
-      }));
+      // Recarregar lista
+      await testarAPI();
+    } catch (error) {
+      console.error('❌ Erro ao criar barbearia:', error);
+      setError(`Erro ao criar: ${error.message}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    testLogin();
-  }, []);
-
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'available':
-        return <Wifi className="h-5 w-5 text-green-600" />;
-      case 'unavailable':
-        return <WifiOff className="h-5 w-5 text-red-600" />;
-      default:
-        return <Loader2 className="h-5 w-5 text-yellow-600 animate-spin" />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'available':
-        return 'bg-green-100 text-green-800';
-      case 'unavailable':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/10 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Teste da API de Barbearias</h1>
+      
+      <div className="space-y-4 mb-6">
+        <Button onClick={testarAPI} disabled={loading}>
+          {loading ? 'Testando...' : 'Testar Listagem de Barbearias'}
+        </Button>
+        
+        <Button onClick={testarCriarBarbearia} disabled={loading} variant="outline">
+          {loading ? 'Criando...' : 'Criar Barbearia de Teste'}
+        </Button>
+      </div>
+
+      {error && (
+        <Card className="mb-4 border-red-200 bg-red-50">
+          <CardContent className="pt-4">
+            <p className="text-red-800">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {rawResponse && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Resposta Bruta da API</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="bg-gray-100 p-4 rounded text-xs overflow-auto max-h-96">
+              {rawResponse}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+
+      {barbearias.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TestTube className="h-6 w-6" />
-              Teste de Conectividade da API
-            </CardTitle>
+            <CardTitle>Barbearias Encontradas ({barbearias.length})</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Status da API */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {getStatusIcon()}
-                <div>
-                  <h3 className="font-semibold">Status da API</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {status === 'available' ? 'Conectado' : 
-                     status === 'unavailable' ? 'Desconectado' : 'Verificando...'}
-                  </p>
+          <CardContent>
+            <div className="space-y-4">
+              {barbearias.map((barbearia, index) => (
+                <div key={index} className="border p-4 rounded">
+                  <h3 className="font-semibold">{barbearia.nome}</h3>
+                  <p className="text-sm text-gray-600">{barbearia.endereco}</p>
+                  <p className="text-sm text-gray-600">Telefone: {barbearia.telefone}</p>
+                  <p className="text-sm text-gray-600">Status: {barbearia.ativo ? 'Ativa' : 'Inativa'}</p>
+                  {barbearia.servicos && (
+                    <p className="text-sm text-gray-600">
+                      Serviços: {barbearia.servicos.length}
+                    </p>
+                  )}
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-sm text-blue-600">Ver dados completos</summary>
+                    <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-auto">
+                      {JSON.stringify(barbearia, null, 2)}
+                    </pre>
+                  </details>
                 </div>
-              </div>
-              <Badge className={getStatusColor()}>
-                {status.toUpperCase()}
-              </Badge>
-            </div>
-
-            {/* Botões de teste */}
-            <div className="flex gap-4">
-              <Button 
-                onClick={testLogin} 
-                disabled={loading}
-                variant="outline"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Testar Login
-              </Button>
-              
-              <Button 
-                onClick={testCurrentUser} 
-                disabled={loading || status !== 'available'}
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                Testar Usuário Atual
-              </Button>
-            </div>
-
-            {/* Erro */}
-            {error && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Resultados dos testes */}
-            {Object.keys(testResults).length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-semibold">Resultados dos Testes</h4>
-                
-                {testResults.login && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Login Test</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 mb-2">
-                        {testResults.login.status === 'success' ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        )}
-                        <span className="text-sm">
-                          {testResults.login.status === 'success' ? 'Sucesso' : 'Erro'}
-                        </span>
-                      </div>
-                      <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                        {JSON.stringify(testResults.login.data || testResults.login.error, null, 2)}
-                      </pre>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {testResults.currentUser && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Current User Test</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 mb-2">
-                        {testResults.currentUser.status === 'success' ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        )}
-                        <span className="text-sm">
-                          {testResults.currentUser.status === 'success' ? 'Sucesso' : 'Erro'}
-                        </span>
-                      </div>
-                      <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                        {JSON.stringify(testResults.currentUser.data || testResults.currentUser.error, null, 2)}
-                      </pre>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Informações da configuração */}
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Configuração Atual</h4>
-              <div className="space-y-1 text-sm">
-                <p><strong>URL da API:</strong> {import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}</p>
-                <p><strong>Modo:</strong> {import.meta.env.VITE_DEV_MODE ? 'Desenvolvimento' : 'Produção'}</p>
-                <p><strong>Debug:</strong> {import.meta.env.VITE_DEBUG_LOGS ? 'Ativado' : 'Desativado'}</p>
-              </div>
-            </div>
-
-            {/* Instruções */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Como usar:</h4>
-              <div className="space-y-1 text-sm">
-                <p>1. Clique em "Testar Login" para verificar se a autenticação está funcionando</p>
-                <p>2. Se o login funcionar, clique em "Testar Usuário Atual" para verificar o token</p>
-                <p>3. Se ambos funcionarem, o sistema de autenticação está OK</p>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {barbearias.length === 0 && !loading && !error && (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-gray-600">Nenhuma barbearia encontrada. Clique em "Testar Listagem" para verificar.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

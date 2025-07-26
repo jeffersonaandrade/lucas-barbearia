@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
@@ -8,17 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { useFilaBackend } from '@/hooks/useFilaBackend.js';
-import { useQRCodeAccess } from '@/hooks/useQRCodeAccess.js';
+import { barbeariasService } from '@/services/api.js';
+
 import RestrictedAccess from '@/components/RestrictedAccess.jsx';
 
 const EntrarFila = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const location = useLocation();
-  const { entrarNaFila, loading, error, estatisticas, barbeiros, barbeariaInfo } = useFilaBackend(parseInt(id));
+
+  console.log('🔍 EntrarFila - ID da URL:', id);
+  console.log('🔍 EntrarFila - ID convertido:', parseInt(id));
+
+  const barbeariaId = parseInt(id);
+  console.log('🔍 EntrarFila - barbeariaId final:', barbeariaId);
+  console.log('🔍 EntrarFila - tipo do barbeariaId:', typeof barbeariaId);
   
-  // Verificar se é uma rota de desenvolvimento
-  const isDevRoute = location.pathname.startsWith('/dev/');
+  const { entrarNaFila, loading, error: filaError, estatisticas, barbeiros, barbeariaInfo } = useFilaBackend(barbeariaId);
+  
+
   
   const [formData, setFormData] = useState({
     nome: '',
@@ -27,9 +34,9 @@ const EntrarFila = () => {
   });
   const [success, setSuccess] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [error, setError] = useState(null); // Adicionar estado de erro
   
-  // Verificar acesso QR Code
-  const { hasQRCodeAccess, barbeariaId: qrBarbeariaId } = useQRCodeAccess();
+
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -52,8 +59,28 @@ const EntrarFila = () => {
       return;
     }
 
+    // Debug: verificar dados recebidos
+    console.log('🔍 Debug - Dados do formulário:', formData);
+    console.log('🔍 Debug - Barbeiros recebidos:', barbeiros);
+    console.log('🔍 Debug - Barbearia Info:', barbeariaInfo);
+    console.log('🔍 Debug - Loading:', loading);
+    console.log('🔍 Debug - Error:', filaError);
+
     try {
+      // Removido: verificação de status da barbearia (endpoint não existe)
+      console.log('📝 Dados do formulário sendo enviados:', formData);
+      console.log('🔍 Verificando se entrarNaFila é uma função:', typeof entrarNaFila);
+      
       const resultado = await entrarNaFila(formData);
+      
+      console.log('📦 Resultado recebido:', resultado);
+      console.log('🔍 Tipo do resultado:', typeof resultado);
+      
+      if (!resultado) {
+        console.error('❌ Resultado é undefined ou null');
+        throw new Error('Nenhum resultado recebido do servidor');
+      }
+      
       setResultado(resultado);
       setSuccess(true);
       
@@ -61,11 +88,12 @@ const EntrarFila = () => {
       setTimeout(() => {
         console.log('🔄 Redirecionando para status da fila...');
         console.log('📍 URL:', `/barbearia/${id}/status-fila`);
-        console.log('🎫 Token:', resultado.token);
+        console.log('🎫 Token:', resultado?.token);
         navigate(`/barbearia/${id}/status-fila`);
       }, 3000);
     } catch (err) {
-      console.error('Erro ao entrar na fila:', err);
+      console.error('❌ Erro ao entrar na fila:', err);
+      setError(err.message || 'Erro ao entrar na fila. Tente novamente.');
     }
   };
 
@@ -94,17 +122,32 @@ const EntrarFila = () => {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Carregando barbeiros...</p>
+        </div>
+      </div>
+    );
+  }
 
+  if (!barbeiros || barbeiros.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Nenhum barbeiro disponível no momento.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Se não há ID na URL, mostrar tela de acesso restrito
   if (!id) {
     return <RestrictedAccess barbeariaId={null} barbeariaInfo={null} />;
   }
   
-  // Se não é rota de desenvolvimento e não tem acesso QR Code, mostrar tela de acesso restrito
-  if (!isDevRoute && !hasQRCodeAccess) {
-    return <RestrictedAccess barbeariaId={parseInt(id)} barbeariaInfo={barbeariaInfo} />;
-  }
+  // Removida validação de QR Code - cliente pode entrar na fila de qualquer lugar
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -120,17 +163,7 @@ const EntrarFila = () => {
         </Button>
 
         <div className="max-w-4xl mx-auto">
-          {/* Indicador de modo de desenvolvimento */}
-          {isDevRoute && (
-            <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
-              <div className="flex items-center justify-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                <p className="text-sm font-medium text-yellow-800">
-                  🧪 Modo de Desenvolvimento - Acesso direto para testes
-                </p>
-              </div>
-            </div>
-          )}
+
           
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
@@ -143,10 +176,17 @@ const EntrarFila = () => {
 
           <div className="grid lg:grid-cols-2 gap-8">
                          {/* Formulário */}
-             <Card className="bg-card border border-border shadow-lg">
-               <CardHeader>
-                 <CardTitle className="text-foreground">Seus Dados</CardTitle>
-               </CardHeader>
+                         <Card className="bg-card border border-border shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-foreground">Seus Dados</CardTitle>
+                {(!barbeiros || barbeiros.length === 0) && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 font-medium">
+                      ⚠️ Barbearia Fechada - Sem barbeiros disponíveis
+                    </p>
+                  </div>
+                )}
+              </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
@@ -226,7 +266,7 @@ const EntrarFila = () => {
                     </div>
                     <div className="text-center p-4 bg-secondary rounded-lg">
                       <Clock className="w-8 h-8 text-primary mx-auto mb-2" />
-                      <div className="text-2xl font-bold text-foreground">{estatisticas.tempoMedio}</div>
+                      <div className="text-2xl font-bold text-foreground">{estatisticas.tempoMedioEspera}</div>
                       <div className="text-sm text-muted-foreground">Min. médio</div>
                     </div>
                   </div>

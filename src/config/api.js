@@ -51,7 +51,7 @@ export const API_CONFIG = {
     FILA: {
       ENTRAR: '/fila/entrar',
       GET: (barbeariaId) => `/fila-publica/${barbeariaId}`,
-      STATUS: (token) => `/fila/status/${token}`,
+      STATUS: (barbeariaId, token) => `/fila/${barbeariaId}/status/${token}`,
       SAIR: (barbeariaId, token) => `/fila/${barbeariaId}/sair/${token}`,
       PROXIMO: (barbeariaId) => `/fila/${barbeariaId}/proximo`,
       FINALIZAR: (barbeariaId, clienteId) => `/fila/${barbeariaId}/finalizar/${clienteId}`,
@@ -205,15 +205,13 @@ export const getApiConfig = () => ({
   ...CONFIG,
 });
 
+import { utilsService } from '@/services/api.js';
+
 // Função para validar se a API está disponível
 export const checkApiHealth = async () => {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/health`, {
-      method: 'GET',
-      headers: API_CONFIG.DEFAULT_HEADERS,
-    });
-    
-    return response.ok;
+    const response = await utilsService.checkHealth();
+    return response.success;
   } catch (error) {
     console.warn('API não está disponível:', error);
     return false;

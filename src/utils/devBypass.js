@@ -1,3 +1,5 @@
+import { devService } from '@/services/api.js';
+
 // Utilitário para bypass de QR Code em desenvolvimento
 export const devBypass = {
   // Simular acesso QR Code
@@ -47,26 +49,9 @@ export const devBypass = {
   // Entrar na fila diretamente (para testes)
   enterQueueDirectly: async (barbeariaId, dadosCliente) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/fila/entrar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nome: dadosCliente.nome,
-          telefone: dadosCliente.telefone,
-          barbearia_id: barbeariaId,
-          barbeiro_id: dadosCliente.barbeiro === 'Fila Geral' ? null : dadosCliente.barbeiro
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Cliente adicionado à fila:', result);
-        return result;
-      } else {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
-      }
+      const result = await devService.enterQueueDirectly(barbeariaId, dadosCliente);
+      console.log('✅ Cliente adicionado à fila:', result);
+      return result;
     } catch (error) {
       console.error('❌ Erro ao entrar na fila:', error);
       throw error;

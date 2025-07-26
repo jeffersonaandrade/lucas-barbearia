@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +18,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, apiStatus } = useAuthBackend();
+  const { login, apiStatus } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

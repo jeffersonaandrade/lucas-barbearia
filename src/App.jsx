@@ -7,6 +7,7 @@ import WhatsAppFloat from './components/WhatsAppFloat.jsx'
 import CookieConsent from './components/CookieConsent.jsx'
 import { SuspenseWrapper } from './components/ui/suspense-wrapper.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import { AuthProvider } from './contexts/AuthContext.jsx'
 
 // Lazy loading para componentes menos críticos
 const About = lazy(() => import('./components/About.jsx'))
@@ -20,9 +21,9 @@ const Footer = lazy(() => import('./components/Footer.jsx'))
 const EntrarFila = lazy(() => import('./pages/EntrarFila.jsx'))
 const StatusFila = lazy(() => import('./pages/StatusFila.jsx'))
 const VisualizarFila = lazy(() => import('./pages/VisualizarFila.jsx'))
-const AdminPanel = lazy(() => import('./components/AdminPanel.jsx'))
 const QRCodeGenerator = lazy(() => import('./components/QRCodeGenerator.jsx'))
 const BarbeariasList = lazy(() => import('./components/BarbeariasList.jsx'))
+const AppointmentScheduler = lazy(() => import('./components/AppointmentScheduler.jsx'))
 const NotFound = lazy(() => import('./components/NotFound.jsx'))
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy.jsx'))
 const TermsOfService = lazy(() => import('./components/TermsOfService.jsx'))
@@ -33,7 +34,6 @@ const AvaliacoesList = lazy(() => import('./components/AvaliacoesList.jsx'))
 const Login = lazy(() => import('./components/Login.jsx'))
 const RecuperarSenha = lazy(() => import('./components/RecuperarSenha.jsx'))
 const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'))
-
 
 const AdminUsuarios = lazy(() => import('./components/AdminUsuarios.jsx'))
 const AdminBarbearias = lazy(() => import('./components/AdminBarbearias.jsx'))
@@ -207,6 +207,13 @@ function AppContent() {
             </SuspenseWrapper>
           } />
           
+          {/* Rota para agendamento */}
+          <Route path="/barbearia/:id/agendar" element={
+            <SuspenseWrapper>
+              <AppointmentScheduler />
+            </SuspenseWrapper>
+          } />
+          
           {/* Páginas legais */}
           <Route path="/privacidade" element={
             <SuspenseWrapper>
@@ -242,11 +249,11 @@ function AppContent() {
           
 
           
-          {/* Rota /admin genérica - deve vir por último */}
+          {/* Rota /admin genérica - redireciona para dashboard */}
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['admin', 'gerente', 'barbeiro']}>
               <SuspenseWrapper>
-                <AdminPanel />
+                <AdminDashboard />
               </SuspenseWrapper>
             </ProtectedRoute>
           } />
@@ -269,6 +276,12 @@ function AppContent() {
             </SuspenseWrapper>
           } />
           
+          <Route path="/api-test" element={
+            <SuspenseWrapper>
+              <ApiTest />
+            </SuspenseWrapper>
+          } />
+          
           {/* Rota catch-all para páginas não encontradas */}
           <Route path="*" element={
             <SuspenseWrapper>
@@ -287,7 +300,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   )
 }
