@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { filaService, barbeariasService } from '@/services/api.js';
+import { CookieManager } from '@/utils/cookieManager.js';
+import { useEstatisticas } from '@/hooks/useEstatisticas.js';
 
 export const useFilaBackend = (barbeariaId = null) => {
   const [fila, setFila] = useState([]);
@@ -7,7 +9,8 @@ export const useFilaBackend = (barbeariaId = null) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [barbeiros, setBarbeiros] = useState([]);
-  const [estatisticas, setEstatisticas] = useState({});
+  // Usar hook centralizado para estatísticas
+  const { estatisticas, carregarEstatisticas } = useEstatisticas(barbeariaId);
   const [barbeariaInfo, setBarbeariaInfo] = useState(null);
   const [apiStatus, setApiStatus] = useState('checking'); // 'checking', 'available', 'unavailable'
 
@@ -15,9 +18,9 @@ export const useFilaBackend = (barbeariaId = null) => {
   useEffect(() => {
     console.log('🔄 useEffect useFilaBackend chamado com barbeariaId:', barbeariaId);
     
-    // Se não há barbeariaId, não carregar dados
     if (!barbeariaId) {
-      console.log('⚠️ Nenhum barbeariaId fornecido, aguardando...');
+      setError('Nenhuma barbearia selecionada.');
+      setApiStatus('unavailable');
       return;
     }
 
@@ -34,27 +37,10 @@ export const useFilaBackend = (barbeariaId = null) => {
           const barbeariaData = barbeariaResponse.data || barbeariaResponse;
           setBarbeariaInfo(barbeariaData);
         } catch (err) {
-          console.log('⚠️ Barbearia específica não encontrada, tentando listar todas...');
-          
-          // Se a barbearia específica não existe, tentar listar todas
-          try {
-            const barbeariasResponse = await barbeariasService.listarBarbearias();
-            const barbeariasData = barbeariasResponse.data || barbeariasResponse;
-            
-            if (barbeariasData && barbeariasData.length > 0) {
-              const primeiraBarbearia = barbeariasData[0];
-              console.log('✅ Usando primeira barbearia disponível:', primeiraBarbearia);
-              setBarbeariaInfo(primeiraBarbearia);
-              
-              // Atualizar o barbeariaId para usar o ID da primeira barbearia
-              window.history.replaceState(null, '', `/barbearia/${primeiraBarbearia.id}/visualizar-fila`);
-            } else {
-              throw new Error('Nenhuma barbearia encontrada');
-            }
-          } catch (listErr) {
-            console.error('❌ Erro ao listar barbearias:', listErr);
-            throw err; // Re-throw o erro original
-          }
+          setError('Barbearia não encontrada.');
+          setApiStatus('unavailable');
+          setLoading(false);
+          return;
         }
         
         // Tentar carregar barbeiros (pode falhar se não autenticado)
@@ -135,49 +121,73 @@ export const useFilaBackend = (barbeariaId = null) => {
   useEffect(() => {
     const verificarClienteAtivo = async () => {
       try {
-        // Verificar se há token no localStorage
-        const token = localStorage.getItem('fila_token');
-        const barbeariaIdStorage = localStorage.getItem('fila_barbearia_id');
+        // Verificar se há token no cookie
+        const token = CookieManager.getFilaToken();
+        const barbeariaIdCookie = CookieManager.getBarbeariaId();
 
-        if (token && barbeariaIdStorage && parseInt(barbeariaIdStorage) === barbeariaId) {
-          console.log('🔍 Verificando cliente ativo no localStorage...');
+        if (token && barbeariaIdCookie && parseInt(barbeariaIdCookie) === barbeariaId) {
+          console.log('🔍 Verificando cliente ativo nos cookies...');
           console.log('🎫 Token encontrado:', token);
           console.log('🏪 Barbearia ID:', barbeariaId);
+          console.log('🔍 Token completo:', token);
+          console.log('🔍 Token length:', token?.length);
           
-                      try {
-              const cliente = await filaService.obterStatusCliente(token, barbeariaId);
-              console.log('📦 Response do status do cliente:', cliente);
+          try {
+            const response = await filaService.obterStatusCliente(token);
+            console.log('📦 Response do status do cliente:', response);
+            
+            if (response && response.success && response.data) {
+              console.log('🔍 Condição de sucesso atendida!');
+              // Tentar diferentes estruturas de resposta
+              let clienteData = null;
               
-              if (cliente) {
-                // Verificar se a resposta tem a estrutura esperada
-                const clienteData = cliente.data || cliente;
-                console.log('✅ Cliente encontrado no servidor:', clienteData);
-                
-                // Garantir que o token esteja no objeto cliente
-                const clienteComToken = {
-                  ...clienteData,
-                  token: token
-                };
-                setClienteAtual(clienteComToken);
-              } else {
-                console.log('⚠️ Cliente não encontrado no servidor, limpando localStorage...');
-                limparLocalStorage();
+              // Estrutura 1: response.data.cliente
+              if (response.data.cliente) {
+                clienteData = response.data.cliente;
+                console.log('✅ Usando estrutura 1: response.data.cliente');
+                console.log('✅ Cliente encontrado:', clienteData);
               }
-          } catch (statusError) {
-            console.log('⚠️ Erro ao verificar status no servidor, tentando carregar do localStorage...');
-            // Tentar carregar do localStorage como fallback
-            const clienteData = localStorage.getItem('cliente_data');
-            if (clienteData) {
-              try {
-                const cliente = JSON.parse(clienteData);
-                console.log('✅ Cliente carregado do localStorage:', cliente);
-                setClienteAtual(cliente);
-              } catch (parseError) {
-                console.log('❌ Erro ao parsear dados do localStorage, limpando...');
-                limparLocalStorage();
+              // Estrutura 2: response.data direto
+              else if (response.data.id || response.data.nome || response.data.status) {
+                clienteData = response.data;
+                console.log('✅ Usando estrutura 2: response.data direto');
               }
+              // Estrutura 3: response.data como objeto com propriedades do cliente
+              else {
+                clienteData = response.data;
+                console.log('✅ Usando estrutura 3: response.data como fallback');
+              }
+              
+              console.log('✅ Cliente encontrado no servidor:', clienteData);
+              console.log('✅ Status do cliente:', clienteData?.status);
+              console.log('✅ Estrutura completa da resposta:', response);
+              console.log('✅ response.data:', response.data);
+              console.log('✅ response.data.cliente:', response.data.cliente);
+              console.log('✅ response.data.posicao_atual:', response.data.posicao_atual);
+              console.log('✅ response.data.tempo_estimado:', response.data.tempo_estimado);
+              console.log('✅ response.data.fila_info:', response.data.fila_info);
+              
+
+              
+              // Garantir que o token esteja no objeto cliente
+              const clienteComToken = {
+                ...clienteData,
+                token: token
+              };
+              setClienteAtual(clienteComToken);
             } else {
-              console.log('❌ Nenhum dado encontrado, limpando localStorage...');
+              console.log('⚠️ Cliente não encontrado no servidor, limpando cookies...');
+              limparLocalStorage();
+            }
+          } catch (statusError) {
+            console.log('⚠️ Erro ao verificar status no servidor, tentando carregar dos cookies...');
+            // Tentar carregar dos cookies como fallback
+            const clienteData = CookieManager.getClienteData();
+            if (clienteData) {
+              console.log('✅ Cliente carregado dos cookies:', clienteData);
+              setClienteAtual(clienteData);
+            } else {
+              console.log('❌ Nenhum dado encontrado, limpando cookies...');
               limparLocalStorage();
             }
           }
@@ -205,18 +215,16 @@ export const useFilaBackend = (barbeariaId = null) => {
   }, [barbeariaId, apiStatus]);
 
   // Funções auxiliares
+
   const limparLocalStorage = () => {
-    localStorage.removeItem('fila_token');
-    localStorage.removeItem('fila_barbearia_id');
-    localStorage.removeItem('cliente_data');
-    localStorage.removeItem('fila_timestamp');
+    CookieManager.clearFilaCookies();
     setClienteAtual(null);
   };
 
   const carregarFilaAtual = async () => {
     try {
       console.log('🔄 Carregando fila atual para barbearia:', barbeariaId);
-      const response = await filaService.obterFilaCompleta(barbeariaId);
+      const response = await filaService.obterFilaPublica(barbeariaId);
       console.log('📦 Response da fila:', response);
       
       const filaData = response.data || response;
@@ -224,45 +232,7 @@ export const useFilaBackend = (barbeariaId = null) => {
       
       const filaArray = filaData.clientes || [];
       
-      // Buscar estatísticas do endpoint específico
-      try {
-        const estatisticasResponse = await filaService.getEstatisticas(barbeariaId);
-        const estatisticasData = estatisticasResponse.data || estatisticasResponse;
-        
-        console.log('📊 Estatísticas do endpoint:', estatisticasData);
-        
-        // Mapear os dados do novo formato
-        const estatisticasMapeadas = {
-          total: estatisticasData.fila?.total || 0,
-          aguardando: estatisticasData.fila?.aguardando || 0,
-          atendendo: estatisticasData.fila?.atendendo || 0,
-          proximo: estatisticasData.fila?.proximo || 0,
-          finalizado: estatisticasData.fila?.finalizado || 0,
-          removido: estatisticasData.fila?.removido || 0,
-          barbeirosTotal: estatisticasData.barbeiros?.total || 0,
-          barbeirosAtendendo: estatisticasData.barbeiros?.atendendo || 0,
-          barbeirosDisponiveis: estatisticasData.barbeiros?.disponiveis || 0,
-          tempoMedioEspera: estatisticasData.tempos?.medioEspera || 0,
-          tempoMedioAtendimento: estatisticasData.tempos?.medioAtendimento || 0,
-          tempoEstimadoProximo: estatisticasData.tempos?.estimadoProximo || 0,
-          totalAtendidos24h: estatisticasData.ultimas24h?.totalAtendidos || 0,
-          tempoMedioEspera24h: estatisticasData.ultimas24h?.tempoMedioEspera || 0,
-          clientesPorHora: estatisticasData.ultimas24h?.clientesPorHora || 0
-        };
-        
-        setEstatisticas(estatisticasMapeadas);
-      } catch (err) {
-        console.error('❌ Erro ao buscar estatísticas:', err);
-        // Fallback para estatísticas básicas
-        const estatisticasBasicas = {
-          total: filaArray.length,
-          aguardando: filaArray.filter(c => c.status === 'aguardando').length,
-          atendendo: filaArray.filter(c => c.status === 'em_atendimento' || c.status === 'atendendo').length,
-          proximo: filaArray.filter(c => c.status === 'próximo' || c.status === 'proximo').length,
-          tempoMedioEspera: 15
-        };
-        setEstatisticas(estatisticasBasicas);
-      }
+      // Estatísticas são carregadas automaticamente pelo hook useEstatisticas
       
       console.log('👥 Fila array:', filaArray);
       
@@ -411,16 +381,13 @@ export const useFilaBackend = (barbeariaId = null) => {
       console.log('📋 Cliente:', cliente);
       console.log('🏪 Barbearia ID:', barbeariaId);
       
-      localStorage.setItem('fila_token', token);
-      localStorage.setItem('cliente_data', JSON.stringify(cliente));
-      localStorage.setItem('fila_barbearia_id', barbeariaId.toString());
-      localStorage.setItem('fila_timestamp', Date.now().toString());
+      CookieManager.setFilaToken(token);
+      CookieManager.setClienteData(cliente);
+      CookieManager.setBarbeariaId(barbeariaId.toString());
 
       console.log('✅ Dados salvos no localStorage');
       console.log('🔍 Verificando localStorage:');
-      console.log('  - fila_token:', localStorage.getItem('fila_token'));
-      console.log('  - cliente_data:', localStorage.getItem('cliente_data'));
-      console.log('  - fila_barbearia_id:', localStorage.getItem('fila_barbearia_id'));
+      CookieManager.debugCookies();
       
       // Garantir que o token esteja no objeto cliente
       const clienteComToken = {
@@ -456,15 +423,15 @@ export const useFilaBackend = (barbeariaId = null) => {
     setError(null);
 
     try {
-      await filaService.sairDaFila(barbeariaId, token);
+      await filaService.sairDaFila(null, token);
       
       // Atualizar estado local
       await carregarFilaAtual();
 
-      // Limpar localStorage
-      console.log('🧹 Limpando dados do localStorage...');
+      // Limpar cookies
+      console.log('🧹 Limpando dados dos cookies...');
       limparLocalStorage();
-      console.log('✅ Dados limpos do localStorage');
+      console.log('✅ Dados limpos dos cookies');
 
       return true;
     } catch (err) {
@@ -481,13 +448,16 @@ export const useFilaBackend = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const cliente = await filaService.obterStatusCliente(token, barbeariaId);
+      const response = await filaService.obterStatusCliente(token);
 
-      if (!cliente) {
+      if (!response || !response.success || !response.data) {
         throw new Error('Cliente não encontrado na fila');
       }
 
-      return cliente;
+      // Extrair dados do cliente da estrutura correta
+      const clienteData = response.data.cliente || response.data;
+
+      return clienteData;
     } catch (err) {
       setError('Erro ao obter status da fila.');
       throw err;
@@ -518,20 +488,23 @@ export const useFilaBackend = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const cliente = await filaService.obterStatusCliente(token, barbeariaId);
+      const response = await filaService.obterStatusCliente(token);
 
-      if (!cliente) {
+      if (!response || !response.success || !response.data) {
         throw new Error('Cliente não encontrado na fila');
       }
+
+      // Extrair dados do cliente da estrutura correta
+      const clienteData = response.data.cliente || response.data;
 
       // Atualizar dados da fila
       await carregarFilaAtual();
 
       // Atualizar cliente atual
-      setClienteAtual(cliente);
-      localStorage.setItem('cliente_data', JSON.stringify(cliente));
+      setClienteAtual(clienteData);
+      CookieManager.setClienteData(clienteData);
 
-      return cliente;
+      return clienteData;
     } catch (err) {
       setError('Erro ao atualizar posição.');
       throw err;

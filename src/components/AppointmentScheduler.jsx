@@ -7,6 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Calendar } from '@/components/ui/calendar.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { barbeariasService } from '@/services/api.js';
+import { useConfiguracoesPublicas } from '../hooks/useConfiguracoesPublicas';
+import LoadingSpinner from './ui/loading-spinner';
 import { 
   MapPin, 
   Phone, 
@@ -25,8 +27,7 @@ import {
 const AppointmentScheduler = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [barbearia, setBarbearia] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { barbearia, loading, error } = useConfiguracoesPublicas(id);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedService, setSelectedService] = useState('');
@@ -35,20 +36,36 @@ const AppointmentScheduler = () => {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
 
-  useEffect(() => {
-    const carregarBarbearia = async () => {
-      try {
-        const response = await barbeariasService.obterBarbearia(id);
-        setBarbearia(response.data);
-      } catch (error) {
-        console.error('Erro ao carregar barbearia:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Formatar horários para o formato esperado
+  const formatarHorarios = (horarios) => {
+    if (!horarios || !Array.isArray(horarios)) {
+      return {
+        segunda: { aberto: true, inicio: '09:00', fim: '18:00' },
+        terca: { aberto: true, inicio: '09:00', fim: '18:00' },
+        quarta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        quinta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        sexta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        sabado: { aberto: true, inicio: '08:00', fim: '17:00' },
+        domingo: { aberto: false, inicio: '08:00', fim: '12:00' }
+      };
+    }
+    
+    const horariosFormatados = {};
+    const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    
+    diasSemana.forEach((dia, index) => {
+      const horario = horarios.find(h => h.dia === `${diasSemana[index].charAt(0).toUpperCase() + diasSemana[index].slice(1)}-feira`);
+      horariosFormatados[dia] = {
+        aberto: horario?.ativo || false,
+        inicio: horario?.inicio || '09:00',
+        fim: horario?.fim || '18:00'
+      };
+    });
+    
+    return horariosFormatados;
+  };
 
-    carregarBarbearia();
-  }, [id]);
+
 
   useEffect(() => {
     if (selectedDate && barbearia) {
@@ -64,7 +81,8 @@ const AppointmentScheduler = () => {
     
     // Mapear dia da semana para configuração
     const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const diaConfig = barbearia.horario[diasSemana[dayOfWeek]];
+    const horariosFormatados = formatarHorarios(barbearia.horarios);
+    const diaConfig = horariosFormatados[diasSemana[dayOfWeek]];
     
     if (diaConfig && diaConfig.aberto) {
       const inicio = new Date(`2000-01-01 ${diaConfig.inicio}`);
@@ -119,10 +137,19 @@ const AppointmentScheduler = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando informações...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Carregando informações..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertDescription>
+            Erro ao carregar informações: {error}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -147,11 +174,11 @@ const AppointmentScheduler = () => {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/barbearia/${id}`)}
+            onClick={() => navigate('/barbearias')}
             className="text-primary hover:text-accent"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar à Barbearia
+            Voltar às Barbearias
           </Button>
         </div>
 
@@ -186,8 +213,8 @@ const AppointmentScheduler = () => {
               <div className="flex items-center space-x-3">
                 <Clock className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-700">
-                  Segunda a Sexta: {barbearia.horario.segunda.aberto ? 
-                    `${barbearia.horario.segunda.inicio} - ${barbearia.horario.segunda.fim}` : 
+                  Segunda a Sexta: {formatarHorarios(barbearia.horarios).segunda.aberto ? 
+                    `${formatarHorarios(barbearia.horarios).segunda.inicio} - ${formatarHorarios(barbearia.horarios).segunda.fim}` : 
                     'Fechado'
                   }
                 </span>
@@ -206,7 +233,7 @@ const AppointmentScheduler = () => {
                   {barbearia.servicos.map((servico, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span className="text-gray-700">{servico.nome}</span>
-                      <span className="font-semibold text-primary">{servico.preco}</span>
+                                              <span className="font-semibold text-primary">R$ {servico.preco.toFixed(2).replace('.', ',')}</span>
                     </div>
                   ))}
                 </div>
@@ -321,7 +348,7 @@ const AppointmentScheduler = () => {
                           <div className="flex items-center justify-between w-full">
                             <span>{servico.nome}</span>
                             <Badge variant="outline" className="ml-2">
-                              {servico.preco}
+                              R$ {servico.preco.toFixed(2).replace('.', ',')}
                             </Badge>
                           </div>
                         </SelectItem>

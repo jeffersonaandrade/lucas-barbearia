@@ -119,6 +119,8 @@ const StatsManager = ({
       tempoMedio: 15
     };
     
+
+    
     if (loading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -187,7 +189,7 @@ const StatsManager = ({
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{displayStats.tempoMedio || 15}min</div>
+            <div className="text-2xl font-bold text-purple-600">{displayStats.tempoMedioEspera || 15}min</div>
             <p className="text-xs text-muted-foreground">
               Por cliente
             </p>

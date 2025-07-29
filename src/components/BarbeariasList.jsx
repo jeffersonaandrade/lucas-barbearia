@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { barbeariasService } from '@/services/api.js';
+import { useConfiguracoesTodasBarbearias } from '../hooks/useConfiguracoesPublicas';
+import LoadingSpinner from './ui/loading-spinner';
 import { 
   MapPin, 
   Phone, 
@@ -23,31 +25,55 @@ import {
 
 const BarbeariasList = () => {
   const navigate = useNavigate();
-  const [barbearias, setBarbearias] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { barbearias, loading, error } = useConfiguracoesTodasBarbearias();
 
-  useEffect(() => {
-    const carregarBarbearias = async () => {
-      try {
-        const response = await barbeariasService.listarBarbearias();
-        setBarbearias(response.data);
-      } catch (error) {
-        console.error('Erro ao carregar barbearias:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Formatar horários para o formato esperado
+  const formatarHorarios = (horarios) => {
+    if (!horarios || !Array.isArray(horarios)) {
+      return {
+        segunda: { aberto: true, inicio: '09:00', fim: '18:00' },
+        terca: { aberto: true, inicio: '09:00', fim: '18:00' },
+        quarta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        quinta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        sexta: { aberto: true, inicio: '09:00', fim: '18:00' },
+        sabado: { aberto: true, inicio: '08:00', fim: '17:00' },
+        domingo: { aberto: false, inicio: '08:00', fim: '12:00' }
+      };
+    }
+    
+    const horariosFormatados = {};
+    const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    
+    diasSemana.forEach((dia, index) => {
+      const horario = horarios.find(h => h.dia === `${diasSemana[index].charAt(0).toUpperCase() + diasSemana[index].slice(1)}-feira`);
+      horariosFormatados[dia] = {
+        aberto: horario?.ativo || false,
+        inicio: horario?.inicio || '09:00',
+        fim: horario?.fim || '18:00'
+      };
+    });
+    
+    return horariosFormatados;
+  };
 
-    carregarBarbearias();
-  }, []);
+
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando barbearias...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Carregando barbearias..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertDescription>
+            Erro ao carregar barbearias: {error}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -122,7 +148,7 @@ const BarbeariasList = () => {
                     {barbearia.servicos.map((servico, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-700">{servico.nome}</span>
-                        <span className="font-semibold text-primary">{servico.preco}</span>
+                        <span className="font-semibold text-primary">R$ {servico.preco.toFixed(2).replace('.', ',')}</span>
                       </div>
                     ))}
                   </div>
@@ -132,7 +158,7 @@ const BarbeariasList = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Tempo médio:</span>
                   <Badge variant="outline">
-                    {barbearia.configuracoes.tempoMedioPorCliente}min
+                    30min
                   </Badge>
                 </div>
 

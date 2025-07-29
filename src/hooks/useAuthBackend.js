@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { authService } from '@/services/api.js';
+import { CookieManager } from '@/utils/cookieManager.js';
 
 export const useAuthBackend = () => {
   const [user, setUser] = useState(null);
@@ -37,14 +38,13 @@ export const useAuthBackend = () => {
       setLoading(true);
       setApiStatus('checking');
       
-      // Verificar se há um token válido na sessão
-      const token = sessionStorage.getItem('adminToken');
-      const userRole = sessionStorage.getItem('userRole');
-      const userEmail = sessionStorage.getItem('userEmail');
+      // Verificar se há um token válido nos cookies
+      const token = CookieManager.getAdminToken();
+      const userInfo = CookieManager.getUserInfo();
 
-      console.log('🔄 useAuthBackend - Verificando sessão:', { token: !!token, userRole, userEmail });
+      console.log('🔄 useAuthBackend - Verificando cookies:', { token: !!token, userInfo: !!userInfo });
 
-      if (token && userRole && userEmail) {
+      if (token && userInfo) {
         // Tentar validar o token com o servidor
         try {
           console.log('🔄 useAuthBackend - Validando token no servidor...');
@@ -103,10 +103,8 @@ export const useAuthBackend = () => {
     } catch (error) {
       console.warn('⚠️ useAuthBackend - Erro no logout do servidor:', error);
     } finally {
-      // Limpar sessão
-      sessionStorage.removeItem('adminToken');
-      sessionStorage.removeItem('userRole');
-      sessionStorage.removeItem('userEmail');
+      // Limpar cookies
+      CookieManager.clearAdminCookies();
       setUser(null);
       
       // Resetar refs

@@ -1,19 +1,70 @@
-import { useState, memo } from 'react';
+import { useState, memo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, UserCheck } from 'lucide-react';
+import { Menu, X, UserCheck, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Logo } from '@/components/ui/logo.jsx';
 import { siteConfig } from '@/config/site.js';
 import { useScroll } from '@/hooks/use-scroll.js';
 import { useWhatsApp } from '@/hooks/use-whatsapp.js';
 import { useClienteToken } from '@/hooks/useClienteToken.js';
+import { authUtils } from '@/utils/authUtils.js';
+import { useIsLoginPage } from '@/hooks/useIsLoginPage.js';
 
 const Header = memo(() => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
   const { scrollToSection } = useScroll();
   const { sendMessage } = useWhatsApp();
   const navigate = useNavigate();
   const { hasToken, getStatusFilaUrl } = useClienteToken();
+  const isLoginPage = useIsLoginPage();
+
+  // Verificar se o usuário está autenticado como funcionário
+  useEffect(() => {
+    // Não verificar autenticação se estivermos na página de login
+    if (isLoginPage) {
+      setIsAdminAuthenticated(false);
+      setAdminUser(null);
+      return;
+    }
+
+    const checkAdminAuth = async () => {
+      console.log('🔍 Header - checkAdminAuth: Iniciando verificação...');
+      
+      try {
+        const authenticated = await authUtils.isAuthenticated();
+        console.log('🔍 Header - checkAdminAuth: Resultado da autenticação:', authenticated);
+        
+        setIsAdminAuthenticated(authenticated);
+        
+        if (authenticated) {
+          console.log('🔍 Header - checkAdminAuth: Obtendo dados do usuário...');
+          const user = await authUtils.getCurrentUser();
+          console.log('🔍 Header - checkAdminAuth: Dados do usuário:', user);
+          setAdminUser(user);
+        } else {
+          console.log('🔍 Header - checkAdminAuth: Usuário não autenticado');
+          setAdminUser(null);
+        }
+      } catch (error) {
+        console.error('❌ Header - checkAdminAuth: Erro:', error);
+        setIsAdminAuthenticated(false);
+        setAdminUser(null);
+      }
+    };
+
+    checkAdminAuth();
+    
+    // Verificar periodicamente (a cada 5 segundos) apenas se não estivermos na página de login
+    const interval = setInterval(() => {
+      if (!isLoginPage) {
+        checkAdminAuth();
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isLoginPage]);
 
   const handleNavigation = (href) => {
     scrollToSection(href, () => setIsMenuOpen(false));
@@ -25,6 +76,23 @@ const Header = memo(() => {
       navigate(statusUrl);
       setIsMenuOpen(false);
     }
+  };
+
+  const handleAdminArea = () => {
+    console.log('🔍 Header - handleAdminArea: Iniciando...');
+    console.log('🔍 Header - handleAdminArea: isAdminAuthenticated:', isAdminAuthenticated);
+    console.log('🔍 Header - handleAdminArea: adminUser:', adminUser);
+    
+    if (isAdminAuthenticated) {
+      console.log('🔍 Header - handleAdminArea: Usuário autenticado, indo para dashboard');
+      // Se está autenticado, vai direto para o dashboard
+      navigate('/admin/dashboard');
+    } else {
+      console.log('🔍 Header - handleAdminArea: Usuário não autenticado, indo para login');
+      // Se não está autenticado, vai para o login
+      navigate('/admin/login');
+    }
+    setIsMenuOpen(false);
   };
 
 
@@ -81,17 +149,25 @@ const Header = memo(() => {
           </nav>
 
           {/* CTA Button Desktop */}
-          <div className="hidden lg:block">
-            <Link to="/admin/login">
+          <div className="hidden lg:block flex items-center space-x-3">
+            {isAdminAuthenticated && adminUser && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-primary">{adminUser.nome || adminUser.email}</span>
+                <span className="ml-1">({adminUser.role})</span>
+              </div>
+            )}
             <Button 
               size="sm"
-                variant="outline"
-                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm px-4 py-2"
-                aria-label="Acesso administrativo"
+              variant="outline"
+              onClick={handleAdminArea}
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm px-4 py-2 flex items-center space-x-2"
+              aria-label="Acesso administrativo"
             >
-                Área Admin
+              <Shield className="w-4 h-4" />
+              <span>
+                {isAdminAuthenticated ? 'Dashboard' : 'Área Admin'}
+              </span>
             </Button>
-            </Link>
           </div>
 
           {/* Menu Mobile/Tablet Button */}
@@ -148,17 +224,27 @@ const Header = memo(() => {
                   Ver Fila
                 </Link>
               )}
+              {isAdminAuthenticated && adminUser && (
+                <div className="px-4 py-2 border-t border-gray-200">
+                  <div className="text-sm text-muted-foreground px-4">
+                    <span className="font-medium text-primary">{adminUser.nome || adminUser.email}</span>
+                    <span className="ml-1">({adminUser.role})</span>
+                  </div>
+                </div>
+              )}
               <div className="px-4 py-3">
-                <Link to="/admin/login" onClick={() => setIsMenuOpen(false)}>
                 <Button 
                   size="sm"
-                    variant="outline"
-                    className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm"
-                    aria-label="Acesso administrativo"
+                  variant="outline"
+                  onClick={handleAdminArea}
+                  className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors text-sm flex items-center justify-center space-x-2"
+                  aria-label="Acesso administrativo"
                 >
-                    Área Admin
+                  <Shield className="w-4 h-4" />
+                  <span>
+                    {isAdminAuthenticated ? 'Dashboard' : 'Área Admin'}
+                  </span>
                 </Button>
-                </Link>
               </div>
             </nav>
           </div>

@@ -59,26 +59,12 @@ const Hero = () => {
               <Link to="/barbearias">
                 <Button 
                   size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-accent px-8 py-3 text-lg font-semibold"
+                  className="border-2 border-black bg-white text-black hover:bg-black hover:text-white px-8 py-3 text-lg font-semibold transition-colors"
                 >
                   <MapPin className="w-5 h-5 mr-2" />
                   NOSSAS UNIDADES
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-              </Link>
-              
-
-              
-              <Link to="/barbearia/1/visualizar-fila">
-              <Button 
-                variant="outline"
-                size="lg"
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-3 text-lg font-semibold"
-              >
-                  <Clock className="w-5 h-5 mr-2" />
-                  VISUALIZAR FILA
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
               </Link>
             </div>
 

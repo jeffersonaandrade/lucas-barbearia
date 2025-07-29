@@ -1,4 +1,4 @@
-// Utilitário para limpar localStorage e migrar para sessionStorage
+// Utilitário para limpar localStorage e migrar para cookies
 export class CleanupService {
   constructor() {
     this.cleanupKey = 'lucas_barbearia_cleanup_completed';
@@ -14,61 +14,61 @@ export class CleanupService {
     localStorage.setItem(this.cleanupKey, 'true');
   }
 
-  // Migrar dados do localStorage para sessionStorage
-  migrateToSessionStorage() {
+  // Migrar dados do localStorage para cookies
+  migrateToCookies() {
     try {
-      console.log('🔄 Iniciando migração para sessionStorage...');
+      console.log('🔄 Iniciando migração para cookies...');
+
+      // Importar CookieManager
+      const { CookieManager } = require('./cookieManager.js');
 
       // Dados de autenticação
       const adminToken = localStorage.getItem('adminToken');
       const userRole = localStorage.getItem('userRole');
       const userEmail = localStorage.getItem('userEmail');
 
-      if (adminToken) {
-        sessionStorage.setItem('adminToken', adminToken);
-        console.log('✅ Token de admin migrado');
-      }
-
-      if (userRole) {
-        sessionStorage.setItem('userRole', userRole);
-        console.log('✅ Role do usuário migrado');
-      }
-
-      if (userEmail) {
-        sessionStorage.setItem('userEmail', userEmail);
-        console.log('✅ Email do usuário migrado');
+      if (adminToken && userRole && userEmail) {
+        // Criar objeto de usuário para salvar nos cookies
+        const userData = {
+          role: userRole,
+          email: userEmail,
+          // Outros campos podem ser adicionados conforme necessário
+        };
+        
+        CookieManager.setAdminToken(adminToken);
+        CookieManager.setUserInfo(userData);
+        console.log('✅ Dados de autenticação migrados para cookies');
       }
 
       // Dados da fila
       const filaToken = localStorage.getItem('fila_token');
       const clienteData = localStorage.getItem('cliente_data');
       const barbeariaId = localStorage.getItem('fila_barbearia_id');
-      const timestamp = localStorage.getItem('fila_timestamp');
 
       if (filaToken) {
-        sessionStorage.setItem('fila_token', filaToken);
-        console.log('✅ Token da fila migrado');
+        CookieManager.setFilaToken(filaToken);
+        console.log('✅ Token da fila migrado para cookies');
       }
 
       if (clienteData) {
-        sessionStorage.setItem('cliente_data', clienteData);
-        console.log('✅ Dados do cliente migrados');
+        try {
+          const cliente = JSON.parse(clienteData);
+          CookieManager.setClienteData(cliente);
+          console.log('✅ Dados do cliente migrados para cookies');
+        } catch (e) {
+          console.log('⚠️ Erro ao parsear dados do cliente');
+        }
       }
 
       if (barbeariaId) {
-        sessionStorage.setItem('fila_barbearia_id', barbeariaId);
-        console.log('✅ ID da barbearia migrado');
+        CookieManager.setBarbeariaId(barbeariaId);
+        console.log('✅ ID da barbearia migrado para cookies');
       }
 
-      if (timestamp) {
-        sessionStorage.setItem('fila_timestamp', timestamp);
-        console.log('✅ Timestamp migrado');
-      }
-
-      console.log('✅ Migração para sessionStorage concluída');
+      console.log('✅ Migração para cookies concluída');
       return true;
     } catch (error) {
-      console.error('❌ Erro na migração para sessionStorage:', error);
+      console.error('❌ Erro na migração para cookies:', error);
       return false;
     }
   }
@@ -105,10 +105,10 @@ export class CleanupService {
     }
   }
 
-  // Limpar sessionStorage
+  // Limpar sessionStorage (apenas para debug, não usado mais)
   clearSessionStorage() {
     try {
-      console.log('🧹 Limpando sessionStorage...');
+      console.log('🧹 Limpando sessionStorage (deprecated)...');
 
       const keysToRemove = [
         'fila_token',
@@ -124,7 +124,7 @@ export class CleanupService {
         sessionStorage.removeItem(key);
       });
 
-      console.log('✅ sessionStorage limpo');
+      console.log('✅ sessionStorage limpo (deprecated)');
       return true;
     } catch (error) {
       console.error('❌ Erro ao limpar sessionStorage:', error);
@@ -142,8 +142,8 @@ export class CleanupService {
     try {
       console.log('🚀 Iniciando limpeza completa...');
 
-      // Migrar dados importantes para sessionStorage
-      const migrationSuccess = this.migrateToSessionStorage();
+      // Migrar dados importantes para cookies
+      const migrationSuccess = this.migrateToCookies();
 
       if (!migrationSuccess) {
         console.warn('⚠️ Falha na migração, mas continuando com a limpeza');

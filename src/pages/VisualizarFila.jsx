@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, RefreshCw, Users2, Eye, MapPin, UserCheck, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Users, Clock, RefreshCw, Users2, Eye, MapPin, UserCheck, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { useFilaBackend } from '@/hooks/useFilaBackend.js';
+import { useClienteFila } from '@/hooks/useClienteFila.js';
 import { useClienteToken } from '@/hooks/useClienteToken.js';
 import { barbeariasService } from '@/services/api.js';
 import { FilaList } from '@/components/ui/fila-list.jsx';
 import { FilaStats } from '@/components/ui/fila-stats.jsx';
-import { useFilaStats } from '@/hooks/useFilaStats.js';
+
+
 
 const VisualizarFila = () => {
   const navigate = useNavigate();
@@ -20,23 +21,14 @@ const VisualizarFila = () => {
   const [barbearias, setBarbearias] = useState([]);
   const [pageError, setPageError] = useState(null);
   
-  const { fila, loading, error: filaError, estatisticas: estatisticasAPI, obterFilaAtual, barbeariaInfo, clienteAtual, barbeiros } = useFilaBackend(selectedBarbeariaId);
+  const { fila, loading, error: filaError, estatisticas: estatisticasAPI, obterFilaAtual, barbeariaInfo, clienteAtual, barbeiros } = useClienteFila(selectedBarbeariaId);
   
   // Usar hook customizado para estatísticas
-  const estatisticas = useFilaStats(fila, estatisticasAPI);
+  // Estatísticas já vêm do hook useFilaBackend centralizado
+  const estatisticas = estatisticasAPI;
   const { hasToken, getStatusFilaUrl } = useClienteToken();
   
-  // Debug logs
-  useEffect(() => {
-    console.log('🔍 DEBUG VisualizarFila:');
-    console.log('📍 selectedBarbeariaId:', selectedBarbeariaId);
-    console.log('👥 fila:', fila);
-    console.log('👨‍💼 barbeiros:', barbeiros);
-    console.log('📊 estatisticas:', estatisticas);
-    console.log('🏪 barbeariaInfo:', barbeariaInfo);
-    console.log('⏳ loading:', loading);
-    console.log('❌ error:', filaError);
-  }, [selectedBarbeariaId, fila, barbeiros, estatisticas, barbeariaInfo, loading, filaError]);
+
   
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showRedirectAlert, setShowRedirectAlert] = useState(false);
@@ -64,19 +56,9 @@ const VisualizarFila = () => {
         console.log('🏪 Barbearias encontradas:', barbeariasArray);
         setBarbearias(barbeariasArray);
         
-        // Se não há barbearia selecionada ou a barbearia não existe, usar a primeira disponível
+        // Se não há barbearia selecionada ou a barbearia não existe, NÃO selecionar automaticamente
         if (!selectedBarbeariaId || !barbeariasArray.find(b => b.id === selectedBarbeariaId)) {
-          if (barbeariasArray.length > 0) {
-            const primeiraBarbearia = barbeariasArray[0];
-            console.log('✅ Usando primeira barbearia disponível:', primeiraBarbearia);
-            setSelectedBarbeariaId(primeiraBarbearia.id);
-            
-            // Atualizar a URL para refletir a barbearia correta
-            window.history.replaceState(null, '', `/barbearia/${primeiraBarbearia.id}/visualizar-fila`);
-          } else {
-            console.error('❌ Nenhuma barbearia encontrada no backend');
-            setPageError('Nenhuma barbearia disponível no momento.');
-          }
+          setPageError('Selecione uma barbearia válida para visualizar a fila.');
         }
       } catch (error) {
         console.error('❌ Erro ao carregar barbearias:', error);
@@ -86,7 +68,7 @@ const VisualizarFila = () => {
     };
     
     carregarBarbearias();
-  }, []); // Remover selectedBarbeariaId da dependência para evitar loop infinito
+  }, []);
 
   // Atualização automática a cada 10 segundos
   useEffect(() => {
@@ -162,6 +144,8 @@ const VisualizarFila = () => {
     setShowRedirectAlert(false);
   };
 
+
+
   // Tratamento de erro
   if (pageError) {
     return (
@@ -200,37 +184,30 @@ const VisualizarFila = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Debug info */}
-      <div className="fixed top-4 right-4 bg-black text-white p-2 rounded text-xs z-50">
-        <div>ID: {selectedBarbeariaId}</div>
-        <div>Loading: {loading ? 'true' : 'false'}</div>
-        <div>Error: {filaError || 'none'}</div>
-        <div>Fila: {fila?.length || 0}</div>
-        <div>Barbeiros: {barbeiros?.length || 0}</div>
-      </div>
+
 
       {/* Alerta de redirecionamento para clientes com token */}
       {showRedirectAlert && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md bg-card border border-border shadow-lg">
-            <CardHeader className="text-center">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UserCheck className="w-6 h-6 text-primary" />
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md bg-white border-2 border-gray-200 shadow-2xl">
+            <CardHeader className="text-center bg-gray-50 border-b border-gray-200">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserCheck className="w-6 h-6 text-blue-600" />
               </div>
-              <CardTitle className="text-foreground">Você está na fila!</CardTitle>
+              <CardTitle className="text-gray-900 text-xl font-bold">Você está na fila!</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert className="border-primary bg-primary/10">
-                <UserCheck className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-foreground">
+            <CardContent className="space-y-4 p-6">
+              <Alert className="border-blue-200 bg-blue-50">
+                <UserCheck className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 font-medium">
                   Detectamos que você já está cadastrado na fila. Deseja ver o status da sua fila pessoal?
                 </AlertDescription>
               </Alert>
               
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 pt-2">
                 <Button
                   onClick={handleIrParaMinhaFila}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-accent"
+                  className="flex-1 bg-blue-600 text-white hover:bg-blue-700 font-medium"
                 >
                   <UserCheck className="w-4 h-4 mr-2" />
                   Minha Fila
@@ -238,7 +215,7 @@ const VisualizarFila = () => {
                 <Button
                   onClick={handleContinuarVisualizando}
                   variant="outline"
-                  className="flex-1 border-foreground text-foreground hover:bg-foreground hover:text-background"
+                  className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   Continuar
@@ -271,7 +248,7 @@ const VisualizarFila = () => {
             
             {/* Informações da Barbearia */}
             {barbeariaInfo && (
-              <div className="max-w-md mx-auto mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="max-w-md mx-auto mb-6 p-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-center space-x-2">
                   <MapPin className="w-5 h-5 text-primary" />
                   <p className="text-lg font-semibold text-foreground">
@@ -283,18 +260,18 @@ const VisualizarFila = () => {
             
             {/* Seleção de Unidade */}
             <div className="max-w-md mx-auto mb-6">
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Selecione a Unidade:
               </label>
               <Select value={selectedBarbeariaId ? selectedBarbeariaId.toString() : ''} onValueChange={handleBarbeariaChange}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-white border-gray-300 text-black hover:bg-gray-50 focus:bg-white">
                   <SelectValue placeholder="Escolha uma unidade" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border-gray-300 text-black">
                   {barbearias.map((barbearia) => (
-                    <SelectItem key={barbearia.id} value={barbearia.id.toString()}>
+                    <SelectItem key={barbearia.id} value={barbearia.id.toString()} className="text-black hover:bg-gray-100">
                       <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                        <MapPin className="w-4 h-4 mr-2 text-gray-500" />
                         {barbearia.nome}
                       </div>
                     </SelectItem>
@@ -411,17 +388,47 @@ const VisualizarFila = () => {
                     ))}
                   </div>
                   
-                                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                  <p className="text-sm text-green-800 mb-3">
-                    <strong>Seja bem vindo!</strong> Clique aqui para entrar na fila
-                  </p>
-                  <Button
-                    onClick={handleEntrarNaFila}
-                    className="bg-primary text-primary-foreground hover:bg-accent"
-                  >
-                    Entrar na Fila
-                  </Button>
-                </div>
+                                  {/* Botão Principal - Destaque Máximo */}
+                                  <div className="mt-8 p-6 bg-gradient-to-r from-green-100 to-green-200 border-4 border-green-300 rounded-xl text-center shadow-2xl hover:shadow-green-400/50 transition-all duration-300 transform hover:scale-105">
+                                    <div className="mb-4">
+                                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                                        <Users className="w-8 h-8 text-white" />
+                                      </div>
+                                      <h3 className="text-xl font-bold text-green-800 mb-2">
+                                        Seja bem vindo!
+                                      </h3>
+                                      <p className="text-green-700 font-medium">
+                                        Clique aqui para entrar na fila
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="relative">
+                                      <Button
+                                        onClick={handleEntrarNaFila}
+                                        className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-4 border-green-400 shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 transition-all duration-300 rounded-xl"
+                                      >
+                                        <div className="flex items-center justify-center space-x-3">
+                                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                            <ArrowRight className="w-5 h-5 text-white" />
+                                          </div>
+                                          <span>ENTRAR NA FILA AGORA!</span>
+                                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                            <ArrowRight className="w-5 h-5 text-white" />
+                                          </div>
+                                        </div>
+                                      </Button>
+                                      
+                                      {/* Efeito de brilho */}
+                                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 animate-pulse pointer-events-none rounded-xl"></div>
+                                    </div>
+                                    
+                                    {/* Texto de destaque abaixo do botão */}
+                                    <div className="mt-4">
+                                      <p className="text-sm text-green-600 font-semibold">
+                                        ⚡ Clique aqui para entrar na fila e ser atendido rapidamente!
+                                      </p>
+                                    </div>
+                                  </div>
                 </>
               )}
             </CardContent>

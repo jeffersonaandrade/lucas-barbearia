@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
@@ -16,12 +16,7 @@ const EntrarFila = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  console.log('🔍 EntrarFila - ID da URL:', id);
-  console.log('🔍 EntrarFila - ID convertido:', parseInt(id));
-
   const barbeariaId = parseInt(id);
-  console.log('🔍 EntrarFila - barbeariaId final:', barbeariaId);
-  console.log('🔍 EntrarFila - tipo do barbeariaId:', typeof barbeariaId);
   
   const { entrarNaFila, loading, error: filaError, estatisticas, barbeiros, barbeariaInfo } = useFilaBackend(barbeariaId);
   
@@ -59,22 +54,11 @@ const EntrarFila = () => {
       return;
     }
 
-    // Debug: verificar dados recebidos
-    console.log('🔍 Debug - Dados do formulário:', formData);
-    console.log('🔍 Debug - Barbeiros recebidos:', barbeiros);
-    console.log('🔍 Debug - Barbearia Info:', barbeariaInfo);
-    console.log('🔍 Debug - Loading:', loading);
-    console.log('🔍 Debug - Error:', filaError);
+
 
     try {
       // Removido: verificação de status da barbearia (endpoint não existe)
-      console.log('📝 Dados do formulário sendo enviados:', formData);
-      console.log('🔍 Verificando se entrarNaFila é uma função:', typeof entrarNaFila);
-      
       const resultado = await entrarNaFila(formData);
-      
-      console.log('📦 Resultado recebido:', resultado);
-      console.log('🔍 Tipo do resultado:', typeof resultado);
       
       if (!resultado) {
         console.error('❌ Resultado é undefined ou null');
@@ -86,9 +70,6 @@ const EntrarFila = () => {
       
       // Redirecionar para status da fila após 3 segundos (dar tempo para salvar no localStorage)
       setTimeout(() => {
-        console.log('🔄 Redirecionando para status da fila...');
-        console.log('📍 URL:', `/barbearia/${id}/status-fila`);
-        console.log('🎫 Token:', resultado?.token);
         navigate(`/barbearia/${id}/status-fila`);
       }, 3000);
     } catch (err) {
@@ -216,15 +197,15 @@ const EntrarFila = () => {
                   <div className="space-y-2">
                     <Label htmlFor="barbeiro" className="text-foreground">Escolher Barbeiro *</Label>
                     <Select value={formData.barbeiro} onValueChange={(value) => handleInputChange('barbeiro', value)}>
-                      <SelectTrigger className="bg-secondary border-border text-foreground">
+                      <SelectTrigger className="w-full bg-white border-gray-300 text-black hover:bg-gray-50 focus:bg-white">
                         <SelectValue placeholder="Selecione um barbeiro" />
                       </SelectTrigger>
-                      <SelectContent className="bg-secondary border-border">
-                        <SelectItem value="Fila Geral">
+                      <SelectContent className="bg-white border-gray-300 text-black">
+                        <SelectItem value="Fila Geral" className="text-black hover:bg-gray-100">
                           🎯 Fila Geral (Qualquer barbeiro)
                         </SelectItem>
                         {barbeiros.map((barbeiro) => (
-                          <SelectItem key={barbeiro.id} value={barbeiro.id}>
+                          <SelectItem key={barbeiro.id} value={barbeiro.id} className="text-black hover:bg-gray-100">
                             {barbeiro.nome}
                           </SelectItem>
                         ))}
@@ -239,13 +220,41 @@ const EntrarFila = () => {
                     </Alert>
                   )}
 
-                  <Button
-                    type="submit"
-                    className="w-full bg-primary text-primary-foreground hover:bg-accent"
-                    disabled={loading}
-                  >
-                    {loading ? 'Entrando na fila...' : 'Entrar na Fila'}
-                  </Button>
+                  {/* Botão Principal - Destaque Máximo */}
+                  <div className="relative">
+                    <Button
+                      type="submit"
+                      className="w-full h-16 text-xl font-bold bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-4 border-green-400 shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 transition-all duration-300 rounded-xl"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <div className="flex items-center space-x-3">
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Entrando na fila...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-3">
+                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                            <Users className="w-5 h-5 text-white" />
+                          </div>
+                          <span>ENTRAR NA FILA AGORA!</span>
+                          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                            <ArrowRight className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </Button>
+                    
+                    {/* Efeito de brilho */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 animate-pulse pointer-events-none rounded-xl"></div>
+                  </div>
+
+                  {/* Texto de destaque abaixo do botão */}
+                  <div className="text-center mt-4">
+                    <p className="text-sm text-green-600 font-semibold">
+                      ⚡ Clique aqui para entrar na fila e ser atendido rapidamente!
+                    </p>
+                  </div>
                 </form>
               </CardContent>
             </Card>

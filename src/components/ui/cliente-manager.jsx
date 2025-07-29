@@ -31,7 +31,7 @@ const ClienteManager = ({
     
     try {
       setLoading(true);
-      const filaData = await filaService.obterFila(barbeariaAtual.id);
+      const filaData = await filaService.obterFilaPublica(barbeariaAtual.id);
       setFilaData(filaData);
     } catch (error) {
       console.error('Erro ao carregar dados da fila:', error);

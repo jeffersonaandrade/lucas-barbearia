@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 const AdminRelatorios = () => {
-  const { user, logout } = useAuthBackend();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [periodo, setPeriodo] = useState('hoje');

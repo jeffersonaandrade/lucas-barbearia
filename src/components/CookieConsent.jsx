@@ -56,8 +56,8 @@ const CookieConsent = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end justify-center p-4 z-50">
-      <Card className="w-full max-w-lg bg-card border border-border shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 flex items-end justify-center p-4 z-50">
+      <Card className="w-full max-w-lg bg-white border-2 border-gray-200 shadow-2xl">
         <CardContent className="p-4">
           {/* Header Compacto */}
           <div className="flex items-start justify-between mb-3">

@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
-import { useFilaBackend } from '@/hooks/useFilaBackend.js';
+import { useClienteFila } from '@/hooks/useClienteFila.js';
 import { FilaList } from '@/components/ui/fila-list.jsx';
 import { FilaStats } from '@/components/ui/fila-stats.jsx';
-import { useFilaStats } from '@/hooks/useFilaStats.js';
+
+import { CookieManager } from '@/utils/cookieManager.js';
 
 const StatusFila = () => {
   const navigate = useNavigate();
@@ -22,36 +23,28 @@ const StatusFila = () => {
     sairDaFila, 
     atualizarPosicao,
     barbeariaInfo
-  } = useFilaBackend(parseInt(id));
+  } = useClienteFila(parseInt(id));
   
-  // Usar hook customizado para estatísticas
-  const estatisticas = useFilaStats(fila, estatisticasAPI);
+  // Estatísticas já vêm do hook useFilaBackend centralizado
+  const estatisticas = estatisticasAPI;
+  
+
   
   const [showConfirmSair, setShowConfirmSair] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   // Verificar se o cliente está na fila
   useEffect(() => {
-    console.log('🔍 StatusFila - Verificando cliente atual:', clienteAtual);
-    console.log('🔍 StatusFila - Token no localStorage:', localStorage.getItem('fila_token'));
-    console.log('🔍 StatusFila - Cliente data no localStorage:', localStorage.getItem('cliente_data'));
-    console.log('🔍 StatusFila - Barbearia ID no localStorage:', localStorage.getItem('fila_barbearia_id'));
+    CookieManager.debugCookies();
     
     if (!clienteAtual) {
-      console.log('⚠️ Cliente não encontrado, aguardando carregamento...');
       // Dar mais tempo para carregar os dados e verificar novamente
       const timeout = setTimeout(() => {
-        const token = localStorage.getItem('fila_token');
-        const clienteData = localStorage.getItem('cliente_data');
-        const barbeariaId = localStorage.getItem('fila_barbearia_id');
-        
-        console.log('⏰ Timeout - Verificando novamente:');
-        console.log('🎫 Token:', token);
-        console.log('📋 Cliente data:', clienteData);
-        console.log('🏪 Barbearia ID:', barbeariaId);
+        const token = CookieManager.getFilaToken();
+        const clienteData = CookieManager.getClienteData();
+        const barbeariaId = CookieManager.getBarbeariaId();
         
         if (!token || !clienteData || !barbeariaId) {
-          console.log('❌ Dados insuficientes, redirecionando para home...');
           navigate('/');
         }
       }, 5000); // 5 segundos para dar tempo de carregar
@@ -209,7 +202,7 @@ const StatusFila = () => {
                   </div>
                   <div className="text-center p-6 bg-secondary rounded-lg">
                     <div className="text-5xl font-bold text-primary mb-2">
-                      {clienteAtual.tempoEstimado}
+                      {estatisticas.tempoMedioEspera || estatisticas.tempoEstimadoProximo || 'N/A'}
                     </div>
                     <div className="text-sm text-muted-foreground">Minutos</div>
                   </div>
@@ -221,8 +214,8 @@ const StatusFila = () => {
                   </div>
                 </div>
 
-                {/* Alerta especial para posição 1 */}
-                {clienteAtual.posicao === 1 && (
+                {/* Alerta especial para quando o barbeiro chama o cliente */}
+                {clienteAtual.status === 'proximo' && (
                   <Alert className="mt-6 border-primary bg-primary/10">
                     <CheckCircle className="h-4 w-4 text-primary" />
                     <AlertDescription className="text-foreground">
@@ -231,6 +224,16 @@ const StatusFila = () => {
                           ? `Dirija-se ao balcão do barbeiro ${clienteAtual.barbeiro}!`
                           : 'Dirija-se ao balcão do próximo barbeiro disponível!'
                       }
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Alerta informativo para posição 1 aguardando */}
+                {clienteAtual.posicao === 1 && clienteAtual.status === 'aguardando' && (
+                  <Alert className="mt-6 border-yellow-500 bg-yellow-50">
+                    <Clock className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-foreground">
+                      <strong>Próximo da fila!</strong> Aguarde ser chamado pelo barbeiro.
                     </AlertDescription>
                   </Alert>
                 )}

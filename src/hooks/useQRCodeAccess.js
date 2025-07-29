@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { CookieManager } from '@/utils/cookieManager.js';
 
 export const useQRCodeAccess = () => {
   const [searchParams] = useSearchParams();
@@ -15,34 +16,33 @@ export const useQRCodeAccess = () => {
       setHasQRCodeAccess(true);
       setBarbeariaId(parseInt(barbearia));
       
-      // Salvar no localStorage para manter o acesso durante a sessão
-      localStorage.setItem('qr_access', JSON.stringify({
+      // Salvar no cookie para manter o acesso durante a sessão
+      CookieManager.setQRAccess({
         barbeariaId: parseInt(barbearia),
         timestamp: Date.now(),
         hasAccess: true
-      }));
+      });
     } else {
-      // Verificar se já tem acesso salvo no localStorage
-      const savedAccess = localStorage.getItem('qr_access');
+      // Verificar se já tem acesso salvo no cookie
+      const savedAccess = CookieManager.getQRAccess();
       if (savedAccess) {
-        const access = JSON.parse(savedAccess);
         const now = Date.now();
         const sessionTimeout = 2 * 60 * 60 * 1000; // 2 horas
         
         // Se ainda está dentro do tempo da sessão
-        if (now - access.timestamp < sessionTimeout) {
+        if (now - savedAccess.timestamp < sessionTimeout) {
           setHasQRCodeAccess(true);
-          setBarbeariaId(access.barbeariaId);
+          setBarbeariaId(savedAccess.barbeariaId);
         } else {
           // Sessão expirada, limpar
-          localStorage.removeItem('qr_access');
+          CookieManager.removeCookie('qr_access');
         }
       }
     }
   }, [searchParams]);
 
   const clearQRCodeAccess = () => {
-    localStorage.removeItem('qr_access');
+    CookieManager.removeCookie('qr_access');
     setHasQRCodeAccess(false);
     setBarbeariaId(null);
   };

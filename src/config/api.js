@@ -19,13 +19,14 @@ export const API_CONFIG = {
     'Accept': 'application/json',
   },
   
-  // Endpoints UNIFICADOS
+  // Endpoints ALINHADOS com o backend
   ENDPOINTS: {
     // Autenticação
     AUTH: {
       LOGIN: '/auth/login',
       LOGOUT: '/auth/logout',
-      ME: '/auth/me',
+      ME: '/auth/me',           // Verificar autenticação atual
+      REGISTER: '/auth/register', // Para criar usuários (admin apenas)
     },
     
     // Barbearias
@@ -35,6 +36,11 @@ export const API_CONFIG = {
       CREATE: '/barbearias',
       UPDATE: (id) => `/barbearias/${id}`,
       DELETE: (id) => `/barbearias/${id}`,
+      PROXIMO_FILA: (id) => `/barbearias/${id}/fila/proximo`, // Chamar próximo cliente
+    },
+    
+    // Usuários/Barbeiros
+    USUARIOS: {
       BARBEIROS: (filtros = {}) => {
         const params = new URLSearchParams();
         if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
@@ -43,23 +49,23 @@ export const API_CONFIG = {
         const queryString = params.toString();
         return queryString ? `/users/barbeiros?${queryString}` : '/users/barbeiros';
       },
-      ATIVAR_BARBEIRO: (barbeariaId, barbeiroId) => `/barbearias/${barbeariaId}/barbeiros/${barbeiroId}/ativar`,
-      DESATIVAR_BARBEIRO: (barbeariaId, barbeiroId) => `/barbearias/${barbeariaId}/barbeiros/${barbeiroId}/desativar`,
+      ATIVAR_BARBEIRO: '/users/barbeiros/ativar',
+      DESATIVAR_BARBEIRO: '/users/barbeiros/desativar',
+      MEU_STATUS: '/users/barbeiros/meu-status',
+      PERFIL: '/users/perfil',
+      GERENCIAMENTO: '/users/gerenciamento',
     },
     
-    // Fila UNIFICADA
+    // Fila ALINHADA com o backend
     FILA: {
       ENTRAR: '/fila/entrar',
-      GET: (barbeariaId) => `/fila-publica/${barbeariaId}`,
-      STATUS: (barbeariaId, token) => `/fila/${barbeariaId}/status/${token}`,
-      SAIR: (barbeariaId, token) => `/fila/${barbeariaId}/sair/${token}`,
-      PROXIMO: (barbeariaId) => `/fila/${barbeariaId}/proximo`,
-      FINALIZAR: (barbeariaId, clienteId) => `/fila/${barbeariaId}/finalizar/${clienteId}`,
-      ADICIONAR: (barbeariaId) => `/fila/${barbeariaId}/adicionar`,
-      REMOVER: (clienteId) => `/fila/remover/${clienteId}`,
+      VISUALIZAR: '/fila/visualizar',
+      STATUS: '/fila/status',
+      GERENCIAR: '/fila/gerenciar',
+      ESTATISTICAS: '/fila/estatisticas',
     },
     
-    // Avaliações com filtros
+    // Avaliações
     AVALIACOES: {
       CREATE: '/avaliacoes',
       LIST: (filtros = {}) => {
@@ -72,57 +78,63 @@ export const API_CONFIG = {
         const queryString = params.toString();
         return queryString ? `/avaliacoes?${queryString}` : '/avaliacoes';
       },
+      GET: (id) => `/avaliacoes/${id}`,
     },
     
-    // Histórico com filtros
+    // Histórico ALINHADO com o backend
     HISTORICO: {
-      GET: (barbeariaId, filtros = {}) => {
+      GET: (filtros = {}) => {
         const params = new URLSearchParams();
+        if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
         if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
         if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
         if (filtros.barbeiro_id) params.append('barbeiro_id', filtros.barbeiro_id);
-        if (filtros.page) params.append('page', filtros.page);
         if (filtros.limit) params.append('limit', filtros.limit);
+        if (filtros.offset) params.append('offset', filtros.offset);
         const queryString = params.toString();
-        return queryString ? `/barbearias/${barbeariaId}/historico?${queryString}` : `/barbearias/${barbeariaId}/historico`;
+        return queryString ? `/historico?${queryString}` : '/historico';
       },
-      BARBEIRO: (barbeiroId, filtros = {}) => {
+      RELATORIOS: '/historico/relatorios',
+    },
+    
+    // Relatórios
+    RELATORIOS: {
+      DASHBOARD: (filtros = {}) => {
         const params = new URLSearchParams();
+        if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
         if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
         if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-        if (filtros.page) params.append('page', filtros.page);
-        if (filtros.limit) params.append('limit', filtros.limit);
+        if (filtros.periodo) params.append('periodo', filtros.periodo);
         const queryString = params.toString();
-        return queryString ? `/historico?barbeiro_id=${barbeiroId}&${queryString}` : `/historico?barbeiro_id=${barbeiroId}`;
+        return queryString ? `/relatorios/dashboard?${queryString}` : '/relatorios/dashboard';
       },
-      RELATORIOS: (barbeariaId, filtros = {}) => {
+      DOWNLOAD: (filtros = {}) => {
         const params = new URLSearchParams();
-        if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
-        if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
         if (filtros.tipo) params.append('tipo', filtros.tipo);
+        if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
+        if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
+        if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
         const queryString = params.toString();
-        return queryString ? `/relatorios/barbearias/${barbeariaId}?${queryString}` : `/relatorios/barbearias/${barbeariaId}`;
+        return queryString ? `/relatorios/download?${queryString}` : '/relatorios/download';
       },
     },
     
-    // Usuários com filtros
-    USUARIOS: {
-      LIST: (filtros = {}) => {
-        const params = new URLSearchParams();
-        if (filtros.role) params.append('role', filtros.role);
-        if (filtros.ativo) params.append('ativo', filtros.ativo);
-        if (filtros.page) params.append('page', filtros.page);
-        if (filtros.limit) params.append('limit', filtros.limit);
-        const queryString = params.toString();
-        return queryString ? `/users?${queryString}` : '/users';
+    // Configurações
+    CONFIGURACOES: {
+      SERVICOS: {
+        LIST: '/configuracoes/servicos',
+        CREATE: '/configuracoes/servicos',
+        UPDATE: (id) => `/configuracoes/servicos/${id}`,
+        DELETE: (id) => `/configuracoes/servicos/${id}`,
       },
-      CREATE: '/users',
-      UPDATE: (id) => `/users/${id}`,
-      DELETE: (id) => `/users/${id}`,
-      BARBEIROS_STATUS: '/users/barbeiros/meu-status',
-      BARBEIROS_ATIVAR: '/users/barbeiros/ativar',
-      BARBEIROS_DESATIVAR: '/users/barbeiros/desativar',
+      HORARIOS: {
+        LIST: '/configuracoes/horarios',
+        CREATE: '/configuracoes/horarios',
+      },
     },
+    
+    // Health Check
+    HEALTH: '/health',
   },
   
   // ESTRUTURA DE RESPOSTA PADRONIZADA
@@ -186,9 +198,13 @@ export const DEV_CONFIG = {
 
 // Configurações de produção
 export const PROD_CONFIG = {
-  API_DELAY: 0,
+  // Logs mínimos
   VERBOSE_LOGS: false,
+  
+  // Sem mock data
   USE_MOCK_DATA: false,
+  
+  // Debug desabilitado
   DEBUG: {
     API_CALLS: false,
     STATE_CHANGES: false,
@@ -196,45 +212,51 @@ export const PROD_CONFIG = {
   },
 };
 
-// Configuração baseada no ambiente
-export const CONFIG = import.meta.env.DEV ? DEV_CONFIG : PROD_CONFIG;
-
-// Função para obter configuração completa
+// Função para obter configuração baseada no ambiente
 export const getApiConfig = () => ({
   ...API_CONFIG,
-  ...CONFIG,
+  ...(import.meta.env.DEV ? DEV_CONFIG : PROD_CONFIG),
 });
 
-import { utilsService } from '@/services/api.js';
-
-// Função para validar se a API está disponível
+// Função para verificar saúde da API
 export const checkApiHealth = async () => {
   try {
-    const response = await utilsService.checkHealth();
-    return response.success;
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, data };
+    }
+    
+    return { success: false, error: `HTTP ${response.status}` };
   } catch (error) {
-    console.warn('API não está disponível:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 };
 
-// Função para obter URL completa do endpoint
+// Função para gerar URL completa
 export const getApiUrl = (endpoint) => {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };
 
-// Função para padronizar resposta da API
+// Função para padronizar resposta
 export const standardizeResponse = (data, message = '', errors = []) => {
   return {
-    success: errors.length === 0,
+    success: true,
     data,
     message,
     errors,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 };
 
-// Função para adicionar paginação à resposta
+// Função para adicionar paginação
 export const addPagination = (response, pagination) => {
   return {
     ...response,
@@ -242,9 +264,35 @@ export const addPagination = (response, pagination) => {
       total: pagination.total || 0,
       page: pagination.page || 1,
       limit: pagination.limit || 10,
-      hasMore: pagination.hasMore || false
-    }
+      hasMore: pagination.hasMore || false,
+      totalPages: Math.ceil((pagination.total || 0) / (pagination.limit || 10)),
+    },
   };
 };
 
-export default API_CONFIG; 
+// Função genérica para requisições HTTP
+export const apiFetch = async (endpoint, options = {}) => {
+  const url = getApiUrl(endpoint);
+  
+  const config = {
+    headers: {
+      ...API_CONFIG.DEFAULT_HEADERS,
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  try {
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`API Error (${endpoint}):`, error);
+    throw error;
+  }
+}; 

@@ -18,7 +18,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, apiStatus } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,15 +33,42 @@ const Login = () => {
       // Validar se os campos não estão vazios após o trim
       if (!email || !senha) {
         setError('Por favor, preencha todos os campos.');
+        setLoading(false);
         return;
       }
       
-      // Chamar a API real de login
-      await login(email, senha);
-      navigate(location.state?.from?.pathname || '/admin/dashboard');
+      console.log('🔄 Login - Iniciando login com:', { email });
+      
+      // Chamar a API real de login com cookies
+      const result = await login(email, senha);
+      
+      console.log('✅ Login - Resultado:', result);
+      
+      // Verificar diferentes estruturas possíveis da resposta
+      // O backend retorna: { token, user, expiresIn }
+      const hasSuccess = result.success || result.authenticated || result.token;
+      const hasUser = result.data?.user || result.user || result.data;
+      
+      if (hasSuccess && hasUser) {
+        console.log('🎯 Login - Redirecionando para dashboard...');
+        console.log('👤 Usuário autenticado:', hasUser);
+        
+        // Usar navigate para redirecionamento mais suave
+        setTimeout(() => {
+          navigate(location.state?.from?.pathname || '/admin/dashboard', { replace: true });
+        }, 100);
+      } else {
+        console.log('❌ Login - Estrutura inválida:', {
+          hasSuccess,
+          hasUser,
+          resultKeys: Object.keys(result || {}),
+          result
+        });
+        setError('Erro ao fazer login. Tente novamente.');
+      }
     } catch (error) {
-      console.error('Erro no login:', error);
-      setError(error.message || 'Erro ao fazer login. Tente novamente.');
+      console.error('❌ Login - Erro no login:', error);
+      setError('Erro ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +152,7 @@ const Login = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 hover:border-gray-400"
                 disabled={loading}
               >
                 {loading ? 'Entrando...' : 'Entrar'}
@@ -135,7 +162,7 @@ const Login = () => {
             <div className="text-center space-y-4">
               <Link
                 to="/admin/recuperar-senha"
-                className="text-sm text-primary hover:text-primary/80 transition-colors"
+                className="w-full"
               >
                 Esqueceu sua senha?
               </Link>

@@ -10,6 +10,30 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Middleware de autenticação
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  console.log('🔐 Middleware de autenticação:', {
+    hasAuthHeader: !!authHeader,
+    token: token ? token.substring(0, 20) + '...' : null,
+    path: req.path
+  });
+  
+  // Para desenvolvimento, aceitar qualquer token que comece com 'auth_' ou 'mock_token_'
+  if (token && (token.startsWith('auth_') || token.startsWith('mock_token_'))) {
+    console.log('✅ Token válido para desenvolvimento');
+    next();
+  } else {
+    console.log('❌ Token inválido ou ausente');
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Token inválido ou expirado' 
+    });
+  }
+};
+
 // Dados mock
 const users = [
   {
@@ -17,7 +41,30 @@ const users = [
     nome: 'Lucas Silva',
     email: 'admin@lucasbarbearia.com',
     role: 'admin',
-    telefone: '(81) 99999-9999'
+    telefone: '(81) 99999-9999',
+    ativo: true,
+    created_at: '2025-07-29T01:50:28.857231+00:00',
+    updated_at: '2025-07-29T02:06:29.649462+00:00'
+  },
+  {
+    id: '2',
+    nome: 'João Silva',
+    email: 'joao@lucasbarbearia.com',
+    role: 'barbeiro',
+    telefone: '(81) 88888-8888',
+    ativo: true,
+    created_at: '2025-07-29T01:50:28.857231+00:00',
+    updated_at: '2025-07-29T02:06:29.649462+00:00'
+  },
+  {
+    id: '3',
+    nome: 'Maria Santos',
+    email: 'maria@lucasbarbearia.com',
+    role: 'gerente',
+    telefone: '(81) 77777-7777',
+    ativo: true,
+    created_at: '2025-07-29T01:50:28.857231+00:00',
+    updated_at: '2025-07-29T02:06:29.649462+00:00'
   }
 ];
 
@@ -61,13 +108,25 @@ app.get('/api/auth/me', (req, res) => {
   
   if (token) {
     res.json({
-      id: '1',
-      nome: 'Lucas Silva',
-      email: 'admin@lucasbarbearia.com',
-      role: 'admin'
+      success: true,
+      data: {
+        user: {
+          id: '1',
+          nome: 'Lucas Silva',
+          email: 'admin@lucasbarbearia.com',
+          role: 'admin',
+          telefone: null,
+          created_at: '2025-07-29T01:50:28.857231+00:00',
+          updated_at: '2025-07-29T02:06:29.649462+00:00',
+          active: true
+        }
+      }
     });
   } else {
-    res.status(401).json({ message: 'Token inválido' });
+    res.status(401).json({ 
+      success: false,
+      message: 'Token inválido' 
+    });
   }
 });
 
@@ -91,23 +150,265 @@ app.post('/api/users', (req, res) => {
   res.status(201).json(newUser);
 });
 
-app.get('/api/users', (req, res) => {
-  res.json(users);
+app.get('/api/users', authenticateToken, (req, res) => {
+  const { role, status } = req.query;
+  
+  let filteredUsers = users;
+  
+  // Filtrar por role se especificado
+  if (role && role !== 'todos') {
+    filteredUsers = filteredUsers.filter(user => user.role === role);
+  }
+  
+  // Filtrar por status se especificado
+  if (status) {
+    filteredUsers = filteredUsers.filter(user => user.ativo === (status === 'ativo'));
+  }
+  
+  res.json({
+    success: true,
+    data: {
+      users: filteredUsers
+    }
+  });
+});
+
+app.post('/api/users', authenticateToken, (req, res) => {
+  const { nome, email, password, role, telefone } = req.body;
+  
+  console.log('👤 Criando usuário:', { nome, email, role, telefone });
+  
+  // Verificar se email já existe
+  const existingUser = users.find(user => user.email === email);
+  if (existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email já cadastrado'
+    });
+  }
+  
+  const newUser = {
+    id: Date.now().toString(),
+    nome,
+    email,
+    role,
+    telefone,
+    ativo: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  
+  users.push(newUser);
+  
+  res.status(201).json({
+    success: true,
+    data: {
+      user: newUser
+    }
+  });
+});
+
+app.put('/api/users/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  const { nome, email, password, role, telefone } = req.body;
+  
+  console.log('👤 Atualizando usuário:', userId, { nome, email, role, telefone });
+  
+  const userIndex = users.findIndex(user => user.id === userId);
+  if (userIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: 'Usuário não encontrado'
+    });
+  }
+  
+  // Verificar se email já existe em outro usuário
+  const existingUser = users.find(user => user.email === email && user.id !== userId);
+  if (existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email já cadastrado'
+    });
+  }
+  
+  users[userIndex] = {
+    ...users[userIndex],
+    nome,
+    email,
+    role,
+    telefone,
+    updated_at: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    data: {
+      user: users[userIndex]
+    }
+  });
+});
+
+app.delete('/api/users/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  
+  console.log('👤 Removendo usuário:', userId);
+  
+  const userIndex = users.findIndex(user => user.id === userId);
+  if (userIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: 'Usuário não encontrado'
+    });
+  }
+  
+  users.splice(userIndex, 1);
+  
+  res.json({
+    success: true,
+    message: 'Usuário removido com sucesso'
+  });
+});
+
+// Endpoint para listar barbeiros (compatível com frontend)
+app.get('/api/users/barbeiros', (req, res) => {
+  const { status, public: isPublic, barbearia_id } = req.query;
+  
+  // Barbeiros mockados
+  const barbeiros = [
+    {
+      id: 'barbeiro_1',
+      nome: 'João Silva',
+      email: 'joao@lucasbarbearia.com',
+      telefone: '(11) 99999-9999',
+      especialidade: 'Cortes modernos',
+      disponivel: true,
+      ativo: true,
+      barbearia_id: 1,
+      dias_trabalho: ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'],
+      horario_inicio: '09:00',
+      horario_fim: '19:00',
+      created_at: '2025-07-29T01:50:28.857231+00:00',
+      updated_at: '2025-07-29T02:06:29.649462+00:00'
+    },
+    {
+      id: 'barbeiro_2',
+      nome: 'Pedro Santos',
+      email: 'pedro@lucasbarbearia.com',
+      telefone: '(11) 88888-8888',
+      especialidade: 'Barba e acabamentos',
+      disponivel: true,
+      ativo: true,
+      barbearia_id: 1,
+      dias_trabalho: ['segunda', 'terca', 'quarta', 'quinta', 'sexta'],
+      horario_inicio: '10:00',
+      horario_fim: '18:00',
+      created_at: '2025-07-29T01:50:28.857231+00:00',
+      updated_at: '2025-07-29T02:06:29.649462+00:00'
+    },
+    {
+      id: 'fila_geral',
+      nome: 'Fila Geral',
+      email: null,
+      telefone: null,
+      especialidade: 'Qualquer barbeiro disponível',
+      disponivel: true,
+      ativo: true,
+      barbearia_id: 1,
+      dias_trabalho: ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'],
+      horario_inicio: '09:00',
+      horario_fim: '19:00',
+      created_at: '2025-07-29T01:50:28.857231+00:00',
+      updated_at: '2025-07-29T02:06:29.649462+00:00'
+    }
+  ];
+  
+  // Filtrar por status se especificado
+  let barbeirosFiltrados = barbeiros;
+  if (status === 'ativo') {
+    barbeirosFiltrados = barbeiros.filter(b => b.ativo);
+  }
+  
+  // Filtrar por barbearia se especificado
+  if (barbearia_id) {
+    barbeirosFiltrados = barbeirosFiltrados.filter(b => b.barbearia_id == barbearia_id);
+  }
+  
+  // Formatar para o formato que o frontend espera
+  const barbeirosFormatados = barbeirosFiltrados.map(barbeiro => ({
+    id: barbeiro.id,
+    nome: barbeiro.nome,
+    email: barbeiro.email,
+    telefone: barbeiro.telefone,
+    especialidades: [barbeiro.especialidade], // Converter para array
+    status: barbeiro.ativo ? "ativo" : "inativo", // Converter para string
+    barbearia_id: barbeiro.barbearia_id,
+    created_at: barbeiro.created_at,
+    updated_at: barbeiro.updated_at
+  }));
+  
+  res.json({
+    success: true,
+    data: {
+      barbeiros: barbeirosFormatados
+    }
+  });
 });
 
 // Rotas de barbearias
 app.get('/api/barbearias', (req, res) => {
-  res.json(barbearias);
+  // Formatar barbearias para o formato que o frontend espera
+  const barbeariasFormatadas = barbearias.map(barbearia => ({
+    id: barbearia.id,
+    nome: barbearia.nome,
+    endereco: barbearia.endereco,
+    telefone: barbearia.telefone,
+    horario_funcionamento: formatarHorarioFuncionamento(barbearia.horario),
+    status: barbearia.ativo ? "aberta" : "fechada",
+    created_at: barbearia.created_at,
+    updated_at: barbearia.updated_at
+  }));
+  
+  res.json({
+    success: true,
+    data: barbeariasFormatadas
+  });
 });
+
+// Função auxiliar para formatar horário
+function formatarHorarioFuncionamento(horario) {
+  if (!horario) return "Horário não definido";
+  
+  const dias = Object.keys(horario);
+  const horarios = dias.map(dia => `${dia}: ${horario[dia]}`);
+  return horarios.join(" | ");
+}
 
 app.get('/api/barbearias/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const barbearia = barbearias.find(b => b.id === id);
   
   if (barbearia) {
-    res.json(barbearia);
+    // Formatar barbearia para o formato que o frontend espera
+    const barbeariaFormatada = {
+      id: barbearia.id,
+      nome: barbearia.nome,
+      endereco: barbearia.endereco,
+      telefone: barbearia.telefone,
+      horario_funcionamento: formatarHorarioFuncionamento(barbearia.horario),
+      status: barbearia.ativo ? "aberta" : "fechada",
+      created_at: barbearia.created_at,
+      updated_at: barbearia.updated_at
+    };
+    
+    res.json({
+      success: true,
+      data: barbeariaFormatada
+    });
   } else {
-    res.status(404).json({ message: 'Barbearia não encontrada' });
+    res.status(404).json({ 
+      success: false,
+      message: 'Barbearia não encontrada' 
+    });
   }
 });
 
@@ -254,8 +555,19 @@ app.post('/api/fila/entrar', (req, res) => {
   console.log(`👤 Cliente ${nome} entrou na fila da barbearia ${barbearia_id}, posição ${novaPosicao}`);
   
   res.status(201).json({
-    token,
-    cliente: novoCliente
+    success: true,
+    data: {
+      token: token,
+      posicao: novaPosicao,
+      tempo_estimado: `${tempoEstimado} minutos`,
+      cliente: {
+        id: novoCliente.id,
+        nome: novoCliente.nome,
+        telefone: novoCliente.telefone,
+        barbeiro: novoCliente.barbeiro,
+        entrada: novoCliente.data_entrada
+      }
+    }
   });
 });
 

@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import AdminLayout from '@/components/ui/admin-layout.jsx';
 import AdminModal from '@/components/ui/admin-modal.jsx';
 import { barbeariasService } from '@/services/api.js';
+import { authUtils } from '@/utils/authUtils.js';
 import { 
   Building2, 
   Plus, 
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 
 const AdminBarbearias = () => {
-  const { user, logout } = useAuthBackend();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [barbearias, setBarbearias] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -75,6 +76,13 @@ const AdminBarbearias = () => {
   });
 
   useEffect(() => {
+    // Verificar autenticação
+    if (!authUtils.isAuthenticated() || authUtils.isTokenExpired()) {
+      setError('Sessão expirada. Redirecionando para login...');
+      authUtils.logout();
+      return;
+    }
+
     // Carregar barbearias da API
     const carregarBarbearias = async () => {
       setLoading(true);
@@ -84,7 +92,12 @@ const AdminBarbearias = () => {
         setBarbearias(response.data || []);
       } catch (error) {
         console.error('Erro ao carregar barbearias:', error);
-        setError('Erro ao carregar barbearias. Tente novamente.');
+        if (error.message.includes('401')) {
+          setError('Sessão expirada. Redirecionando para login...');
+          authUtils.logout();
+        } else {
+          setError('Erro ao carregar barbearias. Tente novamente.');
+        }
         setBarbearias([]);
       } finally {
         setLoading(false);
@@ -92,7 +105,7 @@ const AdminBarbearias = () => {
     };
 
     carregarBarbearias();
-  }, []);
+  }, [navigate]);
 
   const handleLogout = () => {
     logout();
@@ -105,6 +118,13 @@ const AdminBarbearias = () => {
   const handleAddBarbearia = async () => {
     if (!formData.nome || !formData.endereco || !formData.telefone) {
       setError('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    // Verificar se o usuário está autenticado
+    if (!authUtils.isAuthenticated() || authUtils.isTokenExpired()) {
+      setError('Sessão expirada. Redirecionando para login...');
+      authUtils.logout();
       return;
     }
 
@@ -337,7 +357,7 @@ const AdminBarbearias = () => {
         
         <AdminModal
           trigger={
-            <Button className="flex items-center space-x-2">
+            <Button className="flex items-center space-x-2 bg-black text-white hover:bg-gray-800">
               <Plus className="w-4 h-4" />
               <span>Nova Barbearia</span>
             </Button>

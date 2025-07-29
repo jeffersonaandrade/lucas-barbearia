@@ -12,7 +12,8 @@ import {
   UserPlus,
   AlertCircle,
   Phone,
-  RefreshCw
+  RefreshCw,
+  UserCheck
 } from 'lucide-react';
 import { filaService, historicoService } from '@/services/api.js';
 import { formatarHora, formatarData, ordenarFilaPorTempo, podeAtenderCliente, formatarNomeCliente, formatarTelefoneCliente, formatarServicoCliente } from '@/utils/formatters.js';
@@ -21,6 +22,8 @@ const FilaManager = ({
   barbeariaAtual, 
   barbeiroAtual, 
   userRole, 
+  fila: filaFromProps,
+  loading: loadingFromProps,
   onChamarProximo, 
   onFinalizarAtendimento, 
   onAdicionarCliente, 
@@ -32,6 +35,29 @@ const FilaManager = ({
 }) => {
   const [filaData, setFilaData] = useState({ fila: [], estatisticas: {} });
   const [loading, setLoading] = useState(false);
+  
+  // Usar dados da fila passados como props quando disponíveis
+  const fila = filaFromProps || filaData.fila || [];
+  const isLoading = loadingFromProps !== undefined ? loadingFromProps : loading;
+  
+  // ✅ Debug: Log dos dados recebidos
+  console.log('🔍 FilaManager - Fila recebida:', {
+    filaLength: fila.length,
+    barbeariaAtual: barbeariaAtual?.id,
+    barbeiroAtual: barbeiroAtual?.id,
+    filaFromProps: filaFromProps?.length,
+    filaData: filaData?.fila?.length
+  });
+  
+  // ✅ Debug: Verificar se a fila está sendo atualizada
+  useEffect(() => {
+    console.log('🔄 FilaManager - Fila atualizada:', {
+      filaLength: fila.length,
+      filaFromProps: filaFromProps?.length,
+      filaData: filaData?.fila?.length
+    });
+  }, [fila, filaFromProps, filaData]);
+  
   const [tipoFilaAtual, setTipoFilaAtual] = useState('geral');
   const [abaAtiva, setAbaAtiva] = useState('geral');
   const [historicoData, setHistoricoData] = useState([]);
@@ -56,79 +82,60 @@ const FilaManager = ({
   const initialLoadDone = useRef(false);
   const historicoInitialLoadDone = useRef(false);
 
-  // Carregar dados da fila do backend
-  const loadFilaData = useCallback(async (tipoFila = 'geral') => {
-    // Evitar chamadas simultâneas
-    if (filaCallInProgress.current) {
-      console.log('🔄 Chamada de fila já em andamento, aguardando...');
-      return;
-    }
-
-    const now = Date.now();
-    
-    // Evitar chamadas muito frequentes
-    if (lastFilaUpdate > 0 && (now - lastFilaUpdate) < filaCacheTimeout) {
-      console.log('📊 Usando cache da fila (última atualização há', Math.round((now - lastFilaUpdate) / 1000), 'segundos)');
-      setFilaData(filaCache);
-      return;
-    }
-
-    if (!barbeariaAtual?.id) {
-      console.log('❌ Nenhuma barbearia selecionada');
-      return;
-    }
-
-    try {
-      filaCallInProgress.current = true;
-      setLastFilaUpdate(now);
-      
-      setLoading(true);
-      console.log('🔄 Carregando dados da fila:', { 
-        barbeariaId: barbeariaAtual.id, 
-        tipoFila,
-        barbeiroId: barbeiroAtual?.id 
-      });
-
-      const response = await filaService.obterFila(barbeariaAtual.id);
-      
-      if (response && response.data) {
-        setFilaData(response.data);
-        setFilaCache(response.data); // Salvar no cache
-        console.log('✅ Dados da fila carregados:', response.data);
-      } else {
-        setFilaData({ fila: [], estatisticas: {} });
-        setFilaCache({ fila: [], estatisticas: {} });
-        console.log('⚠️ Resposta vazia da API');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados da fila:', error);
-      setFilaData({ fila: [], estatisticas: {} });
-      setFilaCache({ fila: [], estatisticas: {} });
-    } finally {
-      setLoading(false);
-      filaCallInProgress.current = false;
-    }
-  }, []); // Sem dependências para evitar recriações
+  // Dados da fila vêm do hook useBarbeiroFila via props
 
   // Carregar dados do histórico
   const loadHistoricoData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Se não há barbearia selecionada, não carregar histórico
+    if (!barbeariaAtual?.id) {
+      console.log('❌ Nenhuma barbearia selecionada para histórico');
+      return;
+    }
+
+    // Se não há dados de histórico em cache, usar array vazio
+    if (!historicoCache) {
+      console.log('📊 Cache do histórico vazio, carregando dados...');
+      setHistoricoData(historicoCache);
+      return;
+    }
+
+    // ✅ Usar barbeiroAtual ou fallback para o ID do usuário logado
+    let barbeiroId = null;
+    
+    if (barbeiroAtual?.id) {
+      barbeiroId = barbeiroAtual.id;
+      console.log('✅ Usando ID do barbeiro do contexto:', barbeiroId);
+    } else {
+      // Fallback: tentar obter ID do usuário logado
+      try {
+        const { CookieManager } = await import('@/utils/cookieManager.js');
+        const userData = CookieManager.getUserData();
+        if (userData?.id) {
+          barbeiroId = userData.id;
+          console.log('✅ Usando ID do usuário logado como fallback:', barbeiroId);
+        }
+      } catch (error) {
+        console.log('⚠️ Erro ao obter dados do usuário:', error);
+      }
+    }
+
+    if (!barbeiroId) {
+      console.log('❌ Nenhum barbeiro selecionado para histórico');
+      return;
+    }
+
     // Evitar chamadas simultâneas
     if (historicoCallInProgress.current) {
       console.log('🔄 Chamada de histórico já em andamento, aguardando...');
       return;
     }
 
-    const now = Date.now();
-    
     // Evitar chamadas muito frequentes
     if (!forceRefresh && lastHistoricoUpdate > 0 && (now - lastHistoricoUpdate) < historicoCacheTimeout) {
       console.log('📊 Usando cache do histórico (última atualização há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
       setHistoricoData(historicoCache);
-      return;
-    }
-
-    if (!barbeiroAtual?.id) {
-      console.log('❌ Nenhum barbeiro selecionado para histórico');
       return;
     }
 
@@ -142,7 +149,8 @@ const FilaManager = ({
     }
 
     // Verificar se o usuário está autenticado
-    const token = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken');
+    const { CookieManager } = await import('@/utils/cookieManager.js');
+    const token = CookieManager.getAdminToken();
     if (!token) {
       console.log('❌ Usuário não autenticado');
       return;
@@ -152,7 +160,7 @@ const FilaManager = ({
       historicoCallInProgress.current = true;
       setLastHistoricoUpdate(now);
       setLoadingHistorico(true);
-      console.log('🔍 Carregando histórico para barbeiro:', barbeiroAtual.id);
+      console.log('🔍 Carregando histórico para barbeiro:', barbeiroId);
       
       // Buscar histórico do mês atual (do dia 1 até o último dia do mês)
       const hoje = new Date();
@@ -167,7 +175,7 @@ const FilaManager = ({
       const response = await historicoService.obterHistorico({
         data_inicio: dataInicio,
         data_fim: dataFim,
-        barbeiro_id: barbeiroAtual.id
+        barbeiro_id: barbeiroId
       });
       
       console.log('📊 Resposta do histórico:', response);
@@ -187,7 +195,7 @@ const FilaManager = ({
       setLoadingHistorico(false);
       historicoCallInProgress.current = false;
     }
-  }, []); // Sem dependências para evitar recriações
+  }, [barbeariaAtual?.id, barbeiroAtual?.id, historicoCache, historicoCacheTimeout, lastHistoricoUpdate]); // Adicionado dependências
 
   // Função para detectar clientes com status "próximo" ou "atendendo"
   const detectarClienteProximo = () => {
@@ -210,8 +218,8 @@ const FilaManager = ({
 
   // Funções para atualização manual
   const handleRefreshFila = () => {
-    console.log('🔄 Atualização manual da fila solicitada');
-    loadFilaData(tipoFilaAtual);
+    console.log('🔄 Atualização da fila é gerenciada pelo hook useBarbeiroFila');
+    // A atualização é gerenciada pelo hook useBarbeiroFila
   };
 
   const handleRefreshHistorico = () => {
@@ -219,36 +227,30 @@ const FilaManager = ({
     loadHistoricoData(true);
   };
 
-  // Carregar dados iniciais apenas uma vez
-  useEffect(() => {
-    if (!barbeariaAtual?.id) return;
-    
-    console.log('🔄 Carregamento inicial da fila para barbearia:', barbeariaAtual.id);
-    loadFilaData(tipoFilaAtual);
-  }, [barbeariaAtual?.id]); // Apenas quando barbearia mudar
+  // Dados da fila vêm do hook useBarbeiroFila via props
 
   // Carregar histórico apenas quando barbeiro mudar (e usar cache se disponível)
   useEffect(() => {
-    if (!barbeiroAtual?.id) return;
-    
-    // Verificar se já temos cache válido
-    const now = Date.now();
-    if (historicoCache && (now - lastHistoricoUpdate) < historicoCacheTimeout) {
-      console.log('📊 Usando cache do histórico para barbeiro:', barbeiroAtual.id);
-      setHistoricoData(historicoCache);
-      return;
+    if (barbeariaAtual?.id) {
+      console.log('🔄 Barbearia definida, carregando histórico...');
+      loadHistoricoData();
     }
-    
-    console.log('🔄 Carregamento inicial do histórico para barbeiro:', barbeiroAtual.id);
-    loadHistoricoData(true);
-  }, [barbeiroAtual?.id]); // Apenas quando barbeiro mudar
+  }, [barbeariaAtual?.id, loadHistoricoData]);
+
+  // Carregar histórico quando barbeiro for definido
+  useEffect(() => {
+    if (barbeiroAtual?.id && barbeariaAtual?.id) {
+      console.log('🔄 Barbeiro definido, carregando histórico...');
+      loadHistoricoData();
+    }
+  }, [barbeiroAtual?.id, barbeariaAtual?.id, loadHistoricoData]);
 
   // Detectar cliente próximo quando os dados da fila mudarem
   useEffect(() => {
-    if (filaData.fila && filaData.fila.length > 0) {
+    if (fila && fila.length > 0) {
       detectarClienteProximo();
     }
-  }, [filaData.fila]);
+  }, [fila]);
 
   // Recarregar histórico quando solicitado explicitamente
   useEffect(() => {
@@ -259,27 +261,67 @@ const FilaManager = ({
   }, [onHistoricoAtualizado]);
 
   const getFilaBarbearia = () => {
-    return filaData.fila || [];
+    console.log('🔍 getFilaBarbearia - Clientes:', fila.length);
+    console.log('🔍 getFilaBarbearia - Fila completa:', fila);
+    return fila;
   };
 
   const getFilaEspecifica = () => {
+    const filaCompleta = getFilaBarbearia();
+    console.log('🔍 getFilaEspecifica - Fila completa:', filaCompleta);
+    console.log('🔍 getFilaEspecifica - barbeiroAtual:', barbeiroAtual);
+    
     // Se estamos na aba "Minha Fila", usar os dados já carregados da API
     if (tipoFilaAtual === 'especifica') {
-      return getFilaBarbearia();
+      console.log('🔍 getFilaEspecifica - Usando tipoFilaAtual === especifica');
+      return filaCompleta;
     }
     
     // Caso contrário, filtrar localmente (fallback)
-    return getFilaBarbearia().filter(c => {
-      const barbeiroCliente = c.barbeiro || 'Fila Geral';
-      return barbeiroCliente === barbeiroAtual?.nome;
+    const filaEspecifica = filaCompleta.filter(c => {
+      // ✅ Verificar se o cliente tem barbeiro como objeto ou string
+      let barbeiroCliente = 'Fila Geral';
+      
+      if (typeof c.barbeiro === 'object' && c.barbeiro !== null) {
+        barbeiroCliente = c.barbeiro.nome || 'Fila Geral';
+      } else if (typeof c.barbeiro === 'string') {
+        barbeiroCliente = c.barbeiro;
+      }
+      
+      // ✅ CORREÇÃO: Comparar por ID do barbeiro ou nome
+      const isFilaEspecifica = c.barbeiro?.id === barbeiroAtual?.id || barbeiroCliente === barbeiroAtual?.nome;
+      console.log('🔍 Cliente:', c.nome, 'Barbeiro:', barbeiroCliente, 'BarbeiroID:', c.barbeiro?.id, 'BarbeiroAtual:', barbeiroAtual?.nome, 'IsFilaEspecifica:', isFilaEspecifica);
+      
+      return isFilaEspecifica;
     });
+    
+    console.log('🔍 getFilaEspecifica - Resultado:', filaEspecifica);
+    return filaEspecifica;
   };
 
   const getFilaGeral = () => {
-    return getFilaBarbearia().filter(c => {
-      const barbeiroCliente = c.barbeiro || 'Fila Geral';
-      return barbeiroCliente === 'Fila Geral' || barbeiroCliente === 'Geral';
+    const filaCompleta = getFilaBarbearia();
+    console.log('🔍 getFilaGeral - Fila completa:', filaCompleta);
+    
+    const filaGeral = filaCompleta.filter(c => {
+      // ✅ Verificar se o cliente tem barbeiro como objeto ou string
+      let barbeiroCliente = 'Fila Geral';
+      
+      if (typeof c.barbeiro === 'object' && c.barbeiro !== null) {
+        barbeiroCliente = c.barbeiro.nome || 'Fila Geral';
+      } else if (typeof c.barbeiro === 'string') {
+        barbeiroCliente = c.barbeiro;
+      }
+      
+      // ✅ CORREÇÃO: Mostrar TODOS os clientes na fila geral, exceto os sem barbeiro
+      const isFilaGeral = c.barbeiro !== null && c.barbeiro !== undefined;
+      console.log('🔍 Cliente:', c.nome, 'Barbeiro:', barbeiroCliente, 'IsFilaGeral:', isFilaGeral);
+      
+      return isFilaGeral;
     });
+    
+    console.log('🔍 getFilaGeral - Resultado:', filaGeral);
+    return filaGeral;
   };
 
   const getFilaOrdenadaPorTempo = () => {
@@ -329,9 +371,9 @@ const FilaManager = ({
 
   // Logs para debug
   console.log('🔍 Estado do FilaManager:');
-  console.log('- Loading:', loading);
+  console.log('- Loading:', isLoading);
   console.log('- Barbearia atual:', barbeariaAtual);
-  console.log('- Fila data:', filaData);
+  console.log('- Fila:', fila);
   console.log('- Fila ordenada por tempo:', getFilaOrdenadaPorTempo());
 
   return (
@@ -352,7 +394,7 @@ const FilaManager = ({
               </div>
               <Button 
                 onClick={onFinalizarAtendimento}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-black text-white hover:bg-gray-800 border-black"
                 size="sm"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -377,6 +419,19 @@ const FilaManager = ({
                   <p className="text-sm text-blue-600">{atendendoAtual.telefone}</p>
                   <p className="text-xs text-blue-500">Aguardando cliente aparecer no balcão</p>
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Button 
+                  onClick={() => onIniciarAtendimento(atendendoAtual.id)}
+                  className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+                  size="sm"
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Iniciar Atendimento
+                </Button>
+                <p className="text-xs text-blue-600 text-right">
+                  Clique para iniciar o atendimento
+                </p>
               </div>
             </div>
           </CardContent>
@@ -407,22 +462,20 @@ const FilaManager = ({
           <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={handleRefreshFila}
-              variant="outline"
               size="sm"
-              disabled={loading}
-              className="flex items-center gap-1 flex-1 sm:flex-none"
+              disabled={isLoading}
+              className="flex items-center gap-1 flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 border-black"
             >
-              <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Atualizar Fila</span>
               <span className="sm:hidden">Fila</span>
             </Button>
             
             <Button
               onClick={handleRefreshHistorico}
-              variant="outline"
               size="sm"
               disabled={loadingHistorico}
-              className="flex items-center gap-1 flex-1 sm:flex-none"
+              className="flex items-center gap-1 flex-1 sm:flex-none bg-black text-white hover:bg-gray-800 border-black"
             >
               <RefreshCw className={`h-3 w-3 ${loadingHistorico ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Atualizar Histórico</span>
@@ -444,7 +497,7 @@ const FilaManager = ({
               </p>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {isLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
                   <p className="text-gray-500">Carregando dados da fila...</p>
@@ -491,15 +544,26 @@ const FilaManager = ({
                           <Badge variant={podeAtender ? 'default' : 'secondary'} className="mt-1">
                             {podeAtender ? 'Disponível' : 'Não disponível'}
                           </Badge>
-                          <Button
-                            onClick={() => onRemoverCliente(cliente.id)}
-                            variant="outline"
-                            size="sm"
-                            className="mt-2 text-red-600 border-red-200 hover:bg-red-50"
-                          >
-                            <X className="h-3 w-3 mr-1" />
-                            Remover
-                          </Button>
+                          <div className="flex flex-col gap-1 mt-2">
+                            {cliente.status === 'próximo' && podeAtender && (
+                              <Button
+                                onClick={() => onIniciarAtendimento(cliente.id)}
+                                size="sm"
+                                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Atender
+                              </Button>
+                            )}
+                            <Button
+                              onClick={() => onRemoverCliente(cliente.id)}
+                              size="sm"
+                              className="bg-red-600 text-white hover:bg-red-700 border-red-600"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Remover
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -540,9 +604,8 @@ const FilaManager = ({
                         </Badge>
                         <Button
                           onClick={() => onRemoverCliente(cliente.id)}
-                          variant="outline"
                           size="sm"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          className="bg-red-600 text-white hover:bg-red-700 border-red-600"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -583,11 +646,20 @@ const FilaManager = ({
                         <Badge variant={cliente.status === 'aguardando' ? 'default' : 'secondary'}>
                           {cliente.status}
                         </Badge>
+                        {cliente.status === 'próximo' && (
+                          <Button
+                            onClick={() => onIniciarAtendimento(cliente.id)}
+                            size="sm"
+                            className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            Atender
+                          </Button>
+                        )}
                         <Button
                           onClick={() => onRemoverCliente(cliente.id)}
-                          variant="outline"
                           size="sm"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          className="bg-red-600 text-white hover:bg-red-700 border-red-600"
                         >
                           <X className="h-3 w-3" />
                         </Button>

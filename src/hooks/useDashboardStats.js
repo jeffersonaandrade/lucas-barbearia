@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { filaService, barbeariasService } from '@/services/api.js';
+import { useEstatisticas } from '@/hooks/useEstatisticas.js';
 
 export const useDashboardStats = (userRole, barbeariaAtual = null) => {
+  // Usar hook centralizado para estatísticas quando for barbeiro
+  const { estatisticas, loading: estatisticasLoading } = useEstatisticas(
+    userRole === 'barbeiro' ? barbeariaAtual?.id : null
+  );
+  
   const [stats, setStats] = useState({
     totalClientes: 0,
     clientesAtendendo: 0,
@@ -65,7 +71,7 @@ export const useDashboardStats = (userRole, barbeariaAtual = null) => {
       
       // Carregar filas de todas as barbearias
       const filasPromises = barbearias.map(barbearia => 
-        filaService.obterFilaCompleta(barbearia.id)
+        filaService.obterFilaBarbeiro(barbearia.id)
           .then(response => response)
           .catch(error => {
             console.log(`Fila não encontrada para barbearia ${barbearia.id}:`, error.message);
@@ -109,75 +115,14 @@ export const useDashboardStats = (userRole, barbeariaAtual = null) => {
     }
   };
 
-  // Carregar estatísticas para barbeiro
-  const loadBarbeiroStats = async (forceRefresh = false) => {
-    if (!barbeariaAtual?.id) return;
-    
-    const now = Date.now();
-    
-    // Verificar se já carregou recentemente para a mesma barbearia
-    if (!forceRefresh && 
-        lastLoadTimeRef.current > 0 && 
-        (now - lastLoadTimeRef.current) < cacheTimeout &&
-        lastBarbeariaIdRef.current === barbeariaAtual.id &&
-        lastUserRoleRef.current === userRole) {
-      console.log('📊 useDashboardStats - Usando cache para barbeiro stats');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('🔄 useDashboardStats - Carregando estatísticas barbeiro...');
-      
-      const filaData = await filaService.obterFilaCompleta(barbeariaAtual.id)
-        .then(response => response)
-        .catch(error => {
-          console.log(`Fila não encontrada para barbearia ${barbeariaAtual.id}:`, error.message);
-          return { fila: [] };
-        });
-      
-      const filaBarbearia = filaData.fila || [];
-      const hoje = new Date().toDateString();
-      
-      // Contar apenas clientes finalizados hoje
-      const clientesFinalizados = filaBarbearia.filter(c => 
-        c.status === 'finalizado' && 
-        c.data_finalizacao && 
-        new Date(c.data_finalizacao).toDateString() === hoje
-      );
-      
-      const newStats = {
-        totalAtendidos: clientesFinalizados.length,
-        aguardando: filaBarbearia.filter(c => c.status === 'aguardando').length,
-        atendendo: filaBarbearia.filter(c => c.status === 'atendendo').length,
-        tempoMedio: 15,
-        totalClientes: filaBarbearia.length
-      };
-      
-      setStats(newStats);
-      lastLoadTimeRef.current = now;
-      lastBarbeariaIdRef.current = barbeariaAtual.id;
-      lastUserRoleRef.current = userRole;
-      
-      console.log('✅ useDashboardStats - Estatísticas barbeiro carregadas:', newStats);
-      
-    } catch (error) {
-      console.error('❌ useDashboardStats - Erro ao carregar estatísticas do barbeiro:', error);
-      setError('Erro ao carregar estatísticas');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Estatísticas para barbeiros são gerenciadas pelo hook useEstatisticas
 
   // Carregar estatísticas baseado no role
   useEffect(() => {
     if (userRole === 'admin' || userRole === 'gerente') {
       loadAdminStats();
-    } else if (userRole === 'barbeiro' && barbeariaAtual) {
-      loadBarbeiroStats();
     }
+    // Para barbeiros, as estatísticas são gerenciadas pelo hook useEstatisticas
   }, [userRole, barbeariaAtual?.id]);
 
   // Função para carregar stats com barbearias do contexto
@@ -191,10 +136,26 @@ export const useDashboardStats = (userRole, barbeariaAtual = null) => {
   const refreshStats = () => {
     if (userRole === 'admin' || userRole === 'gerente') {
       loadAdminStats(true);
-    } else if (userRole === 'barbeiro' && barbeariaAtual) {
-      loadBarbeiroStats(true);
     }
+    // Para barbeiros, a atualização é gerenciada pelo hook useEstatisticas
   };
+
+  // Para barbeiros, usar estatísticas centralizadas
+  if (userRole === 'barbeiro') {
+    return {
+      stats: {
+        totalClientes: estatisticas.total || 0,
+        clientesAtendendo: estatisticas.atendendo || 0,
+        clientesAguardando: estatisticas.aguardando || 0,
+        totalBarbearias: 1,
+        tempoMedio: estatisticas.tempoMedioEspera || 15
+      },
+      loading: estatisticasLoading,
+      error,
+      refreshStats,
+      loadAdminStatsWithContext
+    };
+  }
 
   return {
     stats,

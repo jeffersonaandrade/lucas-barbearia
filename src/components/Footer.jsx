@@ -1,162 +1,116 @@
-import { Instagram, MessageCircle, Phone, Clock, MapPin, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/ui/logo.jsx';
-import { siteConfig } from '@/config/site.js';
-import { useWhatsApp } from '@/hooks/use-whatsapp.js';
-import { useScroll } from '@/hooks/use-scroll.js';
-import { useCookieConsent } from '@/hooks/useCookieConsent.js';
+import { Phone, MapPin, Clock, Mail } from 'lucide-react';
 
-const Footer = () => {
+export default function Footer() {
   const currentYear = new Date().getFullYear();
-  const { handleContactAction } = useWhatsApp();
-  const { scrollToSection } = useScroll();
-  const navigate = useNavigate();
-  const { clearConsent } = useCookieConsent();
-
-  const handleNavigation = (href) => {
-    scrollToSection(href);
-  };
-
-  const handleCookieSettings = () => {
-    // Limpar consentimento atual para mostrar o modal novamente
-    clearConsent();
-    // Recarregar a página para mostrar o modal
-    window.location.reload();
-  };
 
   return (
-    <footer className="bg-foreground text-white">
-      <div className="container mx-auto section-padding">
-        <div className="grid md:grid-cols-3 gap-12">
-          {/* Brand */}
-          <div className="space-y-6">
-            <Logo size="lg" variant="full" className="text-white" />
-            
-            <p className="text-white/70 text-sm leading-relaxed">
-              Sistema de filas inteligente para barbearia. Entre na fila online, 
-              acompanhe sua posição em tempo real e chegue na hora certa. 
-              Tecnologia a serviço da tradição.
+    <footer className="bg-black text-white">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Coluna 1 - Logo e Descrição */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <span className="text-black font-bold text-sm">L</span>
+              </div>
+              <span className="text-xl font-bold text-white">LUCAS BARBEARIA</span>
+            </div>
+            <p className="text-gray-300 max-w-sm">
+              Profissionalismo e qualidade em cada corte. Atendimento personalizado 
+              com as melhores técnicas e produtos do mercado.
             </p>
           </div>
 
-          {/* Links Rápidos */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Links Rápidos</h3>
-            <nav className="space-y-3">
-              {siteConfig.navigation.map((link) => (
-                <button
-                  key={link.label}
-                  onClick={() => handleNavigation(link.href)}
-                  className="block text-white/70 hover:text-white transition-colors text-sm"
-                >
-                  {link.label}
-                </button>
-              ))}
+          {/* Coluna 2 - Links Rápidos */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Links Rápidos</h3>
+            <nav className="space-y-2">
+              <a href="#home" className="block text-gray-300 hover:text-white transition-colors">
+                Início
+              </a>
+              <a href="#barbearias" className="block text-gray-300 hover:text-white transition-colors">
+                Barbearias
+              </a>
+              <a href="#servicos" className="block text-gray-300 hover:text-white transition-colors">
+                Serviços
+              </a>
+              <a href="#galeria" className="block text-gray-300 hover:text-white transition-colors">
+                Galeria
+              </a>
+              <a href="#contato" className="block text-gray-300 hover:text-white transition-colors">
+                Contato
+              </a>
             </nav>
           </div>
 
-          {/* Contato */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Contato</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <MessageCircle className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">WhatsApp</p>
-                  <p className="text-white/70 text-sm">{siteConfig.contact.whatsappFormatted}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Instagram className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Instagram</p>
-                  <p className="text-white/70 text-sm">{siteConfig.contact.instagram}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Atendimento</p>
-                  <p className="text-white/70 text-sm">Barbearia - {siteConfig.contact.address}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Redes Sociais */}
+          {/* Coluna 3 - Contato */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Contato</h3>
             <div className="space-y-3">
-              <p className="text-sm font-medium">Siga nas redes sociais</p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => handleContactAction('instagram')}
-                  className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-primary transition-colors"
-                  aria-label="Seguir no Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </button>
-
+              <a
+                href="tel:81999999999"
+                className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors"
+              >
+                <Phone className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">(81) 99999-9999</span>
+              </a>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">Rua das Barbearias, 123 - Recife/PE</span>
               </div>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">Seg-Sáb: 8h às 20h | Dom: 9h às 18h</span>
+              </div>
+              <a
+                href="mailto:contato@lucasbarbearia.com"
+                className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors"
+              >
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">contato@lucasbarbearia.com</span>
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-white/20 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-white/70 text-sm">
-              © {currentYear} Lucas Barbearia - Sistema de Filas Inteligente. Todos os direitos reservados.
-            </div>
-            
-            <div className="flex items-center space-x-6 text-white/70 text-sm">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => navigate('/privacidade')}
-                  className="hover:text-white transition-colors"
-                >
-                  Política de Privacidade
-                </button>
-                <button
-                  onClick={() => navigate('/termos')}
-                  className="hover:text-white transition-colors"
-                >
-                  Termos de Uso
-                </button>
-                <button
-                  onClick={handleCookieSettings}
-                  className="hover:text-white transition-colors flex items-center space-x-1"
-                >
-                  <Settings className="w-3 h-3" />
-                  <span>Cookies</span>
-                </button>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>15 min por atendimento</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span>Recife, PE</span>
-                </div>
-              </div>
-            </div>
+        {/* Seção de Informações Importantes */}
+        <div className="grid md:grid-cols-2 gap-8 mt-12 pt-8 border-t border-gray-700">
+          <div className="bg-gray-900 rounded-lg p-6">
+            <h4 className="font-semibold text-white mb-2">
+              Atendimento aos Fins de Semana
+            </h4>
+            <p className="text-sm text-gray-300">
+              Sábados e domingos com horário especial. Agende seu horário preferido 
+              através do WhatsApp ou sistema online.
+            </p>
           </div>
           
-          {/* Crédito do Criador */}
-          <div className="border-t border-white/10 mt-6 pt-6">
-            <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4 text-white/60 text-xs">
-              <span>© {currentYear} Desenvolvimento do site - Todos os direitos reservados a</span>
+          <div className="bg-gray-900 rounded-lg p-6">
+            <h4 className="font-semibold text-white mb-2">
+              Agendamento Online
+            </h4>
+            <p className="text-sm text-gray-300">
+              Agende seu horário de forma rápida e prática através do nosso 
+              sistema online. Evite filas e garanta seu horário.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-8 border-t border-gray-700">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="text-sm text-gray-300">
+              © {currentYear} Lucas Barbearia. Todos os direitos reservados.
+            </div>
+            <div className="text-sm text-gray-300">
+              Desenvolvido por{' '}
               <a 
-                href="https://www.instagram.com/jeffersonaandrade10/" 
+                href="https://github.com/jeffersonandrade" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 hover:text-primary transition-colors font-medium"
+                className="text-white hover:text-gray-300 transition-colors"
               >
-                <span>Jefferson Andrade</span>
-                <Instagram className="w-3 h-3" />
+                Jefferson Andrade
               </a>
             </div>
           </div>
@@ -164,7 +118,5 @@ const Footer = () => {
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}
 

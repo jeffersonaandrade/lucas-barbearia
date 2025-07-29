@@ -17,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog.jsx';
 
-import { useAuthBackend } from '@/hooks/useAuthBackend.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { 
   ArrowLeft, 
   Shield, 
@@ -33,7 +33,7 @@ import {
 import { barbeariasService, filaService } from '@/services/api.js';
 
 const AdminFilas = () => {
-  const { user, logout } = useAuthBackend();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

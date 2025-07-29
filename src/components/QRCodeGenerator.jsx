@@ -177,15 +177,23 @@ const QRCodeGenerator = () => {
               {/* Serviços */}
               {barbeariaInfo.servicos && barbeariaInfo.servicos.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Serviços:</h4>
-                  <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Scissors className="w-4 h-4 mr-2 text-primary" />
+                    Serviços:
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {barbeariaInfo.servicos.map((servico, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div>
-                          <span className="font-medium">{servico.nome}</span>
-                          <p className="text-sm text-gray-600">{servico.duracao}</p>
+                      <div key={index} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
+                        <div className="flex-1">
+                          <span className="font-semibold text-gray-900 text-sm block">{servico.nome}</span>
+                          <div className="flex items-center mt-1">
+                            <Clock className="w-3 h-3 text-gray-500 mr-1" />
+                            <p className="text-xs text-gray-600">{servico.duracao} min</p>
+                          </div>
                         </div>
-                        <span className="font-semibold text-primary">{servico.preco}</span>
+                        <div className="text-right ml-3">
+                          <span className="font-bold text-primary text-base">R$ {servico.preco.toFixed(2).replace('.', ',')}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -197,26 +205,29 @@ const QRCodeGenerator = () => {
 
         </div>
 
-        {/* Informações Adicionais */}
+        {/* Informações Técnicas */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Informações Técnicas</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <QrCode className="w-5 h-5" />
+              <span>Informações Técnicas</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-blue-900">ID da Barbearia</h4>
-                <p className="text-2xl font-bold text-blue-600">{barbeariaId}</p>
+              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-900 mb-2">ID da Barbearia</h4>
+                <p className="text-3xl font-bold text-blue-600">{barbeariaId}</p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <h4 className="font-semibold text-green-900">Status</h4>
-                <Badge variant={barbeariaInfo.ativo ? "default" : "secondary"} className="mt-2">
+              <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                <h4 className="font-semibold text-green-900 mb-2">Status</h4>
+                <Badge variant={barbeariaInfo.ativo ? "default" : "secondary"} className="text-sm px-3 py-1">
                   {barbeariaInfo.ativo ? "Ativa" : "Inativa"}
                 </Badge>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <h4 className="font-semibold text-purple-900">Tempo Médio</h4>
-                <p className="text-2xl font-bold text-purple-600">
+              <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                <h4 className="font-semibold text-purple-900 mb-2">Tempo Médio</h4>
+                <p className="text-3xl font-bold text-purple-600">
                   {barbeariaInfo.configuracoes?.tempo_medio_atendimento || 
                    barbeariaInfo.configuracoes?.tempoMedioPorCliente || 
                    30}min

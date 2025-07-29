@@ -48,7 +48,7 @@ const AdminModal = ({
             <Button
               onClick={onConfirm}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-black text-white hover:bg-gray-800"
             >
               {loading ? 'Salvando...' : confirmText}
             </Button>

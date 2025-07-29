@@ -129,7 +129,7 @@ export const useFilaAPI = (barbeariaId = null) => {
 
   const carregarFilaAtual = async () => {
     try {
-      const response = await filaService.obterFila(barbeariaId);
+      const response = await filaService.obterFilaPublica(barbeariaId);
       const filaData = response.data || response;
       setFila(filaData.fila || []);
       setEstatisticas(filaData.estatisticas || {});
@@ -261,7 +261,7 @@ export const useFilaAPI = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const filaData = await filaService.obterFila(barbeariaId);
+      const filaData = await filaService.obterFilaPublica(barbeariaId);
       return filaData.fila || [];
     } catch (err) {
       setError('Erro ao obter fila atual.');

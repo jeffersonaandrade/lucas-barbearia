@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { authService } from '@/services/api.js';
+import { CookieManager } from '@/utils/cookieManager.js';
 
 // Actions
 const AUTH_ACTIONS = {
@@ -55,6 +56,8 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar usuário atual
   const verificarUsuarioAtual = async () => {
+    console.log('🔄 AuthContext - verificarUsuarioAtual: Iniciando...');
+    
     // Evitar verificações simultâneas
     if (verificationInProgressRef.current) {
       console.log('🔄 AuthContext - Verificação já em andamento, aguardando...');
@@ -76,29 +79,50 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'checking' });
       
-      // Verificar se há um token válido na sessão
-      const token = sessionStorage.getItem('adminToken');
-      const userRole = sessionStorage.getItem('userRole');
-      const userEmail = sessionStorage.getItem('userEmail');
+      // Verificar se há um token válido no localStorage
+      const token = CookieManager.getAdminToken();
+      const userInfo = CookieManager.getUserInfo();
 
-      console.log('🔄 AuthContext - Verificando sessão:', { token: !!token, userRole, userEmail });
+      console.log('🔄 AuthContext - Verificando localStorage:', { 
+        token: !!token, 
+        userInfo: !!userInfo 
+      });
 
-      if (token && userRole && userEmail) {
+      // Se temos dados do usuário no localStorage, usar eles diretamente
+      if (userInfo) {
+        try {
+          const user = userInfo;
+          console.log('✅ AuthContext - Usuário encontrado no localStorage:', user);
+          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
+          dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+          return;
+        } catch (error) {
+          console.log('❌ AuthContext - Erro ao parsear dados do usuário:', error);
+        }
+      }
+
+      if (token && userInfo) {
         // Tentar validar o token com o servidor
         try {
           console.log('🔄 AuthContext - Validando token no servidor...');
           const response = await authService.getCurrentUser();
           console.log('✅ AuthContext - Usuário validado no servidor:', response);
           
-          // Extrair apenas os dados do usuário
-          const userData = response.data || response;
-          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
-          dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+          // Processar a resposta real do backend
+          if (response.data && response.data.user) {
+            console.log('✅ AuthContext - Definindo usuário no contexto:', response.data.user);
+            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: response.data.user });
+            dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+          } else {
+            console.log('❌ AuthContext - Dados do usuário inválidos');
+            // Não fazer logout automático, apenas limpar o estado
+            dispatch({ type: AUTH_ACTIONS.CLEAR_USER });
+          }
         } catch (error) {
           console.log('❌ AuthContext - Token inválido, limpando sessão...');
-          // Token inválido, limpar dados
-          logout();
-          dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+          // Não fazer logout automático, apenas limpar o estado
+          dispatch({ type: AUTH_ACTIONS.CLEAR_USER });
         }
       } else {
         console.log('ℹ️ AuthContext - Nenhum usuário encontrado na sessão');
@@ -123,9 +147,46 @@ export const AuthProvider = ({ children }) => {
       console.log('🔄 AuthContext - Realizando login...');
       const response = await authService.login(email, password);
       
-      console.log('✅ AuthContext - Login realizado:', response);
-      dispatch({ type: AUTH_ACTIONS.SET_USER, payload: response.user });
-      dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+      console.log('✅ AuthContext - Login realizado com sucesso');
+      
+      // Verificar diferentes estruturas possíveis da resposta
+      // O backend retorna: { token, user, expiresIn }
+      const hasSuccess = response && (response.success || response.authenticated || response.token);
+      const user = response?.data?.user || response?.user || response?.data;
+      
+      if (hasSuccess && user) {
+        console.log('✅ AuthContext - Login bem-sucedido, usuário:', user.nome);
+        
+        // Verificar se há token na resposta para salvar como cookie
+        const token = response.token || response.data?.token;
+        if (token) {
+          console.log('🍪 AuthContext - Token salvo como cookie');
+          CookieManager.setAdminToken(token);
+        } else {
+          console.log('❌ AuthContext - Nenhum token encontrado na resposta do backend');
+          throw new Error('Token não fornecido pelo backend');
+        }
+        
+        // Salvar informações do usuário no localStorage
+        if (user) {
+          console.log('🍪 AuthContext - Informações do usuário salvas no localStorage');
+          CookieManager.setUserInfo(user);
+        }
+        
+        // Definir o usuário no contexto
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
+        dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+        console.log('👤 AuthContext - Usuário autenticado:', user.nome);
+      } else {
+        console.log('❌ AuthContext - Login falhou - Estrutura inválida:', {
+          hasResponse: !!response,
+          hasSuccess,
+          hasUser: !!user,
+          responseKeys: response ? Object.keys(response) : 'null',
+          response
+        });
+        throw new Error('Resposta inválida do servidor');
+      }
       
       return response;
     } catch (error) {
@@ -145,18 +206,17 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.warn('⚠️ AuthContext - Erro no logout do servidor:', error);
     } finally {
-      // Limpar sessão
-      sessionStorage.removeItem('adminToken');
-      sessionStorage.removeItem('userRole');
-      sessionStorage.removeItem('userEmail');
+      // Limpar cookies
+      CookieManager.clearAdminCookies();
+      
       dispatch({ type: AUTH_ACTIONS.CLEAR_USER });
       
       // Resetar refs
       verificationInProgressRef.current = false;
       lastVerificationRef.current = 0;
       
-      // Redirecionar para a página principal
-      window.location.href = '/';
+      // Não redirecionar automaticamente, deixar que o componente decida
+      console.log('✅ AuthContext - Logout concluído, cookies limpos');
     }
   };
 
@@ -165,12 +225,16 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔄 AuthContext - Atualizando dados do usuário...');
       const response = await authService.getCurrentUser();
-      const userData = response.data || response;
-      dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
-      return userData;
+      if (response.data && response.data.user) {
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: response.data.user });
+        return response.data.user;
+      } else {
+        throw new Error('Dados do usuário inválidos');
+      }
     } catch (error) {
       console.error('❌ AuthContext - Erro ao atualizar dados do usuário:', error);
-      logout();
+      // Não fazer logout automático, apenas limpar o estado
+      dispatch({ type: AUTH_ACTIONS.CLEAR_USER });
       throw error;
     }
   };
@@ -190,22 +254,27 @@ export const AuthProvider = ({ children }) => {
   // Verificar autenticação
   const isAuthenticated = () => {
     const authenticated = !!state.user;
-    console.log('🔍 AuthContext - isAuthenticated:', authenticated);
+    console.log('🔍 AuthContext - isAuthenticated:', authenticated, 'user:', state.user);
     return authenticated;
   };
 
   // Verificar role
   const hasRole = (role) => {
-    return state.user?.role === role;
+    const hasRoleResult = state.user?.role === role;
+    console.log('🔍 AuthContext - hasRole:', role, hasRoleResult, 'user role:', state.user?.role);
+    return hasRoleResult;
   };
 
   // Verificar múltiplos roles
   const hasAnyRole = (roles) => {
-    return roles.includes(state.user?.role);
+    const hasAnyRoleResult = roles.includes(state.user?.role);
+    console.log('🔍 AuthContext - hasAnyRole:', roles, hasAnyRoleResult, 'user role:', state.user?.role);
+    return hasAnyRoleResult;
   };
 
   // Carregar dados iniciais
   useEffect(() => {
+    console.log('🔄 AuthContext - useEffect: Iniciando verificação inicial...');
     verificarUsuarioAtual();
   }, []);
 

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button.jsx';
-import { Play, CheckCircle, UserPlus, X } from 'lucide-react';
+import { Play, CheckCircle, UserPlus, X, UserCheck } from 'lucide-react';
 
 const ActionButtons = ({ 
   onChamarProximo, 
@@ -36,7 +36,7 @@ const ActionButtons = ({
         <Button 
           onClick={onChamarProximo}
           disabled={loading || disabled}
-          className="w-full"
+          className="w-full bg-black text-white hover:bg-gray-800 border-black"
         >
           <Play className="mr-2 h-4 w-4" />
           Chamar Próximo
@@ -44,9 +44,8 @@ const ActionButtons = ({
         
         <Button 
           onClick={onFinalizarAtendimento}
-          disabled={!atendendoAtual || loading || disabled}
-          variant="outline"
-          className="w-full"
+          disabled={!atendendoAtual || atendendoAtual?.status !== 'atendendo' || loading || disabled}
+          className="w-full bg-black text-white hover:bg-gray-800 border-black"
         >
           <CheckCircle className="mr-2 h-4 w-4" />
           Finalizar Atendimento
@@ -54,9 +53,8 @@ const ActionButtons = ({
         
         <Button 
           onClick={onAdicionarCliente}
-          variant="outline"
           disabled={disabled}
-          className="w-full"
+          className="w-full bg-black text-white hover:bg-gray-800 border-black"
         >
           <UserPlus className="mr-2 h-4 w-4" />
           Adicionar Cliente
@@ -64,9 +62,8 @@ const ActionButtons = ({
         
         <Button 
           onClick={onRemoverClienteNaoApareceu}
-          disabled={!atendendoAtual || loading || disabled}
-          variant="destructive"
-          className="w-full"
+          disabled={!atendendoAtual || atendendoAtual?.status !== 'próximo' || loading || disabled}
+          className="w-full bg-red-600 text-white hover:bg-red-700 border-red-600"
         >
           <X className="mr-2 h-4 w-4" />
           Não Apareceu

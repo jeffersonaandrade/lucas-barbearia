@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CookieManager } from '@/utils/cookieManager.js';
 
 export const useClienteToken = () => {
   const [hasToken, setHasToken] = useState(false);
@@ -7,46 +8,31 @@ export const useClienteToken = () => {
 
   useEffect(() => {
     const verificarToken = () => {
-      const token = localStorage.getItem('fila_token');
-      const clienteDataStr = localStorage.getItem('cliente_data');
-      const barbeariaIdStr = localStorage.getItem('fila_barbearia_id');
+      const token = CookieManager.getFilaToken();
+      const cliente = CookieManager.getClienteData();
+      const barbeariaId = CookieManager.getBarbeariaId();
       
-      if (token && clienteDataStr && barbeariaIdStr) {
-        try {
-          const cliente = JSON.parse(clienteDataStr);
-          setHasToken(true);
-          setBarbeariaId(barbeariaIdStr);
-          setClienteData(cliente);
-        } catch (error) {
-          console.error('Erro ao parsear dados do cliente:', error);
-          limparToken();
-        }
+      if (token && cliente && barbeariaId) {
+        setHasToken(true);
+        setBarbeariaId(barbeariaId);
+        setClienteData(cliente);
       } else {
         limparToken();
       }
     };
 
     verificarToken();
-
-    // Escutar mudanças no localStorage
-    const handleStorageChange = (e) => {
-      if (e.key === 'fila_token' || e.key === 'cliente_data' || e.key === 'fila_barbearia_id') {
-        verificarToken();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
     
-    // Verificar periodicamente (para mudanças na mesma aba)
+    // Verificar periodicamente (cookies não têm evento de mudança)
     const interval = setInterval(verificarToken, 5000);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
   }, []);
 
   const limparToken = () => {
+    CookieManager.clearFilaCookies();
     setHasToken(false);
     setBarbeariaId(null);
     setClienteData(null);

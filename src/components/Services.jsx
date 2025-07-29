@@ -1,14 +1,63 @@
+import { useState, useEffect } from 'react';
 import { Scissors, Clock, Star } from 'lucide-react';
-import { Button } from '@/components/ui/button.jsx';
-import { siteConfig } from '@/config/site.js';
-import { useWhatsApp } from '@/hooks/use-whatsapp.js';
-import { useIntersectionObserver } from '@/hooks/use-intersection-observer.js';
+import { useConfiguracoesTodasBarbearias } from '../hooks/useConfiguracoesPublicas';
+import LoadingSpinner from './ui/loading-spinner';
 
-const Services = () => {
-  const { handleContactAction } = useWhatsApp();
-  const { elementRef, hasIntersected } = useIntersectionObserver();
+export default function Services() {
+  const { barbearias, loading, error } = useConfiguracoesTodasBarbearias();
+  const [servicosConsolidados, setServicosConsolidados] = useState([]);
 
-  const services = [
+  // Consolidar serviços de todas as barbearias
+  useEffect(() => {
+    if (barbearias && barbearias.length > 0) {
+      const servicosUnicos = new Map();
+      
+      barbearias.forEach(barbearia => {
+        if (barbearia.servicos) {
+          barbearia.servicos.forEach(servico => {
+            // Usar nome + categoria como chave única
+            const chave = `${servico.nome}-${servico.categoria}`;
+            
+            if (!servicosUnicos.has(chave)) {
+              servicosUnicos.set(chave, {
+                id: servico.id,
+                title: servico.nome,
+                price: `R$ ${servico.preco.toFixed(2).replace('.', ',')}`,
+                duration: `${servico.duracao} min`,
+                description: servico.descricao || 'Serviço profissional com qualidade garantida.',
+                categoria: servico.categoria,
+                features: gerarFeaturesPorCategoria(servico.categoria),
+                barbearias: [barbearia.nome]
+              });
+            } else {
+              // Se já existe, adicionar a barbearia à lista
+              const servicoExistente = servicosUnicos.get(chave);
+              if (!servicoExistente.barbearias.includes(barbearia.nome)) {
+                servicoExistente.barbearias.push(barbearia.nome);
+              }
+            }
+          });
+        }
+      });
+      
+      setServicosConsolidados(Array.from(servicosUnicos.values()));
+    }
+  }, [barbearias]);
+
+  // Gerar features baseadas na categoria do serviço
+  const gerarFeaturesPorCategoria = (categoria) => {
+    const features = {
+      'corte': ['Lavagem profissional', 'Corte personalizado', 'Finalização com produtos premium'],
+      'barba': ['Acabamento com navalha', 'Produtos premium', 'Hidratação da pele'],
+      'combo': ['Corte completo', 'Acabamento de barba', 'Desconto especial'],
+      'tratamento': ['Produtos profissionais', 'Massagem relaxante', 'Tratamento especializado']
+    };
+    
+    return features[categoria] || ['Serviço profissional', 'Qualidade garantida', 'Atendimento personalizado'];
+  };
+
+  // Fallback para dados estáticos caso não carregue as configurações
+  const servicosFallback = [
     {
       title: 'Corte Masculino',
       price: 'R$ 35',
@@ -29,45 +78,51 @@ const Services = () => {
       duration: '45 min',
       description: 'Combo completo com desconto especial. Corte e barba em uma única sessão.',
       features: ['Corte completo', 'Acabamento de barba', 'Desconto especial']
-    },
-    {
-      title: 'Hidratação',
-      price: 'R$ 20',
-      duration: '15 min',
-      description: 'Tratamento hidratante para cabelo e couro cabeludo.',
-      features: ['Produtos profissionais', 'Massagem relaxante', 'Hidratação profunda']
-    },
-    {
-      title: 'Pigmentação',
-      price: 'R$ 40',
-      duration: '60 min',
-      description: 'Coloração natural para cabelo e barba.',
-      features: ['Cor natural', 'Produtos de qualidade', 'Durabilidade']
-    },
-    {
-      title: 'Pacote Completo',
-      price: 'R$ 80',
-      duration: '90 min',
-      description: 'Experiência completa com todos os serviços incluídos.',
-      features: ['Corte + Barba', 'Hidratação', 'Pigmentação (opcional)']
     }
   ];
 
+  // Usar dados dinâmicos se disponíveis, senão usar fallback
+  const services = servicosConsolidados.length > 0 ? servicosConsolidados : servicosFallback;
+
+  if (loading) {
+    return (
+      <section id="servicos" className="py-20 bg-gray-100">
+        <div className="container mx-auto px-4">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-black">
+              Nossos <span className="text-gray-600">Serviços</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Carregando nossos serviços...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <LoadingSpinner size="lg" text="Carregando serviços..." />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    console.warn('Erro ao carregar configurações, usando dados estáticos:', error);
+  }
+
   return (
-    <section id="services" className="py-20 bg-secondary/30">
+    <section id="servicos" className="py-20 bg-gray-100">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div 
-          ref={elementRef}
-          className={`text-center space-y-4 mb-16 transition-all duration-700 ${
-            hasIntersected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground">
-            Nossos <span className="text-primary">Serviços</span>
+        <div className="text-center space-y-4 mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-black">
+            Nossos <span className="text-gray-600">Serviços</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Oferecemos uma variedade completa de serviços para cuidar do seu visual
+            {servicosConsolidados.length > 0 && (
+              <span className="block text-sm text-gray-500 mt-2">
+                Serviços disponíveis em {barbearias.length} unidades
+              </span>
+            )}
           </p>
         </div>
 
@@ -76,84 +131,60 @@ const Services = () => {
           {services.map((service, index) => (
             <div 
               key={index} 
-              className="bg-card rounded-lg p-8 hover:shadow-xl transition-all duration-300 group border border-border"
+              className="bg-white rounded-lg p-8 hover:shadow-xl transition-all duration-300 group border border-gray-200"
             >
               <div className="space-y-6">
                 {/* Header */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Scissors className="h-8 w-8 text-primary" />
+                    <Scissors className="h-8 w-8 text-black" />
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-foreground">{service.price}</div>
-                      <div className="flex items-center text-sm text-muted-foreground">
+                      <div className="text-2xl font-bold text-black">{service.price}</div>
+                      <div className="flex items-center text-sm text-gray-500">
                         <Clock className="h-4 w-4 mr-1" />
                         {service.duration}
                       </div>
                     </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground">{service.title}</h3>
-                  <p className="text-muted-foreground">{service.description}</p>
+                  <h3 className="text-xl font-semibold text-black">{service.title}</h3>
+                  <p className="text-gray-600">{service.description}</p>
+                  
+                  {/* Mostrar em quais barbearias está disponível */}
+                  {service.barbearias && service.barbearias.length > 0 && (
+                    <div className="text-xs text-gray-500">
+                      Disponível em: {service.barbearias.join(', ')}
+                    </div>
+                  )}
                 </div>
 
                 {/* Features */}
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-foreground">Inclui:</h4>
+                  <h4 className="font-semibold text-black">Inclui:</h4>
                   <ul className="space-y-2">
                     {service.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center text-sm text-muted-foreground">
-                        <Star className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+                      <li key={featureIndex} className="flex items-center text-sm text-gray-600">
+                        <Star className="h-4 w-4 text-black mr-2 flex-shrink-0" />
                         {feature}
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* CTA */}
-                <Button 
-                  className="w-full"
-                  onClick={() => handleContactAction('whatsapp', 'serviceBooking', service.title)}
-                >
-                  Agendar
-                </Button>
+
               </div>
             </div>
           ))}
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-16 bg-primary text-primary-foreground rounded-lg p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold">Horário de Funcionamento</h3>
-              <div className="space-y-2">
-                <p className="flex justify-between">
-                  <span>Segunda a Sexta:</span>
-                  <span>9h às 19h</span>
-                </p>
-                <p className="flex justify-between">
-                  <span>Sábado:</span>
-                  <span>9h às 18h</span>
-                </p>
-                <p className="flex justify-between">
-                  <span>Domingo:</span>
-                  <span>Fechado</span>
-                </p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold">Informações Importantes</h3>
-              <ul className="space-y-2 text-primary-foreground/80">
-                <li>• Agendamento recomendado</li>
-                <li>• Aceitamos cartões e PIX</li>
-                <li>• Produtos disponíveis para venda</li>
-                <li>• Estacionamento gratuito</li>
-              </ul>
-            </div>
+        {/* Mensagem se não há serviços configurados */}
+        {servicosConsolidados.length === 0 && !loading && (
+          <div className="text-center py-8">
+            <p className="text-gray-600">
+              Nossos serviços estão sendo configurados. Entre em contato conosco para mais informações.
+            </p>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
-};
-
-export default Services; 
+} 

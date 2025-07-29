@@ -25,7 +25,7 @@ const ClienteAtual = ({
             </div>
             <Button 
               onClick={onFinalizarAtendimento}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-black text-white hover:bg-gray-800 border-black"
               size="sm"
             >
               <CheckCircle className="h-4 w-4 mr-2" />

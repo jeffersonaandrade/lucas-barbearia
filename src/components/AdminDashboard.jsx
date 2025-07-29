@@ -4,7 +4,7 @@ import { DashboardProvider } from '@/contexts/DashboardContext.jsx';
 import BarbeiroDashboard from '@/components/dashboard/BarbeiroDashboard.jsx';
 import AdminDashboardContent from '@/components/dashboard/AdminDashboard.jsx';
 import GerenteDashboard from '@/components/dashboard/GerenteDashboard.jsx';
-import ApiDebug from '@/components/ui/api-debug.jsx';
+
 
 const AdminDashboardContainer = () => {
   const { user, logout } = useAuth();
@@ -39,7 +39,6 @@ const AdminDashboardContainer = () => {
       <AdminLayout onLogout={handleLogout} showBackButton={false}>
         {renderDashboard()}
       </AdminLayout>
-      <ApiDebug />
     </DashboardProvider>
   );
 };
