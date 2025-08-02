@@ -86,6 +86,13 @@ const FilaManager = ({
 
   // Carregar dados do histórico
   const loadHistoricoData = useCallback(async (forceRefresh = false) => {
+    console.log('🚀 FilaManager - loadHistoricoData chamada:', {
+      forceRefresh,
+      barbeariaId: barbeariaAtual?.id,
+      barbeiroId: barbeiroAtual?.id,
+      userRole: userRole
+    });
+    
     const now = Date.now();
     
     // Se não há barbearia selecionada, não carregar histórico
@@ -97,8 +104,8 @@ const FilaManager = ({
     // Se não há dados de histórico em cache, usar array vazio
     if (!historicoCache) {
       console.log('📊 Cache do histórico vazio, carregando dados...');
-      setHistoricoData(historicoCache);
-      return;
+      setHistoricoData([]);
+      // NÃO retornar aqui, continuar para carregar dados da API
     }
 
     // ✅ Usar barbeiroAtual ou fallback para o ID do usuário logado
@@ -142,6 +149,7 @@ const FilaManager = ({
     // Verificar cache para evitar chamadas duplicadas
     if (!forceRefresh && 
         historicoCache && 
+        historicoCache.length > 0 &&
         (now - lastHistoricoUpdate) < historicoCacheTimeout) {
       console.log('📊 Usando cache do histórico (última chamada há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
       setHistoricoData(historicoCache);
@@ -151,6 +159,7 @@ const FilaManager = ({
     // Verificar se o usuário está autenticado
     const { CookieManager } = await import('@/utils/cookieManager.js');
     const token = CookieManager.getAdminToken();
+    console.log('🔐 Token de autenticação:', token ? 'Presente' : 'Ausente');
     if (!token) {
       console.log('❌ Usuário não autenticado');
       return;
@@ -171,6 +180,7 @@ const FilaManager = ({
       const dataFim = ultimoDia.toISOString().split('T')[0];
       
       console.log('📅 Período do histórico:', { dataInicio, dataFim });
+      console.log('🔍 Parâmetros da chamada:', { data_inicio: dataInicio, data_fim: dataFim, barbeiro_id: barbeiroId });
       
       const response = await historicoService.obterHistorico({
         data_inicio: dataInicio,
@@ -179,6 +189,8 @@ const FilaManager = ({
       });
       
       console.log('📊 Resposta do histórico:', response);
+      console.log('📊 Dados do histórico:', response?.data);
+      console.log('📊 Sucesso da resposta:', response?.success);
       
       if (response && response.data) {
         setHistoricoData(response.data);
@@ -224,6 +236,7 @@ const FilaManager = ({
 
   const handleRefreshHistorico = () => {
     console.log('🔄 Atualização manual do histórico solicitada');
+    console.log('🔄 handleRefreshHistorico - Forçando refresh completo');
     loadHistoricoData(true);
   };
 
@@ -231,19 +244,21 @@ const FilaManager = ({
 
   // Carregar histórico apenas quando barbeiro mudar (e usar cache se disponível)
   useEffect(() => {
-    if (barbeariaAtual?.id) {
+    // EVITAR LOOP INFINITO - só carregar se realmente mudou
+    if (barbeariaAtual?.id && !historicoCallInProgress.current) {
       console.log('🔄 Barbearia definida, carregando histórico...');
       loadHistoricoData();
     }
-  }, [barbeariaAtual?.id, loadHistoricoData]);
+  }, [barbeariaAtual?.id]); // REMOVIDO loadHistoricoData da dependência
 
   // Carregar histórico quando barbeiro for definido
   useEffect(() => {
-    if (barbeiroAtual?.id && barbeariaAtual?.id) {
+    // EVITAR LOOP INFINITO - só carregar se realmente mudou
+    if (barbeiroAtual?.id && barbeariaAtual?.id && !historicoCallInProgress.current) {
       console.log('🔄 Barbeiro definido, carregando histórico...');
       loadHistoricoData();
     }
-  }, [barbeiroAtual?.id, barbeariaAtual?.id, loadHistoricoData]);
+  }, [barbeiroAtual?.id, barbeariaAtual?.id]); // REMOVIDO loadHistoricoData da dependência
 
   // Detectar cliente próximo quando os dados da fila mudarem
   useEffect(() => {
@@ -330,8 +345,14 @@ const FilaManager = ({
   };
 
   const getHistoricoAtendimentos = () => {
+    console.log('🔍 getHistoricoAtendimentos chamada:', {
+      historicoDataLength: historicoData?.length,
+      historicoData: historicoData
+    });
+    
     // Usar dados da API se disponíveis, senão usar dados locais como fallback
     if (historicoData && historicoData.length > 0) {
+      console.log('✅ Usando dados da API para histórico');
       return historicoData.sort((a, b) => {
         const dataA = a.data_fim || '';
         const dataB = b.data_fim || '';
@@ -340,10 +361,11 @@ const FilaManager = ({
     }
     
     // Fallback: buscar na fila local (para compatibilidade)
+    console.log('⚠️ Usando fallback da fila local para histórico');
     const fila = getFilaBarbearia();
     const hoje = new Date().toISOString().split('T')[0];
     
-    return fila
+    const historicoFallback = fila
       .filter(c => 
         c.status === 'finalizado' && 
         c.dataFinalizado === hoje && 
@@ -354,6 +376,9 @@ const FilaManager = ({
         const horaB = b.horaFinalizado || '';
         return horaB.localeCompare(horaA);
       });
+    
+    console.log('📊 Histórico fallback:', historicoFallback);
+    return historicoFallback;
   };
 
   if (!barbeariaAtual) {

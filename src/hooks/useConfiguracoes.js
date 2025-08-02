@@ -13,8 +13,16 @@ export const useConfiguracoes = (barbeariaId) => {
     setError(null);
     
     try {
-      const data = await configuracoesService.carregarConfiguracoes(barbeariaId);
-      setConfiguracoes(data.data);
+      // Usar listarServicos em vez de carregarConfiguracoes
+      const data = await configuracoesService.listarServicos();
+      
+      // Mapear dados do backend para o formato esperado pelo frontend
+      const servicosMapeados = (data.data || []).map(servico => ({
+        ...servico,
+        duracao_estimada: servico.duracao // Mapear duracao -> duracao_estimada
+      }));
+      
+      setConfiguracoes({ servicos: servicosMapeados });
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
       setError(error.message || 'Erro ao carregar configurações');
@@ -54,28 +62,6 @@ export const useConfiguracoes = (barbeariaId) => {
     }
   };
 
-  // Horários
-  const atualizarHorarios = async (dados) => {
-    try {
-      const data = await configuracoesService.atualizarHorarios(barbeariaId, dados);
-      await carregarConfiguracoes(); // Recarregar
-      return data;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  // Configurações Gerais
-  const atualizarConfiguracoesGerais = async (dados) => {
-    try {
-      const data = await configuracoesService.atualizarConfiguracoesGerais(barbeariaId, dados);
-      await carregarConfiguracoes(); // Recarregar
-      return data;
-    } catch (error) {
-      throw error;
-    }
-  };
-
   useEffect(() => {
     if (barbeariaId) {
       carregarConfiguracoes();
@@ -91,9 +77,5 @@ export const useConfiguracoes = (barbeariaId) => {
     atualizarServico,
     criarServico,
     excluirServico,
-    // Horários
-    atualizarHorarios,
-    // Configurações Gerais
-    atualizarConfiguracoesGerais
   };
 }; 

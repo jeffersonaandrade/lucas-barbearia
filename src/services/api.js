@@ -17,8 +17,8 @@ Todos os endpoints que o frontend precisa estão agora disponíveis no backend:
 - POST /api/fila/gerenciar (gerenciar fila)
 - GET /api/barbearias/{id}/fila (fila completa)
 - GET /api/barbearias/{id}/fila/publica (fila pública)
-- POST /api/fila/iniciar-atendimento/{clienteId}
-- POST /api/fila/finalizar-atendimento/{clienteId}
+- POST /api/fila/iniciar-atendimento/{barbeariaId}/{clienteId}
+- POST /api/fila/finalizar/{barbeariaId}
 - DELETE /api/fila/remover/{clienteId}
 - DELETE /api/fila/admin/remover/{clienteId}
 - POST /api/barbearias/{id}/fila/adicionar-manual
@@ -594,17 +594,21 @@ export const filaService = {
   },
 
           // Iniciar atendimento (PRIVADO - requer autenticação de barbeiro)
-        async iniciarAtendimento(barbeariaId, clienteId) {
-          return api.post(`/fila/iniciar-atendimento/${barbeariaId}/${clienteId}`, {});
-        },
-
-          // Finalizar atendimento (PRIVADO - requer autenticação de barbeiro)
-        async finalizarAtendimento(clienteId, observacoes = '') {
-          return api.post(`/fila/finalizar`, {
-            cliente_id: clienteId,
-            observacoes: observacoes
+        async iniciarAtendimento(atendimentoId, dados) {
+          return api.put(`/fila/gerenciar/iniciar/${atendimentoId}`, {
+            servico_id: dados.servico_id
           });
         },
+
+            // Finalizar atendimento (PRIVADO - requer autenticação de barbeiro)
+  async finalizarAtendimento(atendimentoId, dados) {
+    return api.put(`/fila/gerenciar/finalizar/${atendimentoId}`, {
+      servico_id: dados.servico_id,
+      valor_servico: dados.valor_servico,
+      forma_pagamento: dados.forma_pagamento,
+      observacoes: dados.observacoes || ''
+    });
+  },
 
   // Remover cliente (PRIVADO - requer autenticação de barbeiro)
   async removerCliente(clienteId) {
@@ -923,7 +927,86 @@ export const configuracoesService = {
     return api.delete(`/configuracoes/servicos/${servicoId}`);
   },
 
+  // ===== SISTEMA DE COMISSÕES =====
+  
+  // Listar configurações de comissões
+  async listarComissoes(barbeariaId = null) {
+    const params = barbeariaId ? `?barbearia_id=${barbeariaId}` : '';
+    return api.get(`/configuracoes/comissoes${params}`);
+  },
 
+  // Criar configuração de comissão
+  async criarComissao(dados) {
+    return api.post('/configuracoes/comissoes', dados);
+  },
+
+  // Atualizar configuração de comissão
+  async atualizarComissao(comissaoId, dados) {
+    return api.put(`/configuracoes/comissoes/${comissaoId}`, dados);
+  },
+
+  // Excluir configuração de comissão
+  async excluirComissao(comissaoId) {
+    return api.delete(`/configuracoes/comissoes/${comissaoId}`);
+  }
+};
+
+// Serviço financeiro
+export const financeiroService = {
+  // Registrar pagamento
+  async registrarPagamento(dados) {
+    return api.post('/financeiro/pagamentos', dados);
+  },
+
+  // Listar pagamentos
+  async listarPagamentos(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/financeiro/pagamentos${queryString}`);
+  },
+
+  // Listar comissões
+  async listarComissoes(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/financeiro/comissoes${queryString}`);
+  },
+
+  // Calcular comissões
+  async calcularComissoes(dados) {
+    return api.post('/financeiro/comissoes/calcular', dados);
+  }
+};
+
+// Serviço de relatórios financeiros
+export const relatoriosFinanceirosService = {
+  // Relatório financeiro geral
+  async relatorioFinanceiro(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/relatorios/financeiro${queryString}`);
+  },
+
+  // Relatório de comissões
+  async relatorioComissoes(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/relatorios/comissoes${queryString}`);
+  },
+
+  // Relatório de performance
+  async relatorioPerformance(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/relatorios/performance${queryString}`);
+  },
+
+  // Relatório de satisfação
+  async relatorioSatisfacao(filtros = {}) {
+    const params = new URLSearchParams(filtros).toString();
+    const queryString = params ? `?${params}` : '';
+    return api.get(`/relatorios/satisfacao${queryString}`);
+  }
 };
 
 // Serviço de testes

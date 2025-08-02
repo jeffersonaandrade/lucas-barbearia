@@ -174,7 +174,7 @@ const AdminUsuarios = () => {
               nome: 'João Silva',
               email: 'joao@lucasbarbearia.com',
               role: 'barbeiro',
-              telefone: '(11) 99999-9999',
+              telefone: '(81) 99999-9999',
               active: true,
               created_at: new Date().toISOString()
             },

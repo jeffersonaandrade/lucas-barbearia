@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/components/ui/admin-layout.jsx';
+import { relatoriosFinanceirosService, financeiroService } from '@/services/api.js';
+import LoadingSpinner from '@/components/ui/loading-spinner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, 
   Scissors, 
@@ -35,8 +38,10 @@ const AdminRelatorios = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [periodo, setPeriodo] = useState('hoje');
+  const [periodo, setPeriodo] = useState('mes');
   const [barbearia, setBarbearia] = useState('todas');
+  const [relatorios, setRelatorios] = useState([]);
+  const [error, setError] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -46,57 +51,95 @@ const AdminRelatorios = () => {
     navigate('/admin/dashboard');
   };
 
-  // Dados simulados de relatórios
-  const relatorios = [
-    {
-      id: 1,
-      titulo: 'Relatório de Atendimentos',
-      descricao: 'Estatísticas de clientes atendidos por período',
-      icon: Users,
-      metricas: {
-        total: 156,
-        media: 12,
-        crescimento: '+15%'
-      },
-      cor: 'bg-blue-500'
-    },
-    {
-      id: 2,
-      titulo: 'Tempo Médio de Atendimento',
-      descricao: 'Tempo médio gasto por cliente',
-      icon: Clock,
-      metricas: {
-        total: '18 min',
-        media: '15 min',
-        crescimento: '-8%'
-      },
-      cor: 'bg-green-500'
-    },
-    {
-      id: 3,
-      titulo: 'Faturamento',
-      descricao: 'Receita total por período',
-      icon: DollarSign,
-      metricas: {
-        total: 'R$ 12.450,00',
-        media: 'R$ 1.035,00',
-        crescimento: '+22%'
-      },
-      cor: 'bg-yellow-500'
-    },
-    {
-      id: 4,
-      titulo: 'Satisfação dos Clientes',
-      descricao: 'Avaliações e feedback dos clientes',
-      icon: TrendingUp,
-      metricas: {
-        total: '4.8/5',
-        media: '4.6/5',
-        crescimento: '+5%'
-      },
-      cor: 'bg-purple-500'
+  // Carregar dados reais dos relatórios
+  const carregarRelatorios = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const filtros = {
+        periodo: periodo,
+        ...(barbearia !== 'todas' && { barbearia_id: barbearia })
+      };
+
+      // Carregar relatórios financeiros
+      const [financeiro, comissoes, performance, satisfacao] = await Promise.all([
+        relatoriosFinanceirosService.relatorioFinanceiro(filtros),
+        relatoriosFinanceirosService.relatorioComissoes(filtros),
+        relatoriosFinanceirosService.relatorioPerformance(filtros),
+        relatoriosFinanceirosService.relatorioSatisfacao(filtros)
+      ]);
+
+      const relatoriosData = [
+        {
+          id: 1,
+          titulo: 'Faturamento',
+          descricao: 'Receita total por período',
+          icon: DollarSign,
+          metricas: {
+            total: `R$ ${financeiro.data?.total_receita?.toFixed(2) || '0,00'}`,
+            media: `R$ ${financeiro.data?.media_ticket?.toFixed(2) || '0,00'}`,
+            crescimento: financeiro.data?.crescimento || '+0%'
+          },
+          cor: 'bg-yellow-500',
+          dados: financeiro.data
+        },
+        {
+          id: 2,
+          titulo: 'Comissões',
+          descricao: 'Total de comissões pagas',
+          icon: TrendingUp,
+          metricas: {
+            total: `R$ ${comissoes.data?.total_comissoes?.toFixed(2) || '0,00'}`,
+            media: `${comissoes.data?.media_comissao?.toFixed(1) || '0'}%`,
+            crescimento: comissoes.data?.crescimento || '+0%'
+          },
+          cor: 'bg-green-500',
+          dados: comissoes.data
+        },
+        {
+          id: 3,
+          titulo: 'Atendimentos',
+          descricao: 'Total de clientes atendidos',
+          icon: Users,
+          metricas: {
+            total: performance.data?.total_atendimentos || 0,
+            media: performance.data?.media_diaria || 0,
+            crescimento: performance.data?.crescimento || '+0%'
+          },
+          cor: 'bg-blue-500',
+          dados: performance.data
+        },
+        {
+          id: 4,
+          titulo: 'Satisfação',
+          descricao: 'Avaliações dos clientes',
+          icon: TrendingUp,
+          metricas: {
+            total: `${satisfacao.data?.media_avaliacao?.toFixed(1) || '0'}/5`,
+            media: `${satisfacao.data?.total_avaliacoes || 0} avaliações`,
+            crescimento: satisfacao.data?.crescimento || '+0%'
+          },
+          cor: 'bg-purple-500',
+          dados: satisfacao.data
+        }
+      ];
+
+      setRelatorios(relatoriosData);
+    } catch (error) {
+      console.error('Erro ao carregar relatórios:', error);
+      setError('Erro ao carregar relatórios. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Carregar relatórios quando mudar período ou barbearia
+  useEffect(() => {
+    carregarRelatorios();
+  }, [periodo, barbearia]);
+
+
 
   const barbearias = [
     { id: 'todas', nome: 'Todas as Barbearias' },
@@ -113,19 +156,58 @@ const AdminRelatorios = () => {
     { id: 'ano', nome: 'Último Ano' }
   ];
 
-  const handleDownloadRelatorio = (tipo) => {
+  const handleDownloadRelatorio = async (tipo) => {
     setLoading(true);
     
-    // Simular download
-    setTimeout(() => {
+    try {
+      const filtros = {
+        periodo: periodo,
+        tipo: tipo,
+        ...(barbearia !== 'todas' && { barbearia_id: barbearia })
+      };
+
+      // Chamar endpoint de download do backend
+      const response = await relatoriosFinanceirosService.relatorioFinanceiro(filtros);
+      
+      // Simular download (o backend deve retornar um arquivo)
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], { 
+        type: 'application/json' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio-${tipo}-${periodo}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
       alert(`Relatório de ${tipo} baixado com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao baixar relatório:', error);
+      alert('Erro ao baixar relatório. Tente novamente.');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
     <AdminLayout onLogout={handleLogout} onBack={handleBack}>
       <div className="space-y-6">
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex justify-center items-center h-64">
+            <LoadingSpinner />
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -198,185 +280,94 @@ const AdminRelatorios = () => {
 
         {/* Relatórios Detalhados */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Relatório de Atendimentos por Barbearia */}
+          {/* Resumo dos Relatórios */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Atendimentos por Barbearia
+                <BarChart3 className="h-5 w-5" />
+                Resumo do Período
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="font-medium">Centro</span>
+                {relatorios.length > 0 ? (
+                  relatorios.map((relatorio) => (
+                    <div key={relatorio.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 ${relatorio.cor.replace('bg-', 'bg-')} rounded-full`}></div>
+                        <span className="font-medium">{relatorio.titulo}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">{relatorio.metricas.total}</div>
+                        <div className="text-sm text-gray-600">Média: {relatorio.metricas.media}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Nenhum dado disponível para o período selecionado
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold">45 atendimentos</div>
-                    <div className="text-sm text-gray-600">R$ 3.240,00</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="font-medium">Shopping</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">67 atendimentos</div>
-                    <div className="text-sm text-gray-600">R$ 4.820,00</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="font-medium">Bairro</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">34 atendimentos</div>
-                    <div className="text-sm text-gray-600">R$ 2.390,00</div>
-                  </div>
-                </div>
+                )}
               </div>
               
               <Button 
-                onClick={() => handleDownloadRelatorio('Atendimentos por Barbearia')}
+                onClick={() => handleDownloadRelatorio('Resumo Geral')}
                 disabled={loading}
                 className="w-full mt-4"
                 variant="outline"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {loading ? 'Baixando...' : 'Baixar Relatório'}
+                {loading ? 'Baixando...' : 'Baixar Relatório Completo'}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Relatório de Performance dos Barbeiros */}
+          {/* Ações Rápidas */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Scissors className="h-5 w-5" />
-                Performance dos Barbeiros
+                <Activity className="h-5 w-5" />
+                Ações Rápidas
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-blue-600">LS</span>
-                    </div>
-                    <div>
-                      <div className="font-medium">Lucas Silva</div>
-                      <div className="text-sm text-gray-600">Centro</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">23 atendimentos</div>
-                    <div className="text-sm text-green-600">4.9/5 ⭐</div>
-                  </div>
-                </div>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => handleDownloadRelatorio('Completo')}
+                  disabled={loading}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Relatório Completo
+                  <span className="ml-auto text-xs text-gray-500">Todos os dados</span>
+                </Button>
                 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-green-600">MC</span>
-                    </div>
-                    <div>
-                      <div className="font-medium">Maria Costa</div>
-                      <div className="text-sm text-gray-600">Shopping</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">31 atendimentos</div>
-                    <div className="text-sm text-green-600">4.7/5 ⭐</div>
-                  </div>
-                </div>
+                <Button 
+                  onClick={() => handleDownloadRelatorio('Financeiro')}
+                  disabled={loading}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Financeiro
+                  <span className="ml-auto text-xs text-gray-500">Faturamento e custos</span>
+                </Button>
                 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-yellow-600">PS</span>
-                    </div>
-                    <div>
-                      <div className="font-medium">Pedro Santos</div>
-                      <div className="text-sm text-gray-600">Bairro</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">18 atendimentos</div>
-                    <div className="text-sm text-green-600">4.8/5 ⭐</div>
-                  </div>
-                </div>
+                <Button 
+                  onClick={() => handleDownloadRelatorio('Satisfacao')}
+                  disabled={loading}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Satisfação
+                  <span className="ml-auto text-xs text-gray-500">Avaliações dos clientes</span>
+                </Button>
               </div>
-              
-              <Button 
-                onClick={() => handleDownloadRelatorio('Performance dos Barbeiros')}
-                disabled={loading}
-                className="w-full mt-4"
-                variant="outline"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {loading ? 'Baixando...' : 'Baixar Relatório'}
-              </Button>
             </CardContent>
           </Card>
         </div>
-
-        {/* Ações Rápidas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Ações Rápidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                onClick={() => handleDownloadRelatorio('Relatório Completo')}
-                disabled={loading}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-center gap-2"
-              >
-                <Download className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Relatório Completo</div>
-                  <div className="text-sm text-gray-600">Todos os dados</div>
-                </div>
-              </Button>
-              
-              <Button 
-                onClick={() => handleDownloadRelatorio('Relatório Financeiro')}
-                disabled={loading}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-center gap-2"
-              >
-                <DollarSign className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Financeiro</div>
-                  <div className="text-sm text-gray-600">Faturamento e custos</div>
-                </div>
-              </Button>
-              
-              <Button 
-                onClick={() => handleDownloadRelatorio('Relatório de Satisfação')}
-                disabled={loading}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-center gap-2"
-              >
-                <TrendingUp className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Satisfação</div>
-                  <div className="text-sm text-gray-600">Avaliações dos clientes</div>
-                </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AdminLayout>
   );

@@ -28,6 +28,8 @@ import StatsManager from '@/components/ui/stats-manager.jsx';
 import DashboardCard from '@/components/ui/dashboard-card.jsx';
 // Importar o hook especializado para barbeiros
 import { useBarbeiroFila } from '@/hooks/useBarbeiroFila.js';
+import FinalizarAtendimentoModal from '@/components/ui/finalizar-atendimento-modal.jsx';
+import IniciarAtendimentoModal from '@/components/ui/iniciar-atendimento-modal.jsx';
 
 const AdminDashboardBarbeiro = ({ 
   barbearias, 
@@ -41,6 +43,8 @@ const AdminDashboardBarbeiro = ({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [historicoAtualizado, setHistoricoAtualizado] = useState(false);
+  const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [showIniciarModal, setShowIniciarModal] = useState(false);
 
   // Usar o hook especializado para barbeiros
   const {
@@ -141,19 +145,28 @@ const AdminDashboardBarbeiro = ({
     }
   };
 
-  const handleFinalizarAtendimento = async () => {
+  const handleFinalizarAtendimento = () => {
     if (!atendendoAtual) {
       console.log('Nenhum cliente sendo atendido');
       return;
     }
+    setShowFinalizarModal(true);
+  };
 
+  const handleConfirmarFinalizacao = async (dados) => {
     try {
-      await finalizarAtendimento(atendendoAtual.id);
+      console.log('🚀 Finalizando atendimento com dados:', dados);
+      
+      // Buscar o ID do atendimento atual
+      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      
+      await finalizarAtendimento(atendimentoId, dados);
       setAtendendoAtual(null);
+      setShowFinalizarModal(false);
       setHistoricoAtualizado(true);
       setTimeout(() => setHistoricoAtualizado(false), 3000);
     } catch (error) {
-      console.error('Erro ao finalizar atendimento:', error);
+      console.error('❌ Erro ao finalizar atendimento:', error);
     }
   };
 
@@ -161,11 +174,23 @@ const AdminDashboardBarbeiro = ({
     navigate('/admin/adicionar-fila');
   };
 
-  const handleIniciarAtendimento = async (clienteId = null) => {
+  const handleIniciarAtendimento = () => {
+    if (!atendendoAtual) return;
+    setShowIniciarModal(true);
+  };
+
+  const handleConfirmarInicio = async (dados) => {
     try {
-      await iniciarAtendimento(clienteId);
+      console.log('🚀 Iniciando atendimento com dados:', dados);
+      
+      // Buscar o ID do atendimento atual
+      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      
+      await iniciarAtendimento(atendimentoId, dados);
+      setShowIniciarModal(false);
+      console.log('✅ Atendimento iniciado com sucesso');
     } catch (error) {
-      console.error('Erro ao iniciar atendimento:', error);
+      console.error('❌ Erro ao iniciar atendimento:', error);
     }
   };
 
@@ -275,10 +300,27 @@ const AdminDashboardBarbeiro = ({
         </Card>
 
         {/* Ações Rápidas */}
+        {atendendoAtual && atendendoAtual.status === 'atendendo' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  <strong>Em Atendimento:</strong> O barbeiro está atendendo {atendendoAtual.nome}. Finalize o atendimento atual para chamar o próximo cliente.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Button 
             onClick={handleChamarProximo}
-            disabled={filaLoading || !barbeariaAtual}
+            disabled={filaLoading || !barbeariaAtual || (atendendoAtual && atendendoAtual.status === 'atendendo')}
             className="w-full"
           >
             <Play className="mr-2 h-4 w-4" />
@@ -328,6 +370,24 @@ const AdminDashboardBarbeiro = ({
           atendendoAtual={atendendoAtual}
           setAtendendoAtual={setAtendendoAtual}
           onHistoricoAtualizado={() => setHistoricoAtualizado(true)}
+        />
+
+        {/* Modal de Finalizar Atendimento */}
+        <FinalizarAtendimentoModal
+          isOpen={showFinalizarModal}
+          onClose={() => setShowFinalizarModal(false)}
+          onConfirm={handleConfirmarFinalizacao}
+          cliente={atendendoAtual}
+          loading={filaLoading}
+        />
+
+        {/* Modal de Iniciar Atendimento */}
+        <IniciarAtendimentoModal
+          isOpen={showIniciarModal}
+          onClose={() => setShowIniciarModal(false)}
+          onConfirm={handleConfirmarInicio}
+          cliente={atendendoAtual}
+          loading={filaLoading}
         />
       </div>
     </div>

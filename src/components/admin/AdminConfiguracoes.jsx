@@ -14,12 +14,14 @@ import {
   Trash2,
   Save,
   X,
-  Building2
+  Building2,
+  DollarSign
 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import LoadingSpinner from '../ui/loading-spinner';
 import Notification from '../ui/notification';
 import BarbeariaSelector from './BarbeariaSelector';
+import AdminComissoes from './AdminComissoes';
 
 // Componente para gerenciar serviços
 const GerenciarServicos = ({ configuracoes, onCriarServico, onAtualizarServico, onExcluirServico, onShowNotification }) => {
@@ -481,7 +483,7 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
 };
 
 const AdminConfiguracoes = () => {
-  const [selectedBarbeariaId, setSelectedBarbeariaId] = useState(null);
+  const [selectedBarbeariaId, setSelectedBarbeariaId] = useState(1); // Inicializar com barbearia 1
   const [notification, setNotification] = useState(null);
   const { 
     configuracoes, 
@@ -558,7 +560,7 @@ const AdminConfiguracoes = () => {
           </div>
 
           <Tabs defaultValue="servicos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="servicos" className="flex items-center gap-2">
             <Scissors className="h-4 w-4" />
             Serviços
@@ -566,6 +568,10 @@ const AdminConfiguracoes = () => {
           <TabsTrigger value="horarios" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Horários
+          </TabsTrigger>
+          <TabsTrigger value="comissoes" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Comissões
           </TabsTrigger>
           <TabsTrigger value="gerais" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -589,6 +595,10 @@ const AdminConfiguracoes = () => {
               onAtualizarHorarios={atualizarHorarios}
               onShowNotification={showNotification}
             />
+          </TabsContent>
+
+          <TabsContent value="comissoes">
+            <AdminComissoes />
           </TabsContent>
 
           <TabsContent value="gerais">

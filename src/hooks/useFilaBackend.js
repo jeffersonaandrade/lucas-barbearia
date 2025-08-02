@@ -526,7 +526,7 @@ export const useFilaBackend = (barbeariaId = null) => {
 
   const finalizarAtendimento = useCallback(async (clienteId) => {
     try {
-      await filaService.finalizarAtendimento(clienteId);
+      await filaService.finalizarAtendimento(barbeariaId, clienteId);
       await carregarFilaAtual();
     } catch (err) {
       setError('Erro ao finalizar atendimento.');

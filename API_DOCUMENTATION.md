@@ -105,7 +105,7 @@
         "id": 1,
         "nome": "Lucas Barbearia - Centro",
         "endereco": "Rua das Flores, 123",
-        "telefone": "(11) 99999-9999",
+        "telefone": "(81) 99999-9999",
         "horario_funcionamento": "08:00-18:00",
         "status": "aberta",
         "created_at": "2025-07-29T01:50:28.857231+00:00",
@@ -126,7 +126,7 @@
       "id": 1,
       "nome": "Lucas Barbearia - Centro",
       "endereco": "Rua das Flores, 123",
-      "telefone": "(11) 99999-9999",
+      "telefone": "(81) 99999-9999",
       "horario_funcionamento": "08:00-18:00",
       "status": "aberta",
       "created_at": "2025-07-29T01:50:28.857231+00:00",
@@ -152,7 +152,7 @@
           "id": "uuid",
           "nome": "João Silva",
           "email": "joao@lucasbarbearia.com",
-          "telefone": "(11) 99999-9999",
+          "telefone": "(81) 99999-9999",
           "especialidades": ["corte", "barba"],
           "status": "ativo",
           "barbearia_id": 1,
@@ -177,7 +177,7 @@
           "id": "uuid",
           "nome": "João Silva",
           "email": "joao@lucasbarbearia.com",
-          "telefone": "(11) 99999-9999",
+          "telefone": "(81) 99999-9999",
           "especialidades": ["corte", "barba"],
           "status": "ativo",
           "barbearia_id": 1,
@@ -201,7 +201,7 @@
   {
     "barbearia_id": 1,
     "nome": "João Silva",
-    "telefone": "(11) 99999-9999",
+    "telefone": "(81) 99999-9999",
     "barbeiro": "João Silva"
   }
   ```
@@ -216,7 +216,7 @@
       "cliente": {
         "id": "uuid",
         "nome": "João Silva",
-        "telefone": "(11) 99999-9999",
+        "telefone": "(81) 99999-9999",
         "barbeiro": "João Silva",
         "entrada": "2025-07-29T10:30:00Z"
       }
@@ -236,7 +236,7 @@
         {
           "id": "uuid",
           "nome": "João Silva",
-          "telefone": "(11) 99999-9999",
+          "telefone": "(81) 99999-9999",
           "barbeiro": "João Silva",
           "posicao": 1,
           "status": "aguardando",
@@ -263,7 +263,7 @@
       "cliente": {
         "id": "uuid",
         "nome": "João Silva",
-        "telefone": "(11) 99999-9999",
+        "telefone": "(81) 99999-9999",
         "barbeiro": "João Silva",
         "posicao": 3,
         "status": "aguardando",
@@ -302,7 +302,7 @@
       "cliente_chamado": {
         "id": "uuid",
         "nome": "João Silva",
-        "telefone": "(11) 99999-9999",
+        "telefone": "(81) 99999-9999",
         "barbeiro": "João Silva",
         "posicao": 1,
         "status": "atendendo"
@@ -412,7 +412,7 @@
           "nome": "João Silva",
           "email": "joao@lucasbarbearia.com",
           "role": "barbeiro",
-          "telefone": "(11) 99999-9999",
+          "telefone": "(81) 99999-9999",
           "barbearia_id": 1,
           "status": "ativo",
           "created_at": "2025-07-29T01:50:28.857231+00:00",
@@ -433,7 +433,7 @@
     "email": "joao@lucasbarbearia.com",
     "senha": "senha123",
     "role": "barbeiro",
-    "telefone": "(11) 99999-9999",
+    "telefone": "(81) 99999-9999",
     "barbearia_id": 1
   }
   ```
@@ -447,7 +447,7 @@
         "nome": "João Silva",
         "email": "joao@lucasbarbearia.com",
         "role": "barbeiro",
-        "telefone": "(11) 99999-9999",
+        "telefone": "(81) 99999-9999",
         "barbearia_id": 1,
         "created_at": "2025-07-29T01:50:28.857231+00:00"
       }

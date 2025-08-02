@@ -145,7 +145,7 @@ const EntrarFila = () => {
                   type="tel"
                   value={formData.telefone}
                   onChange={(e) => handleInputChange('telefone', e.target.value)}
-                  placeholder="(11) 99999-9999"
+                  placeholder="(81) 99999-9999"
                   required
                 />
               </div>

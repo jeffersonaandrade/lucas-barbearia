@@ -23,8 +23,8 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-black">Endereço</h3>
-                  <p className="text-gray-600">Rua das Flores, 123 - Centro</p>
-                  <p className="text-gray-600">São Paulo - SP, 01234-567</p>
+                  <p className="text-gray-600">Rua das Barbearias, 123</p>
+                  <p className="text-gray-600">Recife/PE</p>
                 </div>
               </div>
 
@@ -34,7 +34,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-black">Telefone</h3>
-                  <p className="text-gray-600">(11) 99999-9999</p>
+                  <p className="text-gray-600">(81) 99999-9999</p>
                   <p className="text-gray-600">WhatsApp disponível</p>
                 </div>
               </div>

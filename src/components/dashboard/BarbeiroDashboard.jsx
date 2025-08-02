@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Building2, CheckCircle, XCircle } from 'lucide-react';
+import FinalizarAtendimentoModal from '@/components/ui/finalizar-atendimento-modal.jsx';
+import IniciarAtendimentoModal from '@/components/ui/iniciar-atendimento-modal.jsx';
 
 const BarbeiroDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -57,6 +59,8 @@ const BarbeiroDashboard = ({ onLogout }) => {
 
   const [historicoAtualizado, setHistoricoAtualizado] = useState(false);
   const [notificacao, setNotificacao] = useState(null);
+  const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [showIniciarModal, setShowIniciarModal] = useState(false);
 
   // Função para mostrar notificação
   const mostrarNotificacao = (mensagem, tipo = 'info') => {
@@ -159,13 +163,21 @@ const BarbeiroDashboard = ({ onLogout }) => {
     }
   };
 
-  const handleFinalizarAtendimento = async () => {
+  const handleFinalizarAtendimento = () => {
     if (!atendendoAtual) return;
+    setShowFinalizarModal(true);
+  };
 
+  const handleConfirmarFinalizacao = async (dados) => {
     try {
-      console.log('🚀 Finalizando atendimento para cliente:', atendendoAtual.id);
-      await finalizarAtendimento(atendendoAtual.id);
+      console.log('🚀 Finalizando atendimento com dados:', dados);
+      
+      // Buscar o ID do atendimento atual
+      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      
+      await finalizarAtendimento(atendimentoId, dados);
       setAtendendoAtual(null);
+      setShowFinalizarModal(false);
       mostrarNotificacao('✅ Atendimento finalizado com sucesso!', 'success');
       setHistoricoAtualizado(true);
       setTimeout(() => setHistoricoAtualizado(false), 3000);
@@ -198,7 +210,12 @@ const BarbeiroDashboard = ({ onLogout }) => {
     }
   };
 
-  const handleIniciarAtendimento = async (clienteId = null) => {
+  const handleIniciarAtendimento = () => {
+    if (!atendendoAtual) return;
+    setShowIniciarModal(true);
+  };
+
+  const handleConfirmarInicio = async (dados) => {
     try {
       // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
       if (!isBarbeiroAtivo(barbeariaAtual?.id)) {
@@ -206,9 +223,15 @@ const BarbeiroDashboard = ({ onLogout }) => {
         return;
       }
 
-      console.log('🚀 Iniciando atendimento para cliente:', clienteId);
-      const response = await iniciarAtendimento(clienteId);
+      console.log('🚀 Iniciando atendimento com dados:', dados);
+      
+      // Buscar o ID do atendimento atual
+      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      
+      const response = await iniciarAtendimento(atendimentoId, dados);
       console.log('✅ Resposta do iniciar atendimento:', response);
+      
+      setShowIniciarModal(false);
       mostrarNotificacao('✅ Atendimento iniciado com sucesso!', 'success');
       setHistoricoAtualizado(true);
       setTimeout(() => setHistoricoAtualizado(false), 3000);
@@ -399,6 +422,24 @@ const BarbeiroDashboard = ({ onLogout }) => {
           atendendoAtual={atendendoAtual}
           setAtendendoAtual={setAtendendoAtual}
           onHistoricoAtualizado={() => setHistoricoAtualizado(true)}
+        />
+
+        {/* Modal de Finalizar Atendimento */}
+        <FinalizarAtendimentoModal
+          isOpen={showFinalizarModal}
+          onClose={() => setShowFinalizarModal(false)}
+          onConfirm={handleConfirmarFinalizacao}
+          cliente={atendendoAtual}
+          loading={filaLoading}
+        />
+
+        {/* Modal de Iniciar Atendimento */}
+        <IniciarAtendimentoModal
+          isOpen={showIniciarModal}
+          onClose={() => setShowIniciarModal(false)}
+          onConfirm={handleConfirmarInicio}
+          cliente={atendendoAtual}
+          loading={filaLoading}
         />
       </div>
     </div>

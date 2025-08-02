@@ -192,6 +192,19 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       setFila(filaArray);
       console.log('✅ Estado da fila atualizado com', filaArray.length, 'clientes');
       
+      // ✅ ATUALIZAR ATENDENDO ATUAL - Verificar se há cliente em atendimento
+      const clienteEmAtendimento = filaArray.find(cliente => 
+        cliente.status === 'atendendo' || cliente.status === 'em_atendimento'
+      );
+      
+      if (clienteEmAtendimento) {
+        console.log('🔍 Cliente em atendimento encontrado:', clienteEmAtendimento.nome);
+        setAtendendoAtual(clienteEmAtendimento);
+      } else {
+        console.log('🔍 Nenhum cliente em atendimento encontrado');
+        setAtendendoAtual(null);
+      }
+      
       // Estatísticas são carregadas automaticamente pelo hook useEstatisticas
       try {
         await carregarEstatisticas();
@@ -357,6 +370,12 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       // Atualizar estado local
       await carregarFilaAtual();
 
+      // ✅ Forçar atualização adicional após um pequeno delay para garantir sincronização
+      setTimeout(async () => {
+        console.log('🔄 Forçando atualização adicional após chamar próximo...');
+        await carregarFilaAtual();
+      }, 1000);
+
       console.log('✅ Próximo cliente chamado com sucesso');
     } catch (err) {
       console.error('❌ Erro ao chamar próximo cliente:', err);
@@ -368,13 +387,13 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   }, [barbeariaId]);
 
     // Finalizar atendimento (BARBEIRO)
-  const finalizarAtendimento = useCallback(async (clienteId, observacoes = '') => {
+  const finalizarAtendimento = useCallback(async (atendimentoId, dados) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Finalizando atendimento para cliente:', clienteId);
-      const response = await filaService.finalizarAtendimento(clienteId, observacoes);
+      console.log('🚀 Finalizando atendimento:', { atendimentoId, dados });
+      const response = await filaService.finalizarAtendimento(atendimentoId, dados);
       console.log('✅ Resposta da API finalizar atendimento:', response);
 
       // Invalidar cache da fila
@@ -384,11 +403,12 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       await carregarFilaAtual();
 
       // Limpar atendimento atual se for o mesmo cliente
-      if (atendendoAtual && atendendoAtual.id === clienteId) {
+      if (atendendoAtual && atendendoAtual.id === dados.cliente_id) {
         setAtendendoAtual(null);
       }
 
       console.log('✅ Atendimento finalizado com sucesso');
+      return response;
     } catch (err) {
       console.error('❌ Erro ao finalizar atendimento:', err);
       setError('Erro ao finalizar atendimento.');
@@ -642,16 +662,16 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   }, [statusBarbeiro]);
 
   // Iniciar atendimento (BARBEIRO)
-  const iniciarAtendimento = useCallback(async (clienteId = null) => {
+  const iniciarAtendimento = useCallback(async (atendimentoId, dados) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Iniciando atendimento para cliente:', clienteId);
+      console.log('🚀 Iniciando atendimento:', { atendimentoId, dados });
       
       // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
       console.log('🔍 Verificando permissões para iniciar atendimento:', {
-        clienteId,
+        atendimentoId,
         barbeariaId,
         statusBarbeiro: statusBarbeiro?.barbeiro,
         isBarbeiroAtivo: isBarbeiroAtivo(barbeariaId)
@@ -660,29 +680,14 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       if (!isBarbeiroAtivo(barbeariaId)) {
         throw new Error('Você precisa estar ativo na barbearia para iniciar atendimentos');
       }
-      
-      // Se não foi passado clienteId, pegar o primeiro da fila
-      if (!clienteId && fila.length > 0) {
-        const primeiroCliente = fila.find(cliente => cliente.status === 'aguardando');
-        if (primeiroCliente) {
-          clienteId = primeiroCliente.id;
-        }
-      }
 
-      if (!clienteId) {
-        throw new Error('Nenhum cliente disponível para atendimento');
+      if (!atendimentoId) {
+        throw new Error('ID do atendimento não fornecido');
       }
 
       // ✅ CHAMAR A API PARA INICIAR ATENDIMENTO
-      const response = await filaService.iniciarAtendimento(barbeariaId, clienteId);
+      const response = await filaService.iniciarAtendimento(atendimentoId, dados);
       console.log('✅ Resposta da API iniciar atendimento:', response);
-
-      // Atualizar status do cliente para 'atendendo'
-      const cliente = fila.find(c => c.id === clienteId);
-      if (cliente) {
-        console.log('🔍 Cliente encontrado na fila:', cliente);
-        setAtendendoAtual(cliente);
-      }
 
       // Invalidar cache da fila
       console.log('🔄 Invalidando cache da fila para barbearia:', barbeariaId);
@@ -699,6 +704,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       }, 1000);
 
       console.log('✅ Atendimento iniciado com sucesso');
+      return response;
     } catch (err) {
       console.error('❌ Erro ao iniciar atendimento:', err);
       setError('Erro ao iniciar atendimento.');
@@ -706,7 +712,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [barbeariaId, fila, isBarbeiroAtivo]);
+  }, [barbeariaId, isBarbeiroAtivo]);
 
   // Obter fila filtrada por barbeiro
   const getFilaBarbeiro = useCallback(() => {

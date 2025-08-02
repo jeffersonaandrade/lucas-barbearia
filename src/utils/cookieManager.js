@@ -60,12 +60,36 @@ export class CookieManager {
   static setFilaToken(token) {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     localStorage.setItem('fila_token', token);
+    // Salvar timestamp de expiração (4 horas = 4 * 60 * 60 * 1000 ms)
+    const expirationTime = Date.now() + (4 * 60 * 60 * 1000);
+    localStorage.setItem('fila_token_expires', expirationTime.toString());
     console.log('🍪 Fila token salvo no localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
+    console.log('⏰ Token expira em:', new Date(expirationTime).toLocaleString());
   }
 
   static getFilaToken() {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     const token = localStorage.getItem('fila_token');
+    const expirationTime = localStorage.getItem('fila_token_expires');
+    
+    // Verificar se o token expirou
+    if (token && expirationTime) {
+      const now = Date.now();
+      const expiresAt = parseInt(expirationTime);
+      
+      if (now > expiresAt) {
+        console.log('⏰ Token da fila expirado, limpando dados...');
+        this.clearFilaCookies();
+        return null;
+      }
+      
+      const remainingTime = expiresAt - now;
+      const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
+      const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+      
+      console.log(`🔍 CookieManager.getFilaToken - Token válido por mais ${remainingHours}h ${remainingMinutes}m`);
+    }
+    
     console.log('🔍 CookieManager.getFilaToken - Token do localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
     return token;
   }
@@ -73,12 +97,36 @@ export class CookieManager {
   static setClienteData(clienteData) {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     localStorage.setItem('cliente_data', JSON.stringify(clienteData));
+    // Salvar timestamp de expiração (4 horas = 4 * 60 * 60 * 1000 ms)
+    const expirationTime = Date.now() + (4 * 60 * 60 * 1000);
+    localStorage.setItem('cliente_data_expires', expirationTime.toString());
     console.log('🍪 Cliente data salvo no localStorage:', clienteData);
+    console.log('⏰ Dados expiram em:', new Date(expirationTime).toLocaleString());
   }
 
   static getClienteData() {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     const clienteData = localStorage.getItem('cliente_data');
+    const expirationTime = localStorage.getItem('cliente_data_expires');
+    
+    // Verificar se os dados expiraram
+    if (clienteData && expirationTime) {
+      const now = Date.now();
+      const expiresAt = parseInt(expirationTime);
+      
+      if (now > expiresAt) {
+        console.log('⏰ Dados do cliente expirados, limpando...');
+        this.clearFilaCookies();
+        return null;
+      }
+      
+      const remainingTime = expiresAt - now;
+      const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
+      const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+      
+      console.log(`🔍 Dados do cliente válidos por mais ${remainingHours}h ${remainingMinutes}m`);
+    }
+    
     if (clienteData) {
       try {
         return JSON.parse(clienteData);
@@ -93,12 +141,36 @@ export class CookieManager {
   static setBarbeariaId(barbeariaId) {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     localStorage.setItem('fila_barbearia_id', barbeariaId);
+    // Salvar timestamp de expiração (4 horas = 4 * 60 * 60 * 1000 ms)
+    const expirationTime = Date.now() + (4 * 60 * 60 * 1000);
+    localStorage.setItem('fila_barbearia_id_expires', expirationTime.toString());
     console.log('🍪 Barbearia ID salvo no localStorage:', barbeariaId);
+    console.log('⏰ ID expira em:', new Date(expirationTime).toLocaleString());
   }
 
   static getBarbeariaId() {
     // SOLUÇÃO TEMPORÁRIA: Usar localStorage em vez de cookies para desenvolvimento
     const barbeariaId = localStorage.getItem('fila_barbearia_id');
+    const expirationTime = localStorage.getItem('fila_barbearia_id_expires');
+    
+    // Verificar se o ID expirou
+    if (barbeariaId && expirationTime) {
+      const now = Date.now();
+      const expiresAt = parseInt(expirationTime);
+      
+      if (now > expiresAt) {
+        console.log('⏰ ID da barbearia expirado, limpando dados...');
+        this.clearFilaCookies();
+        return null;
+      }
+      
+      const remainingTime = expiresAt - now;
+      const remainingHours = Math.floor(remainingTime / (60 * 60 * 1000));
+      const remainingMinutes = Math.floor((remainingTime % (60 * 60 * 1000)) / (60 * 1000));
+      
+      console.log(`🔍 ID da barbearia válido por mais ${remainingHours}h ${remainingMinutes}m`);
+    }
+    
     console.log('🔍 CookieManager.getBarbeariaId - ID do localStorage:', barbeariaId);
     return barbeariaId;
   }
@@ -127,8 +199,11 @@ export class CookieManager {
   static clearFilaCookies() {
     // SOLUÇÃO TEMPORÁRIA: Limpar localStorage em vez de cookies
     localStorage.removeItem('fila_token');
+    localStorage.removeItem('fila_token_expires');
     localStorage.removeItem('cliente_data');
+    localStorage.removeItem('cliente_data_expires');
     localStorage.removeItem('fila_barbearia_id');
+    localStorage.removeItem('fila_barbearia_id_expires');
     localStorage.removeItem('qr_access');
     console.log('🧹 Todos os dados da fila foram limpos do localStorage');
   }
@@ -140,6 +215,46 @@ export class CookieManager {
     const barbeariaId = this.getBarbeariaId();
     
     return !!(token && clienteData && barbeariaId);
+  }
+
+  // Verificar se os dados da fila estão expirados
+  static isFilaDataExpired() {
+    const tokenExpires = localStorage.getItem('fila_token_expires');
+    const clienteExpires = localStorage.getItem('cliente_data_expires');
+    const barbeariaExpires = localStorage.getItem('fila_barbearia_id_expires');
+    
+    if (!tokenExpires || !clienteExpires || !barbeariaExpires) {
+      return true; // Se não há timestamps, considerar expirado
+    }
+    
+    const now = Date.now();
+    const tokenExpiresAt = parseInt(tokenExpires);
+    const clienteExpiresAt = parseInt(clienteExpires);
+    const barbeariaExpiresAt = parseInt(barbeariaExpires);
+    
+    return now > tokenExpiresAt || now > clienteExpiresAt || now > barbeariaExpiresAt;
+  }
+
+  // Obter tempo restante dos dados da fila
+  static getFilaDataRemainingTime() {
+    const tokenExpires = localStorage.getItem('fila_token_expires');
+    const clienteExpires = localStorage.getItem('cliente_data_expires');
+    const barbeariaExpires = localStorage.getItem('fila_barbearia_id_expires');
+    
+    if (!tokenExpires || !clienteExpires || !barbeariaExpires) {
+      return 0;
+    }
+    
+    const now = Date.now();
+    const tokenExpiresAt = parseInt(tokenExpires);
+    const clienteExpiresAt = parseInt(clienteExpires);
+    const barbeariaExpiresAt = parseInt(barbeariaExpires);
+    
+    // Pegar o menor tempo restante
+    const minExpiresAt = Math.min(tokenExpiresAt, clienteExpiresAt, barbeariaExpiresAt);
+    const remainingTime = minExpiresAt - now;
+    
+    return Math.max(0, remainingTime);
   }
 
   // Obter dados completos do cliente na fila

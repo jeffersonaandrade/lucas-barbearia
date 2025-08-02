@@ -188,7 +188,7 @@ const EntrarFila = () => {
                       id="telefone"
                       value={formData.telefone}
                       onChange={(e) => handleInputChange('telefone', formatarTelefone(e.target.value))}
-                      placeholder="(11) 99999-9999"
+                      placeholder="(81) 99999-9999"
                       className="bg-secondary border-border text-foreground"
                       required
                     />

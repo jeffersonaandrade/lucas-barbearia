@@ -247,7 +247,7 @@ const AdminAdicionarFila = () => {
 
   const handleSimularClienteAleatorio = () => {
     const nomes = ['João Silva', 'Pedro Santos', 'Carlos Ferreira', 'Miguel Costa', 'Lucas Oliveira'];
-    const telefones = ['(11) 99999-9999', '(21) 88888-8888', '(31) 77777-7777', '(41) 66666-6666', '(51) 55555-5555'];
+    const telefones = ['(81) 99999-9999', '(21) 88888-8888', '(31) 77777-7777', '(41) 66666-6666', '(51) 55555-5555'];
     
     const nomeAleatorio = nomes[Math.floor(Math.random() * nomes.length)];
     const telefoneAleatorio = telefones[Math.floor(Math.random() * telefones.length)];

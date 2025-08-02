@@ -268,8 +268,8 @@ http://localhost:5174/qr-code/3
 {
   "id": 1,
   "nome": "Lucas Barbearia - Centro",
-  "endereco": "Rua das Flores, 123 - Centro",
-  "telefone": "(11) 99999-9999",
+  "endereco": "Rua das Barbearias, 123",
+  "telefone": "(81) 99999-9999",
   "barbeiros": [
     {
       "id": "joao",
@@ -289,7 +289,7 @@ http://localhost:5174/qr-code/3
 {
   "id": 1,
   "nome": "João Silva",
-  "telefone": "(11) 99999-9999",
+  "telefone": "(81) 99999-9999",
   "barbeiro": "Fila Geral",
   "status": "atendendo",
   "posicao": 1,

@@ -21,8 +21,16 @@ const authenticateToken = (req, res, next) => {
     path: req.path
   });
   
-  // Para desenvolvimento, aceitar qualquer token que comece com 'auth_' ou 'mock_token_'
-  if (token && (token.startsWith('auth_') || token.startsWith('mock_token_'))) {
+  // Para desenvolvimento, aceitar qualquer token que:
+  // 1. Comece com 'auth_' ou 'mock_token_'
+  // 2. Seja um JWT válido (contém pontos)
+  // 3. Seja um token de desenvolvimento
+  if (token && (
+    token.startsWith('auth_') || 
+    token.startsWith('mock_token_') ||
+    token.includes('.') || // JWT tokens contêm pontos
+    token.length > 20 // Tokens reais são longos
+  )) {
     console.log('✅ Token válido para desenvolvimento');
     next();
   } else {
@@ -279,7 +287,7 @@ app.get('/api/users/barbeiros', (req, res) => {
       id: 'barbeiro_1',
       nome: 'João Silva',
       email: 'joao@lucasbarbearia.com',
-      telefone: '(11) 99999-9999',
+      telefone: '(81) 99999-9999',
       especialidade: 'Cortes modernos',
       disponivel: true,
       ativo: true,
@@ -786,7 +794,7 @@ app.post('/api/test/init-data', (req, res) => {
       id: 1,
       nome: "Barbearia Teste",
       endereco: "Rua Teste, 123",
-      telefone: "(11) 99999-9999",
+      telefone: "(81) 99999-9999",
       email: "teste@barbearia.com",
       horario: {
         segunda: { aberto: true, inicio: "09:00", fim: "18:00" },
@@ -868,6 +876,77 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Rota para listar serviços
+app.get('/api/configuracoes/servicos', authenticateToken, (req, res) => {
+  console.log('🔧 DEV-SERVER: Listando serviços');
+  
+  // Dados mock de serviços
+  const servicos = [
+    {
+      id: 1,
+      barbearia_id: 1,
+      nome: "Corte Masculino",
+      descricao: "Corte tradicional masculino com acabamento profissional",
+      preco: 35.00,
+      duracao_estimada: 30,
+      categoria: "corte",
+      ativo: true,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: 2,
+      barbearia_id: 1,
+      nome: "Barba",
+      descricao: "Acabamento de barba com navalha e produtos premium",
+      preco: 25.00,
+      duracao_estimada: 20,
+      categoria: "barba",
+      ativo: true,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: 3,
+      barbearia_id: 1,
+      nome: "Corte + Barba",
+      descricao: "Combo completo com desconto especial",
+      preco: 50.00,
+      duracao_estimada: 45,
+      categoria: "combo",
+      ativo: true,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: 4,
+      barbearia_id: 1,
+      nome: "Sobrancelha",
+      descricao: "Design e modelagem de sobrancelhas",
+      preco: 15.00,
+      duracao_estimada: 15,
+      categoria: "estetica",
+      ativo: true,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z"
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: servicos
+  });
+});
+
+// Endpoint de histórico - REMOVIDO MOCK
+app.get('/api/historico', (req, res) => {
+  console.log('🚫 DEV-SERVER: Endpoint /api/historico BLOQUEADO - Use backend real');
+  res.status(404).json({
+    success: false,
+    error: 'Use backend real - endpoint não disponível no dev-server'
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
   console.log(`📋 Endpoints disponíveis:`);
@@ -887,6 +966,8 @@ app.listen(PORT, () => {
   console.log(`   POST /api/fila/remover/:clienteId`);
   console.log(`   POST /api/fila/admin/remover/:clienteId`);
   console.log(`   GET  /api/fila/:barbeariaId/estatisticas`);
+  console.log(`   GET  /api/configuracoes/servicos`);
+  console.log(`   GET  /api/historico`);
   console.log(`   POST /api/test/init-data`);
   console.log(`   GET  /api/health`);
 }); 
