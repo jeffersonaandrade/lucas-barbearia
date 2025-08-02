@@ -155,18 +155,24 @@ const AdminDashboardBarbeiro = ({
 
   const handleConfirmarFinalizacao = async (dados) => {
     try {
-      console.log('🚀 Finalizando atendimento com dados:', dados);
+      console.log('🏁 Finalizando atendimento com dados:', dados);
       
-      // Buscar o ID do atendimento atual
-      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
+      const clienteId = atendendoAtual?.id;
       
-      await finalizarAtendimento(atendimentoId, dados);
-      setAtendendoAtual(null);
+      if (!clienteId) {
+        throw new Error('ID do cliente não encontrado.');
+      }
+      
+      await finalizarAtendimento(clienteId, dados);
+      console.log('✅ Atendimento finalizado com sucesso');
+      
       setShowFinalizarModal(false);
-      setHistoricoAtualizado(true);
-      setTimeout(() => setHistoricoAtualizado(false), 3000);
+      // Mostrar notificação de sucesso
+      alert('✅ Atendimento finalizado com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao finalizar atendimento:', error);
+      alert(`❌ Erro ao finalizar atendimento: ${error.message}`);
     }
   };
 
@@ -183,14 +189,22 @@ const AdminDashboardBarbeiro = ({
     try {
       console.log('🚀 Iniciando atendimento com dados:', dados);
       
-      // Buscar o ID do atendimento atual
-      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
+      const clienteId = atendendoAtual?.id;
       
-      await iniciarAtendimento(atendimentoId, dados);
-      setShowIniciarModal(false);
+      if (!clienteId) {
+        throw new Error('ID do cliente não encontrado. Tente chamar o próximo cliente novamente.');
+      }
+
+      await iniciarAtendimento(clienteId, dados);
       console.log('✅ Atendimento iniciado com sucesso');
+      
+      setShowIniciarModal(false);
+      // Mostrar notificação de sucesso
+      alert('✅ Atendimento iniciado com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao iniciar atendimento:', error);
+      alert(`❌ Erro ao iniciar atendimento: ${error.message}`);
     }
   };
 
@@ -387,6 +401,7 @@ const AdminDashboardBarbeiro = ({
           onClose={() => setShowIniciarModal(false)}
           onConfirm={handleConfirmarInicio}
           cliente={atendendoAtual}
+          barbeariaId={barbeariaAtual?.id}
           loading={filaLoading}
         />
       </div>

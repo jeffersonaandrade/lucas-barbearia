@@ -600,12 +600,28 @@ export const filaService = {
           });
         },
 
+  // Iniciar atendimento simplificado (PRIVADO - requer autenticação de barbeiro)
+  async iniciarAtendimentoSimplificado(clienteId, dados) {
+    return api.put(`/fila/iniciar-atendimento/${clienteId}`, {
+      servico_id: dados.servico_id
+    });
+  },
+
             // Finalizar atendimento (PRIVADO - requer autenticação de barbeiro)
   async finalizarAtendimento(atendimentoId, dados) {
     return api.put(`/fila/gerenciar/finalizar/${atendimentoId}`, {
       servico_id: dados.servico_id,
       valor_servico: dados.valor_servico,
       forma_pagamento: dados.forma_pagamento,
+      observacoes: dados.observacoes || ''
+    });
+  },
+
+  // Finalizar atendimento simplificado (PRIVADO - requer autenticação de barbeiro)
+  async finalizarAtendimentoSimplificado(clienteId, dados) {
+    return api.put(`/fila/finalizar-atendimento/${clienteId}`, {
+      valor_servico: dados.valor_servico,
+      forma_pagamento: dados.forma_pagamento || 'dinheiro',
       observacoes: dados.observacoes || ''
     });
   },
@@ -908,8 +924,9 @@ export const devService = {
 // Serviço de configurações
 export const configuracoesService = {
   // Listar serviços (PRIVADO - requer role admin ou gerente)
-  async listarServicos() {
-    return api.get('/configuracoes/servicos');
+  async listarServicos(barbeariaId = null) {
+    const params = barbeariaId ? `?barbearia_id=${barbeariaId}` : '';
+    return api.get(`/configuracoes/servicos${params}`);
   },
 
   // Criar serviço (PRIVADO - requer role admin ou gerente)

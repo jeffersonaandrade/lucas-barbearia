@@ -14,7 +14,7 @@ export const useConfiguracoes = (barbeariaId) => {
     
     try {
       // Usar listarServicos em vez de carregarConfiguracoes
-      const data = await configuracoesService.listarServicos();
+      const data = await configuracoesService.listarServicos(barbeariaId);
       
       // Mapear dados do backend para o formato esperado pelo frontend
       const servicosMapeados = (data.data || []).map(servico => ({

@@ -88,7 +88,7 @@ const AdminComissoes = () => {
       setComissoes(comissoesResponse.data || []);
 
       // Carregar serviços da barbearia
-      const servicosResponse = await configuracoesService.listarServicos();
+      const servicosResponse = await configuracoesService.listarServicos(selectedBarbearia);
       setServicos(servicosResponse.data || []);
 
       // Carregar barbeiros da barbearia

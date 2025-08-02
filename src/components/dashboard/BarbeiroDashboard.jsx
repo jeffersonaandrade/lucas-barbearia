@@ -170,13 +170,18 @@ const BarbeiroDashboard = ({ onLogout }) => {
 
   const handleConfirmarFinalizacao = async (dados) => {
     try {
-      console.log('🚀 Finalizando atendimento com dados:', dados);
+      console.log('🏁 Finalizando atendimento com dados:', dados);
       
-      // Buscar o ID do atendimento atual
-      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
+      const clienteId = atendendoAtual?.id;
       
-      await finalizarAtendimento(atendimentoId, dados);
-      setAtendendoAtual(null);
+      if (!clienteId) {
+        throw new Error('ID do cliente não encontrado.');
+      }
+      
+      const response = await finalizarAtendimento(clienteId, dados);
+      console.log('✅ Resposta do finalizar atendimento:', response);
+      
       setShowFinalizarModal(false);
       mostrarNotificacao('✅ Atendimento finalizado com sucesso!', 'success');
       setHistoricoAtualizado(true);
@@ -225,10 +230,14 @@ const BarbeiroDashboard = ({ onLogout }) => {
 
       console.log('🚀 Iniciando atendimento com dados:', dados);
       
-      // Buscar o ID do atendimento atual
-      const atendimentoId = atendendoAtual?.atendimento_id || atendendoAtual?.id;
+      // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
+      const clienteId = atendendoAtual?.id;
       
-      const response = await iniciarAtendimento(atendimentoId, dados);
+      if (!clienteId) {
+        throw new Error('ID do cliente não encontrado. Tente chamar o próximo cliente novamente.');
+      }
+      
+      const response = await iniciarAtendimento(clienteId, dados);
       console.log('✅ Resposta do iniciar atendimento:', response);
       
       setShowIniciarModal(false);
@@ -439,6 +448,7 @@ const BarbeiroDashboard = ({ onLogout }) => {
           onClose={() => setShowIniciarModal(false)}
           onConfirm={handleConfirmarInicio}
           cliente={atendendoAtual}
+          barbeariaId={barbeariaAtual?.id}
           loading={filaLoading}
         />
       </div>

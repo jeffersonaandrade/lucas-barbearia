@@ -286,28 +286,19 @@ const FilaManager = ({
     console.log('🔍 getFilaEspecifica - Fila completa:', filaCompleta);
     console.log('🔍 getFilaEspecifica - barbeiroAtual:', barbeiroAtual);
     
-    // Se estamos na aba "Minha Fila", usar os dados já carregados da API
-    if (tipoFilaAtual === 'especifica') {
-      console.log('🔍 getFilaEspecifica - Usando tipoFilaAtual === especifica');
-      return filaCompleta;
-    }
-    
-    // Caso contrário, filtrar localmente (fallback)
+    // ✅ CORREÇÃO: Remover a condição que impedia a filtragem correta
+    // A lógica de filtragem deve ser aplicada SEMPRE que esta função é chamada
     const filaEspecifica = filaCompleta.filter(c => {
-      // ✅ Verificar se o cliente tem barbeiro como objeto ou string
-      let barbeiroCliente = 'Fila Geral';
+      // Verificar se o cliente tem barbeiro e se é o barbeiro atual
+      const temBarbeiro = c.barbeiro !== null && c.barbeiro !== undefined;
+      const escolheuEsteBarbeiro = temBarbeiro && (
+        c.barbeiro?.id === barbeiroAtual?.id || 
+        c.barbeiro?.nome === barbeiroAtual?.nome
+      );
       
-      if (typeof c.barbeiro === 'object' && c.barbeiro !== null) {
-        barbeiroCliente = c.barbeiro.nome || 'Fila Geral';
-      } else if (typeof c.barbeiro === 'string') {
-        barbeiroCliente = c.barbeiro;
-      }
+      console.log('🔍 Cliente:', c.nome, 'TemBarbeiro:', temBarbeiro, 'EscolheuEsteBarbeiro:', escolheuEsteBarbeiro);
       
-      // ✅ CORREÇÃO: Comparar por ID do barbeiro ou nome
-      const isFilaEspecifica = c.barbeiro?.id === barbeiroAtual?.id || barbeiroCliente === barbeiroAtual?.nome;
-      console.log('🔍 Cliente:', c.nome, 'Barbeiro:', barbeiroCliente, 'BarbeiroID:', c.barbeiro?.id, 'BarbeiroAtual:', barbeiroAtual?.nome, 'IsFilaEspecifica:', isFilaEspecifica);
-      
-      return isFilaEspecifica;
+      return escolheuEsteBarbeiro;
     });
     
     console.log('🔍 getFilaEspecifica - Resultado:', filaEspecifica);
@@ -318,21 +309,14 @@ const FilaManager = ({
     const filaCompleta = getFilaBarbearia();
     console.log('🔍 getFilaGeral - Fila completa:', filaCompleta);
     
+    // ✅ CORREÇÃO: Mostrar TODOS os clientes na fila geral
+    // A fila geral deve mostrar todos os clientes, independente do barbeiro
     const filaGeral = filaCompleta.filter(c => {
-      // ✅ Verificar se o cliente tem barbeiro como objeto ou string
-      let barbeiroCliente = 'Fila Geral';
+      // Mostrar todos os clientes com status "aguardando"
+      const isAguardando = c.status === 'aguardando';
+      console.log('🔍 Cliente:', c.nome, 'Status:', c.status, 'IsAguardando:', isAguardando);
       
-      if (typeof c.barbeiro === 'object' && c.barbeiro !== null) {
-        barbeiroCliente = c.barbeiro.nome || 'Fila Geral';
-      } else if (typeof c.barbeiro === 'string') {
-        barbeiroCliente = c.barbeiro;
-      }
-      
-      // ✅ CORREÇÃO: Mostrar TODOS os clientes na fila geral, exceto os sem barbeiro
-      const isFilaGeral = c.barbeiro !== null && c.barbeiro !== undefined;
-      console.log('🔍 Cliente:', c.nome, 'Barbeiro:', barbeiroCliente, 'IsFilaGeral:', isFilaGeral);
-      
-      return isFilaGeral;
+      return isAguardando;
     });
     
     console.log('🔍 getFilaGeral - Resultado:', filaGeral);

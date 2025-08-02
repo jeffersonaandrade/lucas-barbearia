@@ -21,6 +21,7 @@ const IniciarAtendimentoModal = ({
   onClose, 
   onConfirm, 
   cliente, 
+  barbeariaId, // Adicionar barbeariaId como prop
   loading = false 
 }) => {
   const [servicos, setServicos] = useState([]);
@@ -32,14 +33,21 @@ const IniciarAtendimentoModal = ({
 
   // Carregar serviços disponíveis
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && barbeariaId) { // Verificar se tem barbeariaId
       carregarServicos();
     }
-  }, [isOpen]);
+  }, [isOpen, barbeariaId]); // Adicionar barbeariaId como dependência
 
   const carregarServicos = async () => {
     try {
-      const response = await configuracoesService.listarServicos();
+      // Verificar se tem barbeariaId antes de fazer a chamada
+      if (!barbeariaId) {
+        setError('ID da barbearia não encontrado.');
+        return;
+      }
+
+      // Chamar API com barbearia_id como parâmetro
+      const response = await configuracoesService.listarServicos(barbeariaId);
       
       // Mapear dados do backend para o formato esperado pelo frontend
       const servicosMapeados = (response.data || []).map(servico => ({

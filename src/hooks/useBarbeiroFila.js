@@ -386,24 +386,36 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     }
   }, [barbeariaId]);
 
-    // Finalizar atendimento (BARBEIRO)
-  const finalizarAtendimento = useCallback(async (atendimentoId, dados) => {
+  // Finalizar atendimento (BARBEIRO)
+  const finalizarAtendimento = useCallback(async (clienteId, dados) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Finalizando atendimento:', { atendimentoId, dados });
-      const response = await filaService.finalizarAtendimento(atendimentoId, dados);
+      console.log('🏁 Finalizando atendimento:', { clienteId, dados });
+      
+      // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
+      if (!isBarbeiroAtivo(barbeariaId)) {
+        throw new Error('Você precisa estar ativo na barbearia para finalizar atendimentos');
+      }
+
+      if (!clienteId) {
+        throw new Error('ID do cliente não fornecido');
+      }
+
+      // ✅ USAR O NOVO ENDPOINT SIMPLIFICADO
+      const response = await filaService.finalizarAtendimentoSimplificado(clienteId, dados);
       console.log('✅ Resposta da API finalizar atendimento:', response);
 
       // Invalidar cache da fila
+      console.log('🔄 Invalidando cache da fila para barbearia:', barbeariaId);
       filaCache.invalidate(barbeariaId);
 
       // Atualizar estado local
       await carregarFilaAtual();
 
       // Limpar atendimento atual se for o mesmo cliente
-      if (atendendoAtual && atendendoAtual.id === dados.cliente_id) {
+      if (atendendoAtual && atendendoAtual.id === clienteId) {
         setAtendendoAtual(null);
       }
 
@@ -662,16 +674,16 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   }, [statusBarbeiro]);
 
   // Iniciar atendimento (BARBEIRO)
-  const iniciarAtendimento = useCallback(async (atendimentoId, dados) => {
+  const iniciarAtendimento = useCallback(async (clienteId, dados) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Iniciando atendimento:', { atendimentoId, dados });
+      console.log('🚀 Iniciando atendimento:', { clienteId, dados });
       
       // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
       console.log('🔍 Verificando permissões para iniciar atendimento:', {
-        atendimentoId,
+        clienteId,
         barbeariaId,
         statusBarbeiro: statusBarbeiro?.barbeiro,
         isBarbeiroAtivo: isBarbeiroAtivo(barbeariaId)
@@ -681,12 +693,12 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         throw new Error('Você precisa estar ativo na barbearia para iniciar atendimentos');
       }
 
-      if (!atendimentoId) {
-        throw new Error('ID do atendimento não fornecido');
+      if (!clienteId) {
+        throw new Error('ID do cliente não fornecido');
       }
 
-      // ✅ CHAMAR A API PARA INICIAR ATENDIMENTO
-      const response = await filaService.iniciarAtendimento(atendimentoId, dados);
+      // ✅ USAR O NOVO ENDPOINT SIMPLIFICADO
+      const response = await filaService.iniciarAtendimentoSimplificado(clienteId, dados);
       console.log('✅ Resposta da API iniciar atendimento:', response);
 
       // Invalidar cache da fila
