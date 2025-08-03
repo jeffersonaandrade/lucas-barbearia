@@ -71,8 +71,8 @@ const FilaManager = ({
   const [lastHistoricoUpdate, setLastHistoricoUpdate] = useState(0);
   
   // Configurações de cache
-  const filaCacheTimeout = 30000; // 30 segundos para fila
-  const historicoCacheTimeout = 300000; // 5 minutos para histórico
+  const filaCacheTimeout = 60000; // 60 segundos (1 minuto) para fila
+  const historicoCacheTimeout = 600000; // 10 minutos para histórico
   
   // Controle de chamadas duplicadas
   const filaCallInProgress = useRef(false);
@@ -86,24 +86,15 @@ const FilaManager = ({
 
   // Carregar dados do histórico
   const loadHistoricoData = useCallback(async (forceRefresh = false) => {
-    console.log('🚀 FilaManager - loadHistoricoData chamada:', {
-      forceRefresh,
-      barbeariaId: barbeariaAtual?.id,
-      barbeiroId: barbeiroAtual?.id,
-      userRole: userRole
-    });
-    
     const now = Date.now();
     
     // Se não há barbearia selecionada, não carregar histórico
     if (!barbeariaAtual?.id) {
-      console.log('❌ Nenhuma barbearia selecionada para histórico');
       return;
     }
 
     // Se não há dados de histórico em cache, usar array vazio
     if (!historicoCache) {
-      console.log('📊 Cache do histórico vazio, carregando dados...');
       setHistoricoData([]);
       // NÃO retornar aqui, continuar para carregar dados da API
     }
@@ -113,7 +104,6 @@ const FilaManager = ({
     
     if (barbeiroAtual?.id) {
       barbeiroId = barbeiroAtual.id;
-      console.log('✅ Usando ID do barbeiro do contexto:', barbeiroId);
     } else {
       // Fallback: tentar obter ID do usuário logado
       try {
@@ -121,27 +111,23 @@ const FilaManager = ({
         const userData = CookieManager.getUserData();
         if (userData?.id) {
           barbeiroId = userData.id;
-          console.log('✅ Usando ID do usuário logado como fallback:', barbeiroId);
         }
       } catch (error) {
-        console.log('⚠️ Erro ao obter dados do usuário:', error);
+        // Silenciar erro
       }
     }
 
     if (!barbeiroId) {
-      console.log('❌ Nenhum barbeiro selecionado para histórico');
       return;
     }
 
     // Evitar chamadas simultâneas
     if (historicoCallInProgress.current) {
-      console.log('🔄 Chamada de histórico já em andamento, aguardando...');
       return;
     }
 
     // Evitar chamadas muito frequentes
     if (!forceRefresh && lastHistoricoUpdate > 0 && (now - lastHistoricoUpdate) < historicoCacheTimeout) {
-      console.log('📊 Usando cache do histórico (última atualização há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
       setHistoricoData(historicoCache);
       return;
     }
@@ -151,7 +137,6 @@ const FilaManager = ({
         historicoCache && 
         historicoCache.length > 0 &&
         (now - lastHistoricoUpdate) < historicoCacheTimeout) {
-      console.log('📊 Usando cache do histórico (última chamada há', Math.round((now - lastHistoricoUpdate) / 1000), 'segundos)');
       setHistoricoData(historicoCache);
       return;
     }
@@ -159,9 +144,7 @@ const FilaManager = ({
     // Verificar se o usuário está autenticado
     const { CookieManager } = await import('@/utils/cookieManager.js');
     const token = CookieManager.getAdminToken();
-    console.log('🔐 Token de autenticação:', token ? 'Presente' : 'Ausente');
     if (!token) {
-      console.log('❌ Usuário não autenticado');
       return;
     }
 
@@ -169,7 +152,6 @@ const FilaManager = ({
       historicoCallInProgress.current = true;
       setLastHistoricoUpdate(now);
       setLoadingHistorico(true);
-      console.log('🔍 Carregando histórico para barbeiro:', barbeiroId);
       
       // Buscar histórico do mês atual (do dia 1 até o último dia do mês)
       const hoje = new Date();
@@ -179,22 +161,16 @@ const FilaManager = ({
       const dataInicio = primeiroDia.toISOString().split('T')[0];
       const dataFim = ultimoDia.toISOString().split('T')[0];
       
-      console.log('📅 Período do histórico:', { dataInicio, dataFim });
-      console.log('🔍 Parâmetros da chamada:', { data_inicio: dataInicio, data_fim: dataFim, barbeiro_id: barbeiroId });
-      
       const response = await historicoService.obterHistorico({
         data_inicio: dataInicio,
         data_fim: dataFim,
         barbeiro_id: barbeiroId
       });
       
-      console.log('📊 Resposta do histórico:', response);
-      console.log('📊 Dados do histórico:', response?.data);
-      console.log('📊 Sucesso da resposta:', response?.success);
-      
       if (response && response.data) {
-        setHistoricoData(response.data);
-        setHistoricoCache(response.data); // Salvar no cache
+        const historicoArray = Array.isArray(response.data) ? response.data : [];
+        setHistoricoData(historicoArray);
+        setHistoricoCache(historicoArray);
       } else {
         setHistoricoData([]);
         setHistoricoCache([]);
@@ -207,7 +183,7 @@ const FilaManager = ({
       setLoadingHistorico(false);
       historicoCallInProgress.current = false;
     }
-  }, [barbeariaAtual?.id, barbeiroAtual?.id, historicoCache, historicoCacheTimeout, lastHistoricoUpdate]); // Adicionado dependências
+  }, [barbeariaAtual?.id, barbeiroAtual?.id, userRole, historicoCache, lastHistoricoUpdate]);
 
   // Função para detectar clientes com status "próximo" ou "atendendo"
   const detectarClienteProximo = () => {
@@ -230,13 +206,10 @@ const FilaManager = ({
 
   // Funções para atualização manual
   const handleRefreshFila = () => {
-    console.log('🔄 Atualização da fila é gerenciada pelo hook useBarbeiroFila');
-    // A atualização é gerenciada pelo hook useBarbeiroFila
+    loadHistoricoData(true);
   };
 
   const handleRefreshHistorico = () => {
-    console.log('🔄 Atualização manual do histórico solicitada');
-    console.log('🔄 handleRefreshHistorico - Forçando refresh completo');
     loadHistoricoData(true);
   };
 
@@ -276,93 +249,33 @@ const FilaManager = ({
   }, [onHistoricoAtualizado]);
 
   const getFilaBarbearia = () => {
-    console.log('🔍 getFilaBarbearia - Clientes:', fila.length);
-    console.log('🔍 getFilaBarbearia - Fila completa:', fila);
     return fila;
   };
 
   const getFilaEspecifica = () => {
-    const filaCompleta = getFilaBarbearia();
-    console.log('🔍 getFilaEspecifica - Fila completa:', filaCompleta);
-    console.log('🔍 getFilaEspecifica - barbeiroAtual:', barbeiroAtual);
-    
-    // ✅ CORREÇÃO: Remover a condição que impedia a filtragem correta
-    // A lógica de filtragem deve ser aplicada SEMPRE que esta função é chamada
-    const filaEspecifica = filaCompleta.filter(c => {
-      // Verificar se o cliente tem barbeiro e se é o barbeiro atual
-      const temBarbeiro = c.barbeiro !== null && c.barbeiro !== undefined;
-      const escolheuEsteBarbeiro = temBarbeiro && (
-        c.barbeiro?.id === barbeiroAtual?.id || 
-        c.barbeiro?.nome === barbeiroAtual?.nome
+    // Para barbeiros, mostrar apenas clientes da sua fila
+    if (userRole === 'barbeiro' && barbeiroAtual?.id) {
+      return fila.filter(cliente => 
+        cliente.barbeiro_id === barbeiroAtual.id || 
+        cliente.barbeiro === 'Fila Geral' ||
+        !cliente.barbeiro_id // Clientes sem barbeiro específico
       );
-      
-      console.log('🔍 Cliente:', c.nome, 'TemBarbeiro:', temBarbeiro, 'EscolheuEsteBarbeiro:', escolheuEsteBarbeiro);
-      
-      return escolheuEsteBarbeiro;
-    });
+    }
     
-    console.log('🔍 getFilaEspecifica - Resultado:', filaEspecifica);
-    return filaEspecifica;
+    // Para outros roles, mostrar toda a fila
+    return fila;
   };
 
   const getFilaGeral = () => {
-    const filaCompleta = getFilaBarbearia();
-    console.log('🔍 getFilaGeral - Fila completa:', filaCompleta);
-    
-    // ✅ CORREÇÃO: Mostrar TODOS os clientes na fila geral
-    // A fila geral deve mostrar todos os clientes, independente do barbeiro
-    const filaGeral = filaCompleta.filter(c => {
-      // Mostrar todos os clientes com status "aguardando"
-      const isAguardando = c.status === 'aguardando';
-      console.log('🔍 Cliente:', c.nome, 'Status:', c.status, 'IsAguardando:', isAguardando);
-      
-      return isAguardando;
-    });
-    
-    console.log('🔍 getFilaGeral - Resultado:', filaGeral);
-    return filaGeral;
+    return fila;
   };
 
   const getFilaOrdenadaPorTempo = () => {
-    const fila = getFilaBarbearia();
     return ordenarFilaPorTempo(fila);
   };
 
   const getHistoricoAtendimentos = () => {
-    console.log('🔍 getHistoricoAtendimentos chamada:', {
-      historicoDataLength: historicoData?.length,
-      historicoData: historicoData
-    });
-    
-    // Usar dados da API se disponíveis, senão usar dados locais como fallback
-    if (historicoData && historicoData.length > 0) {
-      console.log('✅ Usando dados da API para histórico');
-      return historicoData.sort((a, b) => {
-        const dataA = a.data_fim || '';
-        const dataB = b.data_fim || '';
-        return dataB.localeCompare(dataA);
-      });
-    }
-    
-    // Fallback: buscar na fila local (para compatibilidade)
-    console.log('⚠️ Usando fallback da fila local para histórico');
-    const fila = getFilaBarbearia();
-    const hoje = new Date().toISOString().split('T')[0];
-    
-    const historicoFallback = fila
-      .filter(c => 
-        c.status === 'finalizado' && 
-        c.dataFinalizado === hoje && 
-        c.barbeiro === barbeiroAtual?.nome
-      )
-      .sort((a, b) => {
-        const horaA = a.horaFinalizado || '';
-        const horaB = b.horaFinalizado || '';
-        return horaB.localeCompare(horaA);
-      });
-    
-    console.log('📊 Histórico fallback:', historicoFallback);
-    return historicoFallback;
+    return historicoData;
   };
 
   if (!barbeariaAtual) {
@@ -379,16 +292,13 @@ const FilaManager = ({
   }
 
   // Logs para debug
-  console.log('🔍 Estado do FilaManager:');
-  console.log('- Loading:', isLoading);
-  console.log('- Barbearia atual:', barbeariaAtual);
-  console.log('- Fila:', fila);
-  console.log('- Fila ordenada por tempo:', getFilaOrdenadaPorTempo());
-
   return (
     <div className="space-y-6">
       {/* Cliente Atual */}
-      {atendendoAtual && atendendoAtual.status === 'atendendo' && (
+      {atendendoAtual && 
+       (atendendoAtual.status === 'atendendo' || atendendoAtual.status === 'em_atendimento') && 
+       atendendoAtual.status !== 'finalizado' && 
+       atendendoAtual.status !== 'concluido' && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -415,7 +325,10 @@ const FilaManager = ({
       )}
 
       {/* Cliente Chamado (Próximo) */}
-      {atendendoAtual && atendendoAtual.status === 'proximo' && (
+      {atendendoAtual && 
+       (atendendoAtual.status === 'proximo' || atendendoAtual.status === 'próximo') && 
+       atendendoAtual.status !== 'finalizado' && 
+       atendendoAtual.status !== 'concluido' && (
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">

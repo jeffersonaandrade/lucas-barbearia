@@ -12,7 +12,7 @@ import StatsManager from '@/components/ui/stats-manager.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Building2, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import FinalizarAtendimentoModal from '@/components/ui/finalizar-atendimento-modal.jsx';
 import IniciarAtendimentoModal from '@/components/ui/iniciar-atendimento-modal.jsx';
 
@@ -45,14 +45,6 @@ const BarbeiroDashboard = ({ onLogout }) => {
     isBarbeiroAtivo,
     getFilaBarbeiro
   } = useBarbeiroFila(barbeariaAtual?.id);
-
-  // Debug logs
-  console.log('🔍 BarbeiroDashboard - Status:', {
-    barbeariaId: barbeariaAtual?.id,
-    filaLength: fila.length,
-    statusBarbeiro: Object.keys(statusBarbeiro).length > 0 ? 'carregado' : 'vazio',
-    fila: fila
-  });
 
   // Hook para estatísticas
   const { stats, loading: statsLoading } = useDashboardStats('barbeiro', barbeariaAtual);
@@ -92,12 +84,23 @@ const BarbeiroDashboard = ({ onLogout }) => {
     }
   }, [atendendoHook, atendendoAtual, setAtendendoAtual]);
 
+  // Garantir que atendendoAtual seja limpo quando não houver cliente em atendimento
+  useEffect(() => {
+    if (atendendoAtual && 
+        atendendoAtual.status !== 'atendendo' && 
+        atendendoAtual.status !== 'em_atendimento' && 
+        atendendoAtual.status !== 'proximo' && 
+        atendendoAtual.status !== 'próximo' &&
+        atendendoAtual.status !== 'aguardando') {
+      setAtendendoAtual(null);
+    }
+  }, [atendendoAtual]);
+
   const handleBarbeariaChange = async (barbeariaId) => {
     const barbearia = barbearias.find(b => b.id === parseInt(barbeariaId));
     
     // Definir nova barbearia
     setBarbeariaAtual(barbearia);
-    console.log('🔄 Barbearia alterada para:', barbearia.nome);
     
     // Mostrar mensagem informativa se mudou de barbearia
     if (barbeariaAtual && barbeariaAtual.id !== barbearia.id) {
@@ -106,22 +109,9 @@ const BarbeiroDashboard = ({ onLogout }) => {
   };
 
   const handleToggleAtivo = async (barbeariaId) => {
-    console.log('🔄 handleToggleAtivo chamado:', {
-      barbeariaId,
-      barbeariaAtual,
-      barbeiroAtual,
-      statusBarbeiro: statusBarbeiro
-    });
-    
     try {
       const isAtivo = isBarbeiroAtivo(barbeariaId);
       const acao = isAtivo ? 'desativar' : 'ativar';
-      
-      console.log('🔄 Status atual:', {
-        isAtivo,
-        acao,
-        barbeariaId
-      });
       
       // Feedback visual imediato
       if (acao === 'ativar') {
@@ -170,8 +160,6 @@ const BarbeiroDashboard = ({ onLogout }) => {
 
   const handleConfirmarFinalizacao = async (dados) => {
     try {
-      console.log('🏁 Finalizando atendimento com dados:', dados);
-      
       // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
       const clienteId = atendendoAtual?.id;
       
@@ -179,13 +167,25 @@ const BarbeiroDashboard = ({ onLogout }) => {
         throw new Error('ID do cliente não encontrado.');
       }
       
+      // ✅ LIMPAR ATENDENDO ATUAL IMEDIATAMENTE
+      setAtendendoAtual(null);
+      
       const response = await finalizarAtendimento(clienteId, dados);
-      console.log('✅ Resposta do finalizar atendimento:', response);
       
       setShowFinalizarModal(false);
       mostrarNotificacao('✅ Atendimento finalizado com sucesso!', 'success');
       setHistoricoAtualizado(true);
       setTimeout(() => setHistoricoAtualizado(false), 3000);
+      
+      // Forçar atualização adicional após um delay
+      setTimeout(async () => {
+        try {
+          await carregarFilaAtual();
+        } catch (error) {
+          console.error('❌ Erro na atualização forçada:', error);
+        }
+      }, 2000);
+      
     } catch (error) {
       console.error('❌ Erro ao finalizar atendimento:', error);
       mostrarNotificacao(`❌ Erro ao finalizar atendimento: ${error.message}`, 'error');
@@ -228,8 +228,6 @@ const BarbeiroDashboard = ({ onLogout }) => {
         return;
       }
 
-      console.log('🚀 Iniciando atendimento com dados:', dados);
-      
       // ✅ USAR DIRETAMENTE O ID DO CLIENTE (SIMPLES!)
       const clienteId = atendendoAtual?.id;
       
@@ -238,12 +236,21 @@ const BarbeiroDashboard = ({ onLogout }) => {
       }
       
       const response = await iniciarAtendimento(clienteId, dados);
-      console.log('✅ Resposta do iniciar atendimento:', response);
       
       setShowIniciarModal(false);
       mostrarNotificacao('✅ Atendimento iniciado com sucesso!', 'success');
       setHistoricoAtualizado(true);
       setTimeout(() => setHistoricoAtualizado(false), 3000);
+      
+      // Forçar atualização adicional após um delay
+      setTimeout(async () => {
+        try {
+          await carregarFilaAtual();
+        } catch (error) {
+          console.error('❌ Erro na atualização forçada:', error);
+        }
+      }, 2000);
+      
     } catch (error) {
       console.error('❌ Erro ao iniciar atendimento:', error);
       mostrarNotificacao(`❌ Erro ao iniciar atendimento: ${error.message}`, 'error');
@@ -390,8 +397,6 @@ const BarbeiroDashboard = ({ onLogout }) => {
           </CardContent>
         </Card>
 
-
-
         {/* Gerenciador de Estatísticas */}
         <div className="mb-4 sm:mb-6">
           <StatsManager
@@ -414,6 +419,28 @@ const BarbeiroDashboard = ({ onLogout }) => {
             loading={filaLoading}
             disabled={!barbeariaAtual || !isBarbeiroAtivo(barbeariaAtual?.id)}
           />
+          
+          {/* Botão de atualização manual */}
+          <div className="mt-4 flex justify-center">
+            <Button
+              onClick={async () => {
+                try {
+                  await carregarFilaAtual();
+                  mostrarNotificacao('✅ Fila atualizada manualmente!', 'success');
+                } catch (error) {
+                  console.error('❌ Erro na atualização manual:', error);
+                  mostrarNotificacao('❌ Erro ao atualizar fila', 'error');
+                }
+              }}
+              disabled={filaLoading}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${filaLoading ? 'animate-spin' : ''}`} />
+              Atualizar Fila Manualmente
+            </Button>
+          </div>
         </div>
 
         {/* Gerenciador de Fila */}

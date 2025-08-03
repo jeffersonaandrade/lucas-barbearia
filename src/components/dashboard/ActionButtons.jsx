@@ -34,7 +34,7 @@ const ActionButtons = ({
       )}
 
       {/* Mensagem quando desabilitado por estar atendendo */}
-      {atendendoAtual && atendendoAtual.status === 'atendendo' && (
+      {atendendoAtual && (atendendoAtual.status === 'atendendo' || atendendoAtual.status === 'em_atendimento') && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -54,7 +54,7 @@ const ActionButtons = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-4">
         <Button 
           onClick={onChamarProximo}
-          disabled={loading || disabled || (atendendoAtual && atendendoAtual.status === 'atendendo')}
+          disabled={loading || disabled || (atendendoAtual && (atendendoAtual.status === 'atendendo' || atendendoAtual.status === 'em_atendimento'))}
           className="w-full bg-black text-white hover:bg-gray-800 border-black"
         >
           <Play className="mr-2 h-4 w-4" />
@@ -63,7 +63,7 @@ const ActionButtons = ({
         
         <Button 
           onClick={onIniciarAtendimento}
-          disabled={!atendendoAtual || atendendoAtual?.status !== 'próximo' || loading || disabled}
+          disabled={!atendendoAtual || (atendendoAtual?.status !== 'próximo' && atendendoAtual?.status !== 'proximo') || loading || disabled}
           className="w-full bg-green-600 text-white hover:bg-green-700 border-green-600"
         >
           <UserCheck className="mr-2 h-4 w-4" />
@@ -72,7 +72,11 @@ const ActionButtons = ({
         
         <Button 
           onClick={onFinalizarAtendimento}
-          disabled={!atendendoAtual || atendendoAtual?.status !== 'atendendo' || loading || disabled}
+          disabled={!atendendoAtual || 
+            (atendendoAtual?.status !== 'atendendo' && 
+             atendendoAtual?.status !== 'em_atendimento') || 
+            loading || 
+            disabled}
           className="w-full bg-black text-white hover:bg-gray-800 border-black"
         >
           <CheckCircle className="mr-2 h-4 w-4" />
@@ -90,7 +94,7 @@ const ActionButtons = ({
         
         <Button 
           onClick={onRemoverClienteNaoApareceu}
-          disabled={!atendendoAtual || atendendoAtual?.status !== 'próximo' || loading || disabled}
+          disabled={!atendendoAtual || (atendendoAtual?.status !== 'próximo' && atendendoAtual?.status !== 'proximo') || loading || disabled}
           className="w-full bg-red-600 text-white hover:bg-red-700 border-red-600"
         >
           <X className="mr-2 h-4 w-4" />

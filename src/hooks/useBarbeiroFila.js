@@ -10,26 +10,17 @@ import { useEstatisticas } from '@/hooks/useEstatisticas.js';
 const filaCache = {
   data: {},
   lastUpdate: {},
-  timeout: 30000, // 30 segundos
+  timeout: 60000, // 60 segundos (1 minuto)
 
   async getFila(serviceFunction, barbeariaId) {
     const now = Date.now();
     const lastUpdate = this.lastUpdate[barbeariaId] || 0;
     
-    console.log('🔍 Cache check - barbeariaId:', barbeariaId);
-    console.log('🔍 Cache check - has data:', !!this.data[barbeariaId]);
-    console.log('🔍 Cache check - time diff:', now - lastUpdate);
-    console.log('🔍 Cache check - timeout:', this.timeout);
-    
     if (this.data[barbeariaId] && (now - lastUpdate) < this.timeout) {
-      console.log('📊 Usando cache da fila para barbearia:', barbeariaId);
       return this.data[barbeariaId];
     }
     
-    console.log('🔄 Carregando dados da fila para barbearia:', barbeariaId);
-    console.log('🔄 Chamando serviceFunction...');
     const response = await serviceFunction(barbeariaId);
-    console.log('🔄 Response recebida:', response);
     this.data[barbeariaId] = response;
     this.lastUpdate[barbeariaId] = now;
     
@@ -39,7 +30,6 @@ const filaCache = {
   invalidate(barbeariaId) {
     delete this.data[barbeariaId];
     delete this.lastUpdate[barbeariaId];
-    console.log('🗑️ Cache da fila invalidado para barbearia:', barbeariaId);
   }
 };
 
@@ -54,11 +44,9 @@ const barbeirosCache = {
     const lastUpdate = this.lastUpdate[barbeariaId] || 0;
     
     if (this.data[barbeariaId] && (now - lastUpdate) < this.timeout) {
-      console.log('📊 Usando cache de barbeiros para barbearia:', barbeariaId);
       return this.data[barbeariaId];
     }
     
-    console.log('🔄 Carregando dados de barbeiros para barbearia:', barbeariaId);
     const response = await serviceFunction(barbeariaId);
     this.data[barbeariaId] = response;
     this.lastUpdate[barbeariaId] = now;
@@ -69,7 +57,6 @@ const barbeirosCache = {
   invalidate(barbeariaId) {
     delete this.data[barbeariaId];
     delete this.lastUpdate[barbeariaId];
-    console.log('🗑️ Cache de barbeiros invalidado para barbearia:', barbeariaId);
   }
 };
 
@@ -117,12 +104,10 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       statusCallInProgress.current = true;
       lastStatusCall.current = now;
       
-      console.log('🔍 Carregando status do barbeiro...');
       const response = await usuariosService.obterStatusBarbeiro();
       
       // ✅ Extrair dados corretamente da estrutura do backend
       const statusData = response.data || response;
-      console.log('✅ Status do barbeiro carregado:', statusData);
       
       setStatusBarbeiro(statusData);
     } catch (error) {
@@ -142,8 +127,8 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
     const now = Date.now();
     
-    // Evitar chamadas muito frequentes
-    if (lastFilaCall.current > 0 && (now - lastFilaCall.current) < filaCallTimeout) {
+    // Evitar chamadas muito frequentes (reduzido para 2 segundos)
+    if (lastFilaCall.current > 0 && (now - lastFilaCall.current) < 2000) {
       return;
     }
 
@@ -151,9 +136,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       filaCallInProgress.current = true;
       lastFilaCall.current = now;
       
-      console.log('🔄 Carregando fila para barbearia:', barbeariaId);
-      
-      // ✅ Invalidar cache para forçar nova chamada
+      // ✅ SEMPRE invalidar cache para forçar nova chamada
       filaCache.invalidate(barbeariaId);
       
       const filaData = await filaCache.getFila(
@@ -161,48 +144,26 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         barbeariaId
       );
       
-      console.log('📦 Response da fila:', filaData);
-      
-      // ✅ Debug detalhado da estrutura da resposta
-      console.log('🔍 Estrutura da resposta:', {
-        success: filaData?.success,
-        hasData: !!filaData?.data,
-        dataType: typeof filaData?.data,
-        dataKeys: filaData?.data ? Object.keys(filaData.data) : 'null',
-        hasClientes: !!filaData?.data?.clientes,
-        clientesType: typeof filaData?.data?.clientes,
-        clientesLength: filaData?.data?.clientes?.length,
-        clientes: filaData?.data?.clientes
-      });
-      
       const filaArray = filaData.data?.clientes || filaData.clientes || filaData.fila || [];
-      console.log('👥 Clientes na fila:', filaArray.length);
-      console.log('👥 Array extraído:', filaArray);
-      
-      // ✅ Debug: Verificar se há clientes na fila
-      if (filaArray.length > 0) {
-        console.log('🔍 Clientes na fila após atualização:', filaArray.length);
-        console.log('🔍 Primeiro cliente:', {
-          id: filaArray[0].id,
-          nome: filaArray[0].nome,
-          status: filaArray[0].status
-        });
-      }
       
       setFila(filaArray);
-      console.log('✅ Estado da fila atualizado com', filaArray.length, 'clientes');
       
       // ✅ ATUALIZAR ATENDENDO ATUAL - Verificar se há cliente em atendimento
       const clienteEmAtendimento = filaArray.find(cliente => 
-        cliente.status === 'atendendo' || cliente.status === 'em_atendimento'
+        cliente.status === 'atendendo' || 
+        cliente.status === 'em_atendimento'
       );
       
       if (clienteEmAtendimento) {
-        console.log('🔍 Cliente em atendimento encontrado:', clienteEmAtendimento.nome);
         setAtendendoAtual(clienteEmAtendimento);
       } else {
-        console.log('🔍 Nenhum cliente em atendimento encontrado');
-        setAtendendoAtual(null);
+        // ✅ SEMPRE LIMPAR SE NÃO ENCONTRAR CLIENTE EM ATENDIMENTO
+        // Também limpar se o cliente atual foi finalizado
+        if (atendendoAtual && (atendendoAtual.status === 'finalizado' || atendendoAtual.status === 'concluido')) {
+          setAtendendoAtual(null);
+        } else if (!clienteEmAtendimento) {
+          setAtendendoAtual(null);
+        }
       }
       
       // Estatísticas são carregadas automaticamente pelo hook useEstatisticas
@@ -216,22 +177,19 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       filaCallInProgress.current = false;
     }
-  }, [barbeariaId, carregarEstatisticas]);
+  }, [barbeariaId, carregarEstatisticas, atendendoAtual]);
 
   // Carregar dados iniciais
   useEffect(() => {
     if (!barbeariaId) {
-      console.log('⚠️ Nenhum barbeariaId fornecido, aguardando...');
       return;
     }
 
     // Evitar carregamento duplicado
     if (initialLoadDone.current) {
-      console.log('🔄 Carregamento inicial já feito, pulando...');
       return;
     }
 
-    console.log('🔄 Iniciando carregamento inicial para barbearia:', barbeariaId);
     initialLoadDone.current = true;
 
     const carregarDados = async () => {
@@ -248,15 +206,12 @@ export const useBarbeiroFila = (barbeariaId = null) => {
           );
           setBarbeariaInfo(barbeariaData.data || barbeariaData);
         } catch (err) {
-          console.log('⚠️ Barbearia específica não encontrada, tentando listar todas...');
-          
           try {
             const barbeariasData = await barbeariasService.listarBarbearias();
             const barbeariasArray = barbeariasData.data || barbeariasData;
             
             if (barbeariasArray && barbeariasArray.length > 0) {
               const primeiraBarbearia = barbeariasArray[0];
-              console.log('✅ Usando primeira barbearia disponível:', primeiraBarbearia);
               setBarbeariaInfo(primeiraBarbearia);
             } else {
               throw new Error('Nenhuma barbearia encontrada');
@@ -269,18 +224,10 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         
         // Carregar barbeiros com cache
         try {
-          console.log('🔄 Carregando barbeiros para barbearia:', barbeariaId);
-          console.log('📞 Chamando barbeariasService.listarBarbeiros...');
-          
-          // Usar a função correta do serviço
           const barbeirosData = await barbeariasService.listarBarbeirosAtivos(barbeariaId);
-          console.log('📦 Response dos barbeiros:', barbeirosData);
-          
           const barbeirosArray = barbeirosData.data || barbeirosData;
-          console.log('👥 Array de barbeiros extraído:', barbeirosArray);
           setBarbeiros(barbeirosArray);
         } catch (err) {
-          console.log('⚠️ Não foi possível carregar barbeiros:', err.message);
           setBarbeiros([]);
         }
         
@@ -290,7 +237,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         try {
           await carregarFilaAtual();
         } catch (err) {
-          console.log('⚠️ Não foi possível carregar fila atual:', err.message);
+          // Silenciar erro de carregamento inicial
         }
 
       } catch (err) {
@@ -313,7 +260,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   // Carregar status do barbeiro quando usuário estiver autenticado
   useEffect(() => {
     if (user && user.id) {
-      console.log('👤 Usuário autenticado, carregando status...');
       carregarStatusBarbeiro();
     }
   }, [user, carregarStatusBarbeiro]);
@@ -328,7 +274,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   // Carregar fila quando status do barbeiro for carregado e houver barbearia
   useEffect(() => {
     if (statusBarbeiro && Object.keys(statusBarbeiro).length > 0 && barbeariaId) {
-      console.log('🚀 Status carregado, carregando fila...');
       carregarFilaAtual();
     }
   }, [statusBarbeiro, barbeariaId, carregarFilaAtual]);
@@ -336,7 +281,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
   // Carregar fila quando API estiver disponível
   useEffect(() => {
     if (apiStatus === 'available' && barbeariaId) {
-      console.log('🚀 API disponível, carregando fila...');
       carregarFilaAtual();
     }
   }, [apiStatus, barbeariaId, carregarFilaAtual]);
@@ -347,10 +291,53 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
     const interval = setInterval(() => {
       carregarFilaAtual();
-    }, 30000); // Atualiza a cada 30 segundos
+    }, 60000); // Atualiza a cada 60 segundos (1 minuto)
 
     return () => clearInterval(interval);
   }, [barbeariaId, apiStatus, carregarFilaAtual]);
+
+  // Verificar se o barbeiro está ativo
+  const isBarbeiroAtivo = useCallback((barbeariaId) => {
+    // Se não há dados de status, retornar false
+    if (!statusBarbeiro || Object.keys(statusBarbeiro).length === 0) {
+      return false;
+    }
+    
+    // ✅ ESTRUTURA CORRETA DO BACKEND: statusBarbeiro.barbeiro.ativo
+    if (statusBarbeiro?.barbeiro?.ativo !== undefined) {
+      const isAtivo = statusBarbeiro.barbeiro.ativo;
+      const barbeariaIdBarbeiro = statusBarbeiro.barbeiro.barbearia?.id;
+      
+      // Se o barbeiro está ativo e a barbearia corresponde
+      if (isAtivo && barbeariaIdBarbeiro === parseInt(barbeariaId)) {
+        return true;
+      }
+      
+      return false;
+    }
+    
+    // Estrutura antiga (fallback): statusBarbeiro.barbearias
+    if (statusBarbeiro?.barbearias && Array.isArray(statusBarbeiro.barbearias)) {
+      const isAtivo = statusBarbeiro.barbearias.some(barbearia => 
+        barbearia.barbearia_id === parseInt(barbeariaId) && barbearia.ativo === true
+      );
+      return isAtivo;
+    }
+    
+    // Estrutura alternativa: statusBarbeiro.ativo (diretamente)
+    if (statusBarbeiro?.ativo !== undefined) {
+      const isAtivo = statusBarbeiro.ativo;
+      return isAtivo;
+    }
+    
+    // Estrutura alternativa: statusBarbeiro.status
+    if (statusBarbeiro?.status) {
+      const isAtivo = statusBarbeiro.status === 'ativo' || statusBarbeiro.status === true;
+      return isAtivo;
+    }
+    
+    return false;
+  }, [statusBarbeiro]);
 
   // FUNÇÕES ESPECÍFICAS PARA BARBEIROS
 
@@ -360,9 +347,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     setError(null);
 
     try {
-      console.log('🚀 Chamando próximo cliente para barbearia:', barbeariaId);
       const response = await filaService.chamarProximo(barbeariaId);
-      console.log('✅ Resposta do chamar próximo:', response);
       
       // Invalidar cache da fila
       filaCache.invalidate(barbeariaId);
@@ -372,11 +357,9 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
       // ✅ Forçar atualização adicional após um pequeno delay para garantir sincronização
       setTimeout(async () => {
-        console.log('🔄 Forçando atualização adicional após chamar próximo...');
         await carregarFilaAtual();
       }, 1000);
 
-      console.log('✅ Próximo cliente chamado com sucesso');
     } catch (err) {
       console.error('❌ Erro ao chamar próximo cliente:', err);
       setError('Erro ao chamar próximo cliente.');
@@ -392,8 +375,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     setError(null);
 
     try {
-      console.log('🏁 Finalizando atendimento:', { clienteId, dados });
-      
       // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
       if (!isBarbeiroAtivo(barbeariaId)) {
         throw new Error('Você precisa estar ativo na barbearia para finalizar atendimentos');
@@ -403,23 +384,36 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         throw new Error('ID do cliente não fornecido');
       }
 
+      // ✅ LIMPAR ATENDENDO ATUAL IMEDIATAMENTE ANTES DA CHAMADA
+      setAtendendoAtual(null);
+
       // ✅ USAR O NOVO ENDPOINT SIMPLIFICADO
       const response = await filaService.finalizarAtendimentoSimplificado(clienteId, dados);
-      console.log('✅ Resposta da API finalizar atendimento:', response);
 
       // Invalidar cache da fila
-      console.log('🔄 Invalidando cache da fila para barbearia:', barbeariaId);
       filaCache.invalidate(barbeariaId);
 
-      // Atualizar estado local
+      // Atualizar estado local com múltiplas tentativas
       await carregarFilaAtual();
 
-      // Limpar atendimento atual se for o mesmo cliente
-      if (atendendoAtual && atendendoAtual.id === clienteId) {
-        setAtendendoAtual(null);
-      }
+      // Forçar atualizações adicionais para garantir sincronização
+      setTimeout(async () => {
+        await carregarFilaAtual();
+      }, 500);
 
-      console.log('✅ Atendimento finalizado com sucesso');
+      setTimeout(async () => {
+        await carregarFilaAtual();
+      }, 1500);
+
+      setTimeout(async () => {
+        await carregarFilaAtual();
+      }, 3000);
+
+      // Garantir que atendendoAtual esteja limpo
+      setTimeout(() => {
+        setAtendendoAtual(null);
+      }, 100);
+
       return response;
     } catch (err) {
       console.error('❌ Erro ao finalizar atendimento:', err);
@@ -428,7 +422,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [barbeariaId, atendendoAtual]);
+  }, [barbeariaId, isBarbeiroAtivo, carregarFilaAtual]);
 
   // Adicionar cliente manualmente (BARBEIRO)
   const adicionarClienteManual = useCallback(async (dadosCliente) => {
@@ -482,12 +476,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
   // Ativar/desativar status do barbeiro (BARBEIRO)
   const toggleStatusBarbeiro = useCallback(async (acao) => {
-    console.log('🔄 toggleStatusBarbeiro chamado:', {
-      acao,
-      barbeariaId,
-      statusBarbeiro
-    });
-    
     setLoading(true);
     setError(null);
 
@@ -504,35 +492,24 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       // Primeiro, tentar obter do contexto de autenticação
       if (user?.id) {
         barbeiroId = user.id;
-        console.log('✅ ID do barbeiro obtido do contexto de autenticação:', barbeiroId);
       }
       // Se não temos do contexto, tentar dos dados de status
       else if (statusBarbeiro?.barbeiro?.id) {
         barbeiroId = statusBarbeiro.barbeiro.id;
-        console.log('✅ ID do barbeiro obtido dos dados de status:', barbeiroId);
       } else if (statusBarbeiro?.id) {
         barbeiroId = statusBarbeiro.id;
-        console.log('✅ ID do barbeiro obtido dos dados de status (estrutura antiga):', barbeiroId);
       } else if (statusBarbeiro?.user_id) {
         barbeiroId = statusBarbeiro.user_id;
-        console.log('✅ ID do barbeiro obtido dos dados de status (user_id):', barbeiroId);
       } else {
-        console.error('❌ ID do barbeiro não encontrado em nenhuma fonte:', {
-          user,
-          statusBarbeiro
-        });
         throw new Error('Não foi possível identificar o barbeiro. Tente fazer login novamente.');
       }
       
       if (!barbeiroId) {
-        console.error('❌ ID do barbeiro não encontrado:', statusBarbeiro);
         throw new Error('Dados do barbeiro não carregados. Tente recarregar a página.');
       }
 
       // REGRA: Se está ativando, primeiro desativar em todas as outras barbearias
       if (acao === 'ativar') {
-        console.log('🔄 Ativando barbeiro - Primeiro desativando em outras barbearias...');
-        
         try {
           // Obter lista de barbearias onde o barbeiro pode trabalhar
           const barbeariasResponse = await barbeariasService.listarBarbearias();
@@ -547,33 +524,25 @@ export const useBarbeiroFila = (barbeariaId = null) => {
                   barbearia_id: barbearia.id,
                   barbeiro_id: barbeiroId
                 };
-                console.log(`🔄 Desativando em barbearia ${barbearia.id} (${barbearia.nome})`);
                 await usuariosService.atualizarStatusBarbeiro('desativar', dadosDesativacao);
                 return { success: true, barbearia: barbearia.id };
               } catch (error) {
-                console.log(`⚠️ Erro ao desativar em barbearia ${barbearia.id}:`, error.message);
                 return { success: false, barbearia: barbearia.id, error: error.message };
               }
             });
           
           // Aguardar todas as desativações
-          const resultados = await Promise.allSettled(promessasDesativacao);
-          console.log('📊 Resultados das desativações:', resultados);
+          await Promise.allSettled(promessasDesativacao);
           
         } catch (error) {
-          console.log('⚠️ Erro ao desativar em outras barbearias:', error.message);
           // Continuar mesmo se houver erro na desativação
         }
       }
-      
-      console.log(`🔄 ${acao === 'ativar' ? 'Ativando' : 'Desativando'} barbeiro na barbearia ${barbeariaId}`);
 
       const dados = {
         barbearia_id: barbeariaId,
         barbeiro_id: barbeiroId
       };
-
-      console.log('🔄 Enviando dados para API:', dados);
 
       await usuariosService.atualizarStatusBarbeiro(acao, dados);
       
@@ -583,17 +552,8 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       // Recarregar status do barbeiro
       try {
         const response = await usuariosService.obterStatusBarbeiro();
-        console.log('🔄 Resposta da API após alteração:', response.data);
         setStatusBarbeiro(response.data);
-        
-        // Verificar se o estado foi atualizado
-        console.log('🔄 Estado atualizado:', {
-          novoStatus: response.data,
-          barbeiroAtivo: response.data?.barbeiro?.ativo,
-          barbeariaIdBarbeiro: response.data?.barbeiro?.barbearia?.id
-        });
       } catch (statusError) {
-        console.log('⚠️ Não foi possível recarregar o status após alteração:', statusError.message);
         // Mesmo que não consigamos recarregar o status, a operação foi bem-sucedida
         // Vamos atualizar o estado local baseado na ação realizada
         const novoStatus = {
@@ -606,7 +566,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         setStatusBarbeiro(novoStatus);
       }
 
-      console.log(`✅ Status do barbeiro ${acao === 'ativar' ? 'ativado' : 'desativado'} com sucesso`);
     } catch (err) {
       console.error(`❌ Erro ao ${acao} status do barbeiro:`, err);
       setError(`Erro ao ${acao} status do barbeiro: ${err.message}`);
@@ -616,79 +575,13 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     }
   }, [barbeariaId, statusBarbeiro, user]);
 
-  // Verificar se o barbeiro está ativo
-  const isBarbeiroAtivo = useCallback((barbeariaId) => {
-    console.log('🔍 Verificando se barbeiro está ativo:', {
-      barbeariaId,
-      statusBarbeiro,
-      barbeiroAtivo: statusBarbeiro?.barbeiro?.ativo,
-      barbeariaIdBarbeiro: statusBarbeiro?.barbeiro?.barbearia?.id
-    });
-    
-    // Se não há dados de status, retornar false
-    if (!statusBarbeiro || Object.keys(statusBarbeiro).length === 0) {
-      console.log('❌ Nenhum dado de status disponível');
-      return false;
-    }
-    
-    // ✅ ESTRUTURA CORRETA DO BACKEND: statusBarbeiro.barbeiro.ativo
-    if (statusBarbeiro?.barbeiro?.ativo !== undefined) {
-      const isAtivo = statusBarbeiro.barbeiro.ativo;
-      const barbeariaIdBarbeiro = statusBarbeiro.barbeiro.barbearia?.id;
-      
-      // Se o barbeiro está ativo e a barbearia corresponde
-      if (isAtivo && barbeariaIdBarbeiro === parseInt(barbeariaId)) {
-        console.log('✅ Barbeiro está ativo para esta barbearia');
-        return true;
-      }
-      
-      console.log('❌ Barbeiro não está ativo ou barbearia não corresponde');
-      return false;
-    }
-    
-    // Estrutura antiga (fallback): statusBarbeiro.barbearias
-    if (statusBarbeiro?.barbearias && Array.isArray(statusBarbeiro.barbearias)) {
-      const isAtivo = statusBarbeiro.barbearias.some(barbearia => 
-        barbearia.barbearia_id === parseInt(barbeariaId) && barbearia.ativo === true
-      );
-      console.log('🔍 Verificação via barbearias (fallback):', { barbearias: statusBarbeiro.barbearias, isAtivo });
-      return isAtivo;
-    }
-    
-    // Estrutura alternativa: statusBarbeiro.ativo (diretamente)
-    if (statusBarbeiro?.ativo !== undefined) {
-      const isAtivo = statusBarbeiro.ativo;
-      console.log('🔍 Verificação via ativo direto (fallback):', { ativo: isAtivo });
-      return isAtivo;
-    }
-    
-    // Estrutura alternativa: statusBarbeiro.status
-    if (statusBarbeiro?.status) {
-      const isAtivo = statusBarbeiro.status === 'ativo' || statusBarbeiro.status === true;
-      console.log('🔍 Verificação via status (fallback):', { status: statusBarbeiro.status, isAtivo });
-      return isAtivo;
-    }
-    
-    console.log('❌ Estrutura de dados não reconhecida:', statusBarbeiro);
-    return false;
-  }, [statusBarbeiro]);
-
   // Iniciar atendimento (BARBEIRO)
   const iniciarAtendimento = useCallback(async (clienteId, dados) => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🚀 Iniciando atendimento:', { clienteId, dados });
-      
       // ✅ VERIFICAR SE O BARBEIRO ESTÁ ATIVO
-      console.log('🔍 Verificando permissões para iniciar atendimento:', {
-        clienteId,
-        barbeariaId,
-        statusBarbeiro: statusBarbeiro?.barbeiro,
-        isBarbeiroAtivo: isBarbeiroAtivo(barbeariaId)
-      });
-      
       if (!isBarbeiroAtivo(barbeariaId)) {
         throw new Error('Você precisa estar ativo na barbearia para iniciar atendimentos');
       }
@@ -699,23 +592,26 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
       // ✅ USAR O NOVO ENDPOINT SIMPLIFICADO
       const response = await filaService.iniciarAtendimentoSimplificado(clienteId, dados);
-      console.log('✅ Resposta da API iniciar atendimento:', response);
 
       // Invalidar cache da fila
-      console.log('🔄 Invalidando cache da fila para barbearia:', barbeariaId);
       filaCache.invalidate(barbeariaId);
 
-      // Atualizar estado local
-      console.log('🔄 Recarregando fila atual...');
+      // Atualizar estado local com múltiplas tentativas
       await carregarFilaAtual();
 
-      // Forçar atualização adicional após um pequeno delay
+      // Forçar atualizações adicionais para garantir sincronização
       setTimeout(async () => {
-        console.log('🔄 Forçando atualização adicional da fila...');
         await carregarFilaAtual();
-      }, 1000);
+      }, 500);
 
-      console.log('✅ Atendimento iniciado com sucesso');
+      setTimeout(async () => {
+        await carregarFilaAtual();
+      }, 1500);
+
+      setTimeout(async () => {
+        await carregarFilaAtual();
+      }, 3000);
+
       return response;
     } catch (err) {
       console.error('❌ Erro ao iniciar atendimento:', err);
@@ -724,7 +620,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [barbeariaId, isBarbeiroAtivo]);
+  }, [barbeariaId, isBarbeiroAtivo, carregarFilaAtual]);
 
   // Obter fila filtrada por barbeiro
   const getFilaBarbeiro = useCallback(() => {
@@ -732,7 +628,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     const barbeiroId = statusBarbeiro?.barbeiro?.id || statusBarbeiro?.id;
     
     if (!barbeiroId) {
-      console.log('⚠️ ID do barbeiro não encontrado para filtrar fila');
       return [];
     }
     

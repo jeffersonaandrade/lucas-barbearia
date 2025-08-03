@@ -9,7 +9,9 @@ const ClienteAtual = ({
   if (!atendendoAtual) return null;
 
   // Cliente sendo atendido
-  if (atendendoAtual.status === 'atendendo') {
+  if ((atendendoAtual.status === 'atendendo' || atendendoAtual.status === 'em_atendimento') && 
+      atendendoAtual.status !== 'finalizado' && 
+      atendendoAtual.status !== 'concluido') {
     return (
       <Card className="border-green-200 bg-green-50 mb-6">
         <CardContent className="pt-6">
@@ -38,7 +40,9 @@ const ClienteAtual = ({
   }
 
   // Cliente chamado (próximo)
-  if (atendendoAtual.status === 'proximo') {
+  if ((atendendoAtual.status === 'proximo' || atendendoAtual.status === 'próximo') && 
+      atendendoAtual.status !== 'finalizado' && 
+      atendendoAtual.status !== 'concluido') {
     return (
       <Card className="border-blue-200 bg-blue-50 mb-6">
         <CardContent className="pt-6">
