@@ -965,6 +965,30 @@ export const configuracoesService = {
   // Excluir configuração de comissão
   async excluirComissao(comissaoId) {
     return api.delete(`/configuracoes/comissoes/${comissaoId}`);
+  },
+
+  // ===== HORÁRIOS DE FUNCIONAMENTO =====
+  
+  // Listar horários de funcionamento
+  async listarHorarios(barbeariaId) {
+    return api.get(`/configuracoes/horarios/${barbeariaId}`);
+  },
+
+  // Atualizar horários de funcionamento
+  async atualizarHorarios(barbeariaId, dados) {
+    return api.put(`/configuracoes/horarios/${barbeariaId}`, dados);
+  },
+
+  // ===== CONFIGURAÇÕES GERAIS =====
+  
+  // Listar configurações gerais
+  async listarConfiguracoesGerais(barbeariaId) {
+    return api.get(`/configuracoes/gerais/${barbeariaId}`);
+  },
+
+  // Atualizar configurações gerais
+  async atualizarConfiguracoesGerais(barbeariaId, dados) {
+    return api.put(`/configuracoes/gerais/${barbeariaId}`, dados);
   }
 };
 

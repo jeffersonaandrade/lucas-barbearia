@@ -62,6 +62,8 @@ export const useConfiguracoes = (barbeariaId) => {
     }
   };
 
+
+
   useEffect(() => {
     if (barbeariaId) {
       carregarConfiguracoes();

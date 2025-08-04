@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useConfiguracoes } from '../../hooks/useConfiguracoes';
+import { barbeariasService } from '../../services/api.js';
+import { CookieManager } from '../../utils/cookieManager.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Button } from '../ui/button';
@@ -239,39 +241,127 @@ const GerenciarServicos = ({ configuracoes, onCriarServico, onAtualizarServico, 
 };
 
 // Componente para gerenciar horários
-const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotification }) => {
-  const [horarios, setHorarios] = useState(configuracoes?.horarios || []);
+const GerenciarHorarios = ({ barbeariaId, onShowNotification }) => {
+  const [horarios, setHorarios] = useState({
+    domingo: { aberto: false, hora_inicio: null, hora_fim: null },
+    segunda: { aberto: false, hora_inicio: null, hora_fim: null },
+    terca: { aberto: false, hora_inicio: null, hora_fim: null },
+    quarta: { aberto: false, hora_inicio: null, hora_fim: null },
+    quinta: { aberto: false, hora_inicio: null, hora_fim: null },
+    sexta: { aberto: false, hora_inicio: null, hora_fim: null },
+    sabado: { aberto: false, hora_inicio: null, hora_fim: null }
+  });
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const diasSemana = [
-    { id: 0, nome: 'Domingo' },
-    { id: 1, nome: 'Segunda-feira' },
-    { id: 2, nome: 'Terça-feira' },
-    { id: 3, nome: 'Quarta-feira' },
-    { id: 4, nome: 'Quinta-feira' },
-    { id: 5, nome: 'Sexta-feira' },
-    { id: 6, nome: 'Sábado' }
+    { id: 'domingo', nome: 'Domingo' },
+    { id: 'segunda', nome: 'Segunda-feira' },
+    { id: 'terca', nome: 'Terça-feira' },
+    { id: 'quarta', nome: 'Quarta-feira' },
+    { id: 'quinta', nome: 'Quinta-feira' },
+    { id: 'sexta', nome: 'Sexta-feira' },
+    { id: 'sabado', nome: 'Sábado' }
   ];
 
-  const handleSave = async () => {
+  // Carregar horários do backend
+  const carregarHorarios = async () => {
+    if (!barbeariaId) return;
+    
     try {
-      await onAtualizarHorarios({ horarios });
-      onShowNotification('success', 'Horários atualizados com sucesso!');
-      setIsEditing(false);
+      setLoading(true);
+      const response = await fetch(`/api/configuracoes/horarios/${barbeariaId}`, {
+        headers: {
+          'Authorization': `Bearer ${CookieManager.getAdminToken()}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setHorarios(data.data || horarios);
+      } else {
+        console.error('Erro ao carregar horários:', response.status);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar horários:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar horários quando barbearia mudar
+  useEffect(() => {
+    carregarHorarios();
+  }, [barbeariaId]);
+
+  const handleSave = async () => {
+    if (!barbeariaId) return;
+    
+    try {
+      setLoading(true);
+              const response = await fetch(`/api/configuracoes/horarios/${barbeariaId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${CookieManager.getAdminToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(horarios)
+        });
+      
+      if (response.ok) {
+        onShowNotification('success', 'Horários atualizados com sucesso!');
+        setIsEditing(false);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao salvar horários');
+      }
     } catch (error) {
       console.error('Erro ao salvar horários:', error);
-      onShowNotification('error', 'Erro ao salvar horários. Tente novamente.');
+      onShowNotification('error', `Erro ao salvar horários: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!barbeariaId) return;
+    
+    if (!window.confirm('Tem certeza que deseja resetar todos os horários?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+              const response = await fetch(`/api/configuracoes/horarios/${barbeariaId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${CookieManager.getAdminToken()}`
+          }
+        });
+      
+      if (response.ok) {
+        await carregarHorarios();
+        onShowNotification('success', 'Horários resetados com sucesso!');
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao resetar horários');
+      }
+    } catch (error) {
+      console.error('Erro ao resetar horários:', error);
+      onShowNotification('error', `Erro ao resetar horários: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const updateHorario = (diaId, field, value) => {
-    setHorarios(prev => 
-      prev.map(h => 
-        h.dia_semana === diaId 
-          ? { ...h, [field]: value }
-          : h
-      )
-    );
+    setHorarios(prev => ({
+      ...prev,
+      [diaId]: {
+        ...prev[diaId],
+        [field]: value
+      }
+    }));
   };
 
   return (
@@ -279,22 +369,38 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Horários de Funcionamento</h3>
         {!isEditing ? (
-          <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
-            <Edit className="h-4 w-4" />
-            Editar Horários
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
+              <Edit className="h-4 w-4" />
+              Editar Horários
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleReset}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Resetar
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={handleSave} className="flex items-center gap-2">
+            <Button 
+              onClick={handleSave} 
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
               <Save className="h-4 w-4" />
-              Salvar
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
             <Button 
               variant="outline" 
               onClick={() => {
-                setHorarios(configuracoes?.horarios || []);
+                carregarHorarios();
                 setIsEditing(false);
               }}
+              disabled={loading}
               className="flex items-center gap-2"
             >
               <X className="h-4 w-4" />
@@ -304,9 +410,15 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
         )}
       </div>
 
+      {loading && !isEditing && (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {diasSemana.map(dia => {
-          const horario = horarios.find(h => h.dia_semana === dia.id);
+          const horario = horarios[dia.id];
           return (
             <Card key={dia.id}>
               <CardContent className="p-4">
@@ -316,7 +428,7 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
                       type="checkbox"
                       checked={horario?.aberto || false}
                       onChange={(e) => updateHorario(dia.id, 'aberto', e.target.checked)}
-                      disabled={!isEditing}
+                      disabled={!isEditing || loading}
                       className="h-4 w-4"
                     />
                     <span className="font-medium">{dia.nome}</span>
@@ -329,6 +441,7 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
                         value={horario.hora_inicio || '08:00'}
                         onChange={(e) => updateHorario(dia.id, 'hora_inicio', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded"
+                        disabled={loading}
                       />
                       <span>até</span>
                       <input
@@ -336,6 +449,7 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
                         value={horario.hora_fim || '18:00'}
                         onChange={(e) => updateHorario(dia.id, 'hora_fim', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded"
+                        disabled={loading}
                       />
                     </div>
                   ) : horario?.aberto ? (
@@ -356,18 +470,71 @@ const GerenciarHorarios = ({ configuracoes, onAtualizarHorarios, onShowNotificat
 };
 
 // Componente para configurações gerais
-const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNotification }) => {
-  const [configs, setConfigs] = useState(configuracoes?.configuracoes || {});
+const ConfiguracoesGerais = ({ barbeariaId, onShowNotification }) => {
+  const [configs, setConfigs] = useState({
+    tempo_medio_atendimento: { valor: 30 },
+    max_clientes_fila: { valor: 20 },
+    permitir_agendamento: { valor: true }
+  });
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Carregar configurações do backend
+  const carregarConfiguracoes = async () => {
+    if (!barbeariaId) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/configuracoes/gerais/${barbeariaId}`, {
+        headers: {
+          'Authorization': `Bearer ${CookieManager.getAdminToken()}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setConfigs(data.data || configs);
+      } else {
+        console.error('Erro ao carregar configurações:', response.status);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar configurações quando barbearia mudar
+  useEffect(() => {
+    carregarConfiguracoes();
+  }, [barbeariaId]);
 
   const handleSave = async () => {
+    if (!barbeariaId) return;
+    
     try {
-      await onAtualizarConfiguracoes({ configuracoes: configs });
-      onShowNotification('success', 'Configurações atualizadas com sucesso!');
-      setIsEditing(false);
+      setLoading(true);
+              const response = await fetch(`/api/configuracoes/gerais/${barbeariaId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${CookieManager.getAdminToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(configs)
+        });
+      
+      if (response.ok) {
+        onShowNotification('success', 'Configurações atualizadas com sucesso!');
+        setIsEditing(false);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao salvar configurações');
+      }
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
-      onShowNotification('error', 'Erro ao salvar configurações. Tente novamente.');
+      onShowNotification('error', `Erro ao salvar configurações: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -389,16 +556,21 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={handleSave} className="flex items-center gap-2">
+            <Button 
+              onClick={handleSave} 
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
               <Save className="h-4 w-4" />
-              Salvar
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
             <Button 
               variant="outline" 
               onClick={() => {
-                setConfigs(configuracoes?.configuracoes || {});
+                carregarConfiguracoes();
                 setIsEditing(false);
               }}
+              disabled={loading}
               className="flex items-center gap-2"
             >
               <X className="h-4 w-4" />
@@ -407,6 +579,12 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
           </div>
         )}
       </div>
+
+      {loading && !isEditing && (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -424,6 +602,7 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
                 onChange={(e) => updateConfig('tempo_medio_atendimento', parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 min="1"
+                disabled={loading}
               />
             ) : (
               <p className="text-2xl font-bold">{configs.tempo_medio_atendimento?.valor || 30} min</p>
@@ -446,6 +625,7 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
                 onChange={(e) => updateConfig('max_clientes_fila', parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 min="1"
+                disabled={loading}
               />
             ) : (
               <p className="text-2xl font-bold">{configs.max_clientes_fila?.valor || 20}</p>
@@ -466,6 +646,7 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
                 value={configs.permitir_agendamento?.valor ? 'true' : 'false'}
                 onChange={(e) => updateConfig('permitir_agendamento', e.target.value === 'true')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                disabled={loading}
               >
                 <option value="true">Sim</option>
                 <option value="false">Não</option>
@@ -484,6 +665,7 @@ const ConfiguracoesGerais = ({ configuracoes, onAtualizarConfiguracoes, onShowNo
 
 const AdminConfiguracoes = () => {
   const [selectedBarbeariaId, setSelectedBarbeariaId] = useState(1); // Inicializar com barbearia 1
+  const [barbeariaData, setBarbeariaData] = useState(null);
   const [notification, setNotification] = useState(null);
   const { 
     configuracoes, 
@@ -491,10 +673,26 @@ const AdminConfiguracoes = () => {
     error, 
     criarServico, 
     atualizarServico, 
-    excluirServico,
-    atualizarHorarios,
-    atualizarConfiguracoesGerais
+    excluirServico
   } = useConfiguracoes(selectedBarbeariaId);
+
+  // Carregar dados da barbearia
+  useEffect(() => {
+    const carregarBarbearia = async () => {
+      if (!selectedBarbeariaId) return;
+      
+      try {
+        const response = await barbeariasService.obterBarbearia(selectedBarbeariaId);
+        const data = response.data || response;
+        setBarbeariaData(data);
+      } catch (error) {
+        console.error('Erro ao carregar dados da barbearia:', error);
+        setBarbeariaData(null);
+      }
+    };
+
+    carregarBarbearia();
+  }, [selectedBarbeariaId]);
 
   const showNotification = (type, message) => {
     setNotification({ type, message });
@@ -528,6 +726,7 @@ const AdminConfiguracoes = () => {
         />
       )}
       
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Configurações do Sistema
@@ -547,9 +746,16 @@ const AdminConfiguracoes = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Building2 className="h-6 w-6 text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-900">
-                Configurando Barbearia #{selectedBarbeariaId}
-              </h2>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {barbeariaData ? `Configurando ${barbeariaData.nome}` : `Configurando Barbearia #${selectedBarbeariaId}`}
+                </h2>
+                {barbeariaData?.endereco && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {barbeariaData.endereco}
+                  </p>
+                )}
+              </div>
             </div>
             <Button 
               variant="outline" 
@@ -591,8 +797,7 @@ const AdminConfiguracoes = () => {
 
           <TabsContent value="horarios">
             <GerenciarHorarios
-              configuracoes={configuracoes}
-              onAtualizarHorarios={atualizarHorarios}
+              barbeariaId={selectedBarbeariaId}
               onShowNotification={showNotification}
             />
           </TabsContent>
@@ -603,8 +808,7 @@ const AdminConfiguracoes = () => {
 
           <TabsContent value="gerais">
             <ConfiguracoesGerais
-              configuracoes={configuracoes}
-              onAtualizarConfiguracoes={atualizarConfiguracoesGerais}
+              barbeariaId={selectedBarbeariaId}
               onShowNotification={showNotification}
             />
           </TabsContent>

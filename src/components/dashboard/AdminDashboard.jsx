@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useDashboardStats } from '@/hooks/useDashboardStats.js';
+import { useSharedData } from '@/hooks/useSharedData.js';
 import { useDashboard } from '@/contexts/DashboardContext.jsx';
 import DashboardHeader from './DashboardHeader.jsx';
 import DashboardCard from '@/components/ui/dashboard-card.jsx';
@@ -10,21 +10,24 @@ import {
   Building2, 
   Settings, 
   UserPlus,
-  BarChart3
+  BarChart3,
+  MessageCircle
 } from 'lucide-react';
 
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const { barbearias, loading: dashboardLoading } = useDashboard();
-  const { stats, loading: statsLoading, loadAdminStatsWithContext } = useDashboardStats('admin');
+  
+  // Sistema de dados compartilhados
+  const { useSharedDashboardStats } = useSharedData();
+  const { stats, loading: statsLoading } = useSharedDashboardStats('admin');
 
   // Carregar estatísticas quando as barbearias estiverem disponíveis
   useEffect(() => {
     if (barbearias && barbearias.length > 0) {
-      console.log('📊 AdminDashboard - Carregando stats com barbearias do contexto:', barbearias.length);
-      loadAdminStatsWithContext(barbearias);
+      console.log('📊 AdminDashboard - Barbearias disponíveis no contexto:', barbearias.length);
     }
-  }, [barbearias, loadAdminStatsWithContext]);
+  }, [barbearias]);
 
   const handleNavigation = (path) => {
     console.log('Navegando para', path);
@@ -94,7 +97,13 @@ const AdminDashboard = ({ onLogout }) => {
           onButtonClick={() => handleNavigation('/admin/barbearias')}
         />
 
-
+        <DashboardCard
+          title="Configurações"
+          description="Configurar serviços, horários e comissões"
+          icon={Settings}
+          buttonText="Acessar"
+          onButtonClick={() => handleNavigation('/admin/configuracoes')}
+        />
 
         <DashboardCard
           title="Relatórios"
@@ -105,11 +114,11 @@ const AdminDashboard = ({ onLogout }) => {
         />
 
         <DashboardCard
-          title="Configurações"
-          description="Configurações do sistema"
-          icon={Settings}
+          title="Avaliações"
+          description="Visualizar e gerenciar avaliações dos clientes"
+          icon={MessageCircle}
           buttonText="Acessar"
-          onButtonClick={() => handleNavigation('/admin/configuracoes')}
+          onButtonClick={() => handleNavigation('/admin/avaliacoes')}
         />
       </div>
     </div>

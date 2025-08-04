@@ -1,152 +1,100 @@
 import { useState, useEffect } from 'react';
-import { 
-  Star, 
-  Filter, 
-  Search, 
-  Calendar, 
-  User, 
-  Scissors,
-  Heart,
-  Clock,
-  ThumbsUp,
-  MessageCircle,
-  TrendingUp,
-  BarChart3
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
-import { Badge } from '@/components/ui/badge.jsx';
-import { Button } from '@/components/ui/button.jsx';
-import { Input } from '@/components/ui/input.jsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Star, Calendar, User, MessageCircle, Filter, Search, Building2, Clock, AlertTriangle } from 'lucide-react';
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const AvaliacoesList = () => {
   const [avaliacoes, setAvaliacoes] = useState([]);
-  const [filteredAvaliacoes, setFilteredAvaliacoes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRating, setFilterRating] = useState('all');
-  const [filterCategoria, setFilterCategoria] = useState('all');
-  const [stats, setStats] = useState({
-    total: 0,
-    media: 0,
-    excelente: 0,
-    bom: 0,
-    regular: 0,
-    ruim: 0,
-    pessimo: 0
-  });
+  const [filterRatingEstrutura, setFilterRatingEstrutura] = useState('all');
+  const [filterRatingBarbeiro, setFilterRatingBarbeiro] = useState('all');
+  const [filterBarbearia, setFilterBarbearia] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [barbearias, setBarbearias] = useState([]);
 
   useEffect(() => {
     carregarAvaliacoes();
+    carregarBarbearias();
   }, []);
 
-  useEffect(() => {
-    filtrarAvaliacoes();
-  }, [avaliacoes, searchTerm, filterRating, filterCategoria]);
-
-  const carregarAvaliacoes = () => {
+  const carregarAvaliacoes = async () => {
     try {
-      const avaliacoesData = JSON.parse(localStorage.getItem('avaliacoes') || '[]');
-      setAvaliacoes(avaliacoesData);
-      calcularEstatisticas(avaliacoesData);
+      setLoading(true);
+      const response = await fetch('/api/avaliacoes');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAvaliacoes(data);
+      } else {
+        setError('Erro ao carregar avaliações');
+      }
     } catch (error) {
       console.error('Erro ao carregar avaliações:', error);
+      setError('Erro de conexão');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const calcularEstatisticas = (data) => {
-    if (data.length === 0) return;
-
-    const total = data.length;
-    const media = data.reduce((acc, av) => acc + av.rating, 0) / total;
-    
-    const excelente = data.filter(av => av.rating === 5).length;
-    const bom = data.filter(av => av.rating === 4).length;
-    const regular = data.filter(av => av.rating === 3).length;
-    const ruim = data.filter(av => av.rating === 2).length;
-    const pessimo = data.filter(av => av.rating === 1).length;
-
-    setStats({
-      total,
-      media: Math.round(media * 10) / 10,
-      excelente,
-      bom,
-      regular,
-      ruim,
-      pessimo
-    });
+  const carregarBarbearias = async () => {
+    try {
+      const response = await fetch('/api/barbearias');
+      if (response.ok) {
+        const data = await response.json();
+        setBarbearias(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar barbearias:', error);
+    }
   };
 
   const filtrarAvaliacoes = () => {
-    let filtered = [...avaliacoes];
-
-    // Filtro por busca
-    if (searchTerm) {
-      filtered = filtered.filter(av => 
-        av.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        av.barbeiro.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        av.comentario.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtro por rating
-    if (filterRating !== 'all') {
-      filtered = filtered.filter(av => av.rating === parseInt(filterRating));
-    }
-
-    // Filtro por categoria
-    if (filterCategoria !== 'all') {
-      filtered = filtered.filter(av => av.categoria === filterCategoria);
-    }
-
-    setFilteredAvaliacoes(filtered);
-  };
-
-  const getRatingText = (rating) => {
-    switch (rating) {
-      case 1: return 'Péssimo';
-      case 2: return 'Ruim';
-      case 3: return 'Regular';
-      case 4: return 'Bom';
-      case 5: return 'Excelente';
-      default: return 'N/A';
-    }
+    return avaliacoes.filter(avaliacao => {
+      const matchSearch = avaliacao.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         avaliacao.comentario?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchRatingEstrutura = filterRatingEstrutura === 'all' || avaliacao.rating_estrutura === parseInt(filterRatingEstrutura);
+      const matchRatingBarbeiro = filterRatingBarbeiro === 'all' || avaliacao.rating_barbeiro === parseInt(filterRatingBarbeiro);
+      
+      const matchBarbearia = filterBarbearia === 'all' || avaliacao.barbearia_id === parseInt(filterBarbearia);
+      
+      // Filtro por status (link válido/expirado)
+      const agora = new Date();
+      const dataFinalizacao = new Date(avaliacao.data_finalizacao);
+      const horasPassadas = (agora - dataFinalizacao) / (1000 * 60 * 60);
+      const linkValido = horasPassadas <= 24;
+      
+      let matchStatus = true;
+      if (filterStatus === 'valido') matchStatus = linkValido;
+      if (filterStatus === 'expirado') matchStatus = !linkValido;
+      
+      return matchSearch && matchRatingEstrutura && matchRatingBarbeiro && matchBarbearia && matchStatus;
+    });
   };
 
   const getRatingColor = (rating) => {
-    switch (rating) {
-      case 1: return 'bg-red-500';
-      case 2: return 'bg-orange-500';
-      case 3: return 'bg-yellow-500';
-      case 4: return 'bg-blue-500';
-      case 5: return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
+    if (rating >= 4) return 'bg-green-100 text-green-800';
+    if (rating >= 3) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
   };
 
-  const getCategoriaIcon = (categoria) => {
-    switch (categoria) {
-      case 'atendimento': return User;
-      case 'qualidade': return Scissors;
-      case 'ambiente': return Heart;
-      case 'tempo': return Clock;
-      case 'preco': return ThumbsUp;
-      default: return MessageCircle;
-    }
+  const getRatingText = (rating) => {
+    if (rating === 5) return 'Excelente';
+    if (rating === 4) return 'Muito Bom';
+    if (rating === 3) return 'Bom';
+    if (rating === 2) return 'Regular';
+    if (rating === 1) return 'Ruim';
+    return 'Não avaliado';
   };
 
-  const getCategoriaLabel = (categoria) => {
-    switch (categoria) {
-      case 'atendimento': return 'Atendimento';
-      case 'qualidade': return 'Qualidade do Serviço';
-      case 'ambiente': return 'Ambiente';
-      case 'tempo': return 'Tempo de Espera';
-      case 'preco': return 'Preço';
-      default: return 'Geral';
-    }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+  const formatarData = (dataString) => {
+    return new Date(dataString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -155,227 +103,411 @@ const AvaliacoesList = () => {
     });
   };
 
+  const calcularTempoRestante = (dataFinalizacao) => {
+    const agora = new Date();
+    const dataFinal = new Date(dataFinalizacao);
+    const horasPassadas = (agora - dataFinal) / (1000 * 60 * 60);
+    const horasRestantes = Math.max(0, 24 - horasPassadas);
+    
+    if (horasRestantes <= 0) return 0;
+    return Math.floor(horasRestantes);
+  };
+
+  const getStatusLink = (dataFinalizacao) => {
+    const horasRestantes = calcularTempoRestante(dataFinalizacao);
+    
+    if (horasRestantes <= 0) {
+      return {
+        status: 'expirado',
+        texto: 'Expirado',
+        cor: 'bg-red-100 text-red-800',
+        icon: AlertTriangle
+      };
+    } else if (horasRestantes <= 6) {
+      return {
+        status: 'expirando',
+        texto: `${horasRestantes}h restantes`,
+        cor: 'bg-orange-100 text-orange-800',
+        icon: AlertTriangle
+      };
+    } else {
+      return {
+        status: 'valido',
+        texto: `${horasRestantes}h restantes`,
+        cor: 'bg-green-100 text-green-800',
+        icon: Clock
+      };
+    }
+  };
+
+  const calcularMediaEstrutura = () => {
+    if (avaliacoes.length === 0) return 0;
+    const total = avaliacoes.reduce((acc, av) => acc + (av.rating_estrutura || 0), 0);
+    return (total / avaliacoes.length).toFixed(1);
+  };
+
+  const calcularMediaBarbeiro = () => {
+    if (avaliacoes.length === 0) return 0;
+    const total = avaliacoes.reduce((acc, av) => acc + (av.rating_barbeiro || 0), 0);
+    return (total / avaliacoes.length).toFixed(1);
+  };
+
+  const contarLinksExpirados = () => {
+    return avaliacoes.filter(av => calcularTempoRestante(av.data_finalizacao) <= 0).length;
+  };
+
+  const contarLinksValidos = () => {
+    return avaliacoes.filter(av => calcularTempoRestante(av.data_finalizacao) > 0).length;
+  };
+
+  const avaliacoesFiltradas = filtrarAvaliacoes();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center text-red-600">
+              <p>{error}</p>
+              <Button onClick={carregarAvaliacoes} className="mt-4">
+                Tentar Novamente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            Avaliações dos Clientes
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie e acompanhe o feedback dos seus clientes
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Avaliações dos Clientes
+        </h1>
+        <p className="text-gray-600">
+          Gerencie e visualize todas as avaliações recebidas
+        </p>
+      </div>
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-card border border-border shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Avaliações</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                </div>
-                <BarChart3 className="w-8 h-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border border-border shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Média Geral</p>
-                  <div className="flex items-center space-x-2">
-                    <p className="text-2xl font-bold text-foreground">{stats.media}</p>
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
-                          className={`w-4 h-4 ${i < Math.floor(stats.media) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <TrendingUp className="w-8 h-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border border-border shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Excelente (5★)</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.excelente}</p>
-                </div>
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <Star className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border border-border shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Bom (4★)</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.bom}</p>
-                </div>
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Star className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filtros */}
-        <Card className="bg-card border border-border shadow-lg mb-8">
-          <CardHeader>
-            <CardTitle className="text-foreground">Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Buscar
-                </label>
-                <Input
-                  placeholder="Nome, barbeiro ou comentário..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
-                />
+                <p className="text-sm font-medium text-gray-600">Total de Avaliações</p>
+                <p className="text-2xl font-bold text-gray-900">{avaliacoes.length}</p>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Avaliação
-                </label>
-                <Select value={filterRating} onValueChange={setFilterRating}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as avaliações" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as avaliações</SelectItem>
-                    <SelectItem value="5">Excelente (5★)</SelectItem>
-                    <SelectItem value="4">Bom (4★)</SelectItem>
-                    <SelectItem value="3">Regular (3★)</SelectItem>
-                    <SelectItem value="2">Ruim (2★)</SelectItem>
-                    <SelectItem value="1">Péssimo (1★)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Categoria
-                </label>
-                <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as categorias" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as categorias</SelectItem>
-                    <SelectItem value="atendimento">Atendimento</SelectItem>
-                    <SelectItem value="qualidade">Qualidade do Serviço</SelectItem>
-                    <SelectItem value="ambiente">Ambiente</SelectItem>
-                    <SelectItem value="tempo">Tempo de Espera</SelectItem>
-                    <SelectItem value="preco">Preço</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <MessageCircle className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Lista de Avaliações */}
-        <div className="space-y-4">
-          {filteredAvaliacoes.length === 0 ? (
-            <Card className="bg-card border border-border shadow-lg">
-              <CardContent className="p-8 text-center">
-                <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  {avaliacoes.length === 0 ? 'Nenhuma avaliação ainda' : 'Nenhuma avaliação encontrada'}
-                </h3>
-                <p className="text-muted-foreground">
-                  {avaliacoes.length === 0 
-                    ? 'As avaliações dos clientes aparecerão aqui.' 
-                    : 'Tente ajustar os filtros de busca.'
-                  }
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Média Estrutura</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {calcularMediaEstrutura()}
                 </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredAvaliacoes.map((avaliacao) => {
-              const CategoriaIcon = getCategoriaIcon(avaliacao.categoria);
-              return (
-                <Card key={avaliacao.id} className="bg-card border border-border shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground">{avaliacao.clienteNome}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Atendido por {avaliacao.barbeiro}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center space-x-1 mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`w-4 h-4 ${i < avaliacao.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                            />
-                          ))}
-                        </div>
-                        <Badge className={getRatingColor(avaliacao.rating)}>
-                          {getRatingText(avaliacao.rating)}
-                        </Badge>
-                      </div>
-                    </div>
+              </div>
+              <Building2 className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <CategoriaIcon className="w-4 h-4 text-primary" />
-                        <span className="text-sm text-muted-foreground">
-                          {getCategoriaLabel(avaliacao.categoria)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(avaliacao.data)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Scissors className="w-4 h-4 text-primary" />
-                        <span className="text-sm text-muted-foreground">
-                          Barbearia #{avaliacao.barbeariaId}
-                        </span>
-                      </div>
-                    </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Média Barbeiro</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {calcularMediaBarbeiro()}
+                </p>
+              </div>
+              <User className="w-8 h-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-                    {avaliacao.comentario && (
-                      <div className="bg-secondary/50 rounded-lg p-4">
-                        <p className="text-foreground italic">"{avaliacao.comentario}"</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Links Válidos</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {contarLinksValidos()}
+                </p>
+              </div>
+              <Clock className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Links Expirados</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {contarLinksExpirados()}
+                </p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Com Comentários</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {avaliacoes.filter(av => av.comentario && av.comentario.trim()).length}
+                </p>
+              </div>
+              <MessageCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Filtros */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Buscar
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Nome do cliente ou comentário..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Estrutura
+              </label>
+              <Select value={filterRatingEstrutura} onValueChange={setFilterRatingEstrutura}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="5">5 estrelas</SelectItem>
+                  <SelectItem value="4">4 estrelas</SelectItem>
+                  <SelectItem value="3">3 estrelas</SelectItem>
+                  <SelectItem value="2">2 estrelas</SelectItem>
+                  <SelectItem value="1">1 estrela</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Barbeiro
+              </label>
+              <Select value={filterRatingBarbeiro} onValueChange={setFilterRatingBarbeiro}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="5">5 estrelas</SelectItem>
+                  <SelectItem value="4">4 estrelas</SelectItem>
+                  <SelectItem value="3">3 estrelas</SelectItem>
+                  <SelectItem value="2">2 estrelas</SelectItem>
+                  <SelectItem value="1">1 estrela</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Barbearia
+              </label>
+              <Select value={filterBarbearia} onValueChange={setFilterBarbearia}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {barbearias.map(barbearia => (
+                    <SelectItem key={barbearia.id} value={barbearia.id.toString()}>
+                      {barbearia.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Status do Link
+              </label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="valido">Válidos</SelectItem>
+                  <SelectItem value="expirado">Expirados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterRatingEstrutura('all');
+                  setFilterRatingBarbeiro('all');
+                  setFilterBarbearia('all');
+                  setFilterStatus('all');
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                Limpar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela de Avaliações */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Avaliações ({avaliacoesFiltradas.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {avaliacoesFiltradas.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Nenhuma avaliação encontrada</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Barbearia</TableHead>
+                  <TableHead>Estrutura</TableHead>
+                  <TableHead>Barbeiro</TableHead>
+                  <TableHead>Status Link</TableHead>
+                  <TableHead>Comentário</TableHead>
+                  <TableHead>Data</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {avaliacoesFiltradas.map((avaliacao) => {
+                  const statusLink = getStatusLink(avaliacao.data_finalizacao);
+                  const StatusIcon = statusLink.icon;
+                  
+                  return (
+                    <TableRow key={avaliacao.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium">{avaliacao.cliente_nome}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {barbearias.find(b => b.id === avaliacao.barbearia_id)?.nome || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star 
+                                key={star} 
+                                className={`w-4 h-4 ${
+                                  star <= (avaliacao.rating_estrutura || 0)
+                                    ? 'text-yellow-500 fill-current' 
+                                    : 'text-gray-300'
+                                }`} 
+                              />
+                            ))}
+                          </div>
+                          <Badge className={getRatingColor(avaliacao.rating_estrutura || 0)}>
+                            {getRatingText(avaliacao.rating_estrutura || 0)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star 
+                                key={star} 
+                                className={`w-4 h-4 ${
+                                  star <= (avaliacao.rating_barbeiro || 0)
+                                    ? 'text-yellow-500 fill-current' 
+                                    : 'text-gray-300'
+                                }`} 
+                              />
+                            ))}
+                          </div>
+                          <Badge className={getRatingColor(avaliacao.rating_barbeiro || 0)}>
+                            {getRatingText(avaliacao.rating_barbeiro || 0)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusLink.cor}>
+                          <StatusIcon className="w-3 h-3 mr-1" />
+                          {statusLink.texto}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {avaliacao.comentario ? (
+                          <div className="max-w-xs">
+                            <p className="text-sm text-gray-900 line-clamp-2">
+                              {avaliacao.comentario}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Sem comentário</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {formatarData(avaliacao.created_at)}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

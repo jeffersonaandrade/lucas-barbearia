@@ -1,328 +1,434 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Star, 
-  ThumbsUp, 
-  MessageCircle, 
-  Send, 
-  ArrowLeft, 
-  CheckCircle,
-  Heart,
-  Clock,
-  User,
-  Scissors
-} from 'lucide-react';
-import { Button } from '@/components/ui/button.jsx';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
-import { Textarea } from '@/components/ui/textarea.jsx';
-import { Badge } from '@/components/ui/badge.jsx';
-import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
-import { useFilaBackend } from '@/hooks/useFilaBackend.js';
-import { useClienteToken } from '@/hooks/useClienteToken.js';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Alert, AlertDescription } from './ui/alert';
+import { CheckCircle, Star, AlertCircle, Loader2, Building2, User, Clock, CheckSquare, ArrowLeft } from 'lucide-react';
 
 const Avaliacao = () => {
+  const { clienteId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const { clienteAtual, barbeariaInfo } = useFilaBackend(parseInt(id));
-  const { hasToken, getStatusFilaUrl } = useClienteToken();
   
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingEstrutura, setRatingEstrutura] = useState(0);
+  const [ratingBarbeiro, setRatingBarbeiro] = useState(0);
   const [comentario, setComentario] = useState('');
-  const [categoriaAvaliacao, setCategoriaAvaliacao] = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState('idle'); // idle, success, error, expired, already_rated
+  const [errorMessage, setErrorMessage] = useState('');
+  const [linkInfo, setLinkInfo] = useState(null);
+  const [verificando, setVerificando] = useState(true);
+  
+  const token = searchParams.get('token');
 
-  // Verificar se o cliente foi realmente atendido
   useEffect(() => {
-    if (!hasToken || !clienteAtual) {
-      navigate('/');
+    // Verificar se temos o token necessário
+    if (!token) {
+      setStatus('error');
+      setErrorMessage('Token de avaliação não encontrado. Verifique o link enviado.');
+      setVerificando(false);
       return;
     }
 
-    // Verificar se o cliente foi atendido (posição 0 ou status 'atendido')
-    if (clienteAtual.posicao > 0 && clienteAtual.status !== 'atendido') {
-      // Redirecionar para status da fila se ainda não foi atendido
-      const statusUrl = getStatusFilaUrl();
-      if (statusUrl) {
-        navigate(statusUrl);
+    // Verificar validade do link
+    verificarLink();
+  }, [token]);
+
+  const verificarLink = async () => {
+    try {
+      setVerificando(true);
+      const response = await fetch(`/api/avaliacoes/verificar/${token}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          const linkData = data.data;
+          setLinkInfo(linkData);
+          
+          if (!linkData.valido) {
+            if (linkData.ja_avaliou) {
+              setStatus('already_rated');
+            } else {
+              setStatus('expired');
+            }
+            setErrorMessage(linkData.mensagem);
+          }
+        } else {
+          setStatus('error');
+          setErrorMessage('Erro ao verificar link de avaliação');
+        }
       } else {
-        navigate('/');
+        setStatus('error');
+        setErrorMessage('Erro ao verificar link de avaliação');
       }
+    } catch (error) {
+      console.error('Erro ao verificar link:', error);
+      setStatus('error');
+      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+    } finally {
+      setVerificando(false);
     }
-  }, [hasToken, clienteAtual, navigate, getStatusFilaUrl]);
+  };
 
-  const categorias = [
-    { id: 'atendimento', label: 'Atendimento', icon: User },
-    { id: 'qualidade', label: 'Qualidade do Serviço', icon: Scissors },
-    { id: 'ambiente', label: 'Ambiente', icon: Heart },
-    { id: 'tempo', label: 'Tempo de Espera', icon: Clock },
-    { id: 'preco', label: 'Preço', icon: ThumbsUp }
-  ];
+  const handleRatingChange = (newRating, type) => {
+    if (type === 'estrutura') {
+      setRatingEstrutura(newRating);
+    } else if (type === 'barbeiro') {
+      setRatingBarbeiro(newRating);
+    }
+  };
 
-  const handleSubmit = async () => {
-    if (rating === 0) {
-      alert('Por favor, selecione uma avaliação');
+  const enviarAvaliacao = async () => {
+    if (!ratingEstrutura || !ratingBarbeiro) {
+      setErrorMessage('Por favor, avalie tanto a estrutura quanto o barbeiro (1-5 estrelas)');
       return;
     }
 
     setLoading(true);
-    
+    setErrorMessage('');
+
     try {
-      // Simular envio da avaliação
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Salvar avaliação no localStorage (simulando backend)
-      const avaliacao = {
-        id: Date.now(),
-        clienteId: clienteAtual.token,
-        barbeariaId: id,
-        clienteNome: clienteAtual.nome,
-        rating,
-        categoria: categoriaAvaliacao,
-        comentario,
-        data: new Date().toISOString(),
-        barbeiro: clienteAtual.barbeiro
-      };
+      const response = await fetch('/api/avaliacoes/token', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token: token,
+          rating_estrutura: ratingEstrutura,
+          rating_barbeiro: ratingBarbeiro,
+          comentario: comentario
+        })
+      });
 
-      const avaliacoes = JSON.parse(localStorage.getItem('avaliacoes') || '[]');
-      avaliacoes.push(avaliacao);
-      localStorage.setItem('avaliacoes', JSON.stringify(avaliacoes));
-
-      // Marcar cliente como avaliado
-      localStorage.setItem('cliente_avaliado', 'true');
-      
-      setSubmitted(true);
+      if (response.ok) {
+        setStatus('success');
+        // Limpar formulário
+        setRatingEstrutura(0);
+        setRatingBarbeiro(0);
+        setComentario('');
+      } else {
+        const errorData = await response.json();
+        setStatus('error');
+        setErrorMessage(errorData.message || 'Erro ao enviar avaliação. Tente novamente.');
+      }
     } catch (error) {
       console.error('Erro ao enviar avaliação:', error);
-      alert('Erro ao enviar avaliação. Tente novamente.');
+      setStatus('error');
+      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVoltar = () => {
-    navigate('/');
+  const StarRating = ({ rating, onRatingChange, disabled = false, title, icon: Icon }) => {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Icon className="w-6 h-6 text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        </div>
+        <div className="flex gap-2 justify-center">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => !disabled && onRatingChange(star)}
+              disabled={disabled}
+              className={`
+                text-4xl transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full p-1
+                ${star <= rating 
+                  ? 'text-yellow-400' 
+                  : 'text-gray-300 hover:text-yellow-200'
+                }
+                ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
+              `}
+            >
+              <Star className="w-10 h-10 fill-current" />
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground text-center">
+          {rating > 0 ? `${rating} estrela${rating > 1 ? 's' : ''} selecionada${rating > 1 ? 's' : ''}` : 'Clique nas estrelas para avaliar'}
+        </p>
+      </div>
+    );
   };
 
-  if (!hasToken || !clienteAtual) {
+  // Tela de carregamento
+  if (verificando) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-        <Card className="w-full max-w-md bg-card border border-border shadow-lg">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Acesso Negado</h2>
-            <p className="text-muted-foreground mb-4">
-              Você precisa estar na fila para avaliar o atendimento.
-            </p>
-            <Button onClick={handleVoltar}>
-              Voltar ao Início
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
+                  <h2 className="text-xl font-semibold text-foreground">
+                    Verificando link...
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Aguarde enquanto verificamos a validade do seu link de avaliação.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (submitted) {
+  // Tela de sucesso
+  if (status === 'success') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-        <Card className="w-full max-w-md bg-card border border-border shadow-lg">
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Avaliação Enviada!</h2>
-            <p className="text-muted-foreground mb-4">
-              Obrigado por avaliar nosso atendimento. Sua opinião é muito importante para nós!
-            </p>
-            <div className="flex items-center justify-center space-x-1 mb-6">
-              {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`w-6 h-6 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
-                />
-              ))}
-            </div>
-            <Button onClick={handleVoltar} className="w-full">
-              Voltar ao Início
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Avaliação Enviada!
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Obrigado por avaliar nosso serviço. Sua opinião é muito importante para nós!
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/')}
+                    className="w-full"
+                  >
+                    Voltar ao Início
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
+  }
+
+  // Tela de já avaliou
+  if (status === 'already_rated') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <CheckSquare className="w-16 h-16 text-primary mx-auto" />
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Avaliação Já Enviada
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Você já enviou uma avaliação para este atendimento. Obrigado pelo feedback!
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/')}
+                    className="w-full"
+                  >
+                    Voltar ao Início
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de link expirado
+  if (status === 'expired') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <Clock className="w-16 h-16 text-orange-500 mx-auto" />
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Link Expirado
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Este link de avaliação expirou. O prazo de 24 horas foi ultrapassado.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/')}
+                    className="w-full"
+                  >
+                    Voltar ao Início
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de erro
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Erro no Link
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {errorMessage}
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/')}
+                    className="w-full"
+                  >
+                    Voltar ao Início
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Formulário de avaliação (apenas se link for válido)
+  if (!linkInfo?.valido) {
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={handleVoltar}
-          className="text-primary hover:text-accent mb-8"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar ao Início
-        </Button>
+        {/* Header com botão voltar */}
+        <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar ao site
+          </Button>
+        </div>
 
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Avalie seu <span className="text-primary">Atendimento</span>
+          {/* Header da página */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-foreground mb-4">
+              Avalie nossa <span className="text-primary">Barbearia</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Sua opinião é muito importante para continuarmos melhorando
+              Sua opinião é muito importante para continuarmos melhorando!
             </p>
           </div>
 
-          {/* Informações do Atendimento */}
-          <Card className="bg-card border border-border shadow-lg mb-8">
+          {/* Informações do cliente */}
+          {linkInfo && (
+            <Card className="mb-8">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 text-primary" />
+                    <span className="text-foreground font-medium">
+                      Cliente: {linkInfo.cliente_nome}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-primary font-medium">
+                    <Clock className="w-4 h-4" />
+                    <span>{Math.floor(linkInfo.tempo_restante)}h restantes</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Formulário de avaliação */}
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Detalhes do Atendimento</CardTitle>
+              <CardTitle className="text-2xl text-foreground">
+                Como foi sua experiência?
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Cliente</p>
-                  <p className="font-semibold text-foreground">{clienteAtual.nome}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Barbeiro</p>
-                  <p className="font-semibold text-foreground">{clienteAtual.barbeiro}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Barbearia</p>
-                  <p className="font-semibold text-foreground">{barbeariaInfo?.nome || 'Lucas Barbearia'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Data</p>
-                  <p className="font-semibold text-foreground">
-                    {new Date().toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
+            <CardContent className="space-y-8">
+              {/* Avaliação da Estrutura */}
+              <div className="space-y-4">
+                <StarRating 
+                  rating={ratingEstrutura} 
+                  onRatingChange={(rating) => handleRatingChange(rating, 'estrutura')}
+                  disabled={loading}
+                  title="Avalie a estrutura do local"
+                  icon={Building2}
+                />
               </div>
+
+              {/* Separador */}
+              <div className="border-t border-border"></div>
+
+              {/* Avaliação do Barbeiro */}
+              <div className="space-y-4">
+                <StarRating 
+                  rating={ratingBarbeiro} 
+                  onRatingChange={(rating) => handleRatingChange(rating, 'barbeiro')}
+                  disabled={loading}
+                  title="Avalie o atendimento do barbeiro"
+                  icon={User}
+                />
+              </div>
+
+              {/* Separador */}
+              <div className="border-t border-border"></div>
+
+              {/* Comentário */}
+              <div className="space-y-3">
+                <label htmlFor="comentario" className="text-sm font-medium text-foreground">
+                  Comentário (opcional)
+                </label>
+                <Textarea
+                  id="comentario"
+                  placeholder="Conte-nos sobre sua experiência..."
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  disabled={loading}
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+
+                             {/* Botão de envio */}
+               <div className="pt-4">
+                 <Button 
+                   onClick={enviarAvaliacao}
+                   disabled={loading || !ratingEstrutura || !ratingBarbeiro}
+                   className="w-full h-12 text-lg font-semibold bg-black hover:bg-gray-800 text-white disabled:bg-gray-400"
+                   size="lg"
+                 >
+                   {loading ? (
+                     <>
+                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                       Enviando...
+                     </>
+                   ) : (
+                     'Enviar Avaliação'
+                   )}
+                 </Button>
+               </div>
             </CardContent>
           </Card>
-
-          {/* Avaliação por Estrelas */}
-          <Card className="bg-card border border-border shadow-lg mb-8">
-            <CardHeader>
-              <CardTitle className="text-foreground">Como você avalia sua experiência?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center space-x-2 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full p-1"
-                  >
-                    <Star 
-                      className={`w-12 h-12 transition-colors ${
-                        star <= (hoverRating || rating) 
-                          ? 'fill-yellow-400 text-yellow-400' 
-                          : 'text-gray-300 hover:text-yellow-300'
-                      }`} 
-                    />
-                  </button>
-                ))}
-              </div>
-              
-              <div className="text-center">
-                <p className="text-lg font-semibold text-foreground">
-                  {rating === 0 && 'Selecione uma avaliação'}
-                  {rating === 1 && 'Péssimo'}
-                  {rating === 2 && 'Ruim'}
-                  {rating === 3 && 'Regular'}
-                  {rating === 4 && 'Bom'}
-                  {rating === 5 && 'Excelente'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Categoria da Avaliação */}
-          <Card className="bg-card border border-border shadow-lg mb-8">
-            <CardHeader>
-              <CardTitle className="text-foreground">O que você está avaliando?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categorias.map((categoria) => {
-                  const Icon = categoria.icon;
-                  return (
-                    <button
-                      key={categoria.id}
-                      onClick={() => setCategoriaAvaliacao(categoria.id)}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        categoriaAvaliacao === categoria.id
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Icon className="w-6 h-6 text-primary" />
-                        <span className="font-medium text-foreground">{categoria.label}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Comentário */}
-          <Card className="bg-card border border-border shadow-lg mb-8">
-            <CardHeader>
-              <CardTitle className="text-foreground">Deixe um comentário (opcional)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Conte-nos mais sobre sua experiência..."
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                className="min-h-[120px] resize-none"
-                maxLength={500}
-              />
-              <div className="text-right mt-2">
-                <span className="text-sm text-muted-foreground">
-                  {comentario.length}/500
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Botão de Envio */}
-          <div className="text-center">
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || rating === 0}
-              size="lg"
-              className="bg-primary text-primary-foreground hover:bg-accent px-8 py-3 text-lg font-semibold"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  Enviar Avaliação
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Informação adicional */}
-          <div className="text-center mt-8">
-            <Alert className="max-w-md mx-auto border-primary/20 bg-primary/5">
-              <MessageCircle className="h-4 w-4 text-primary" />
-              <AlertDescription className="text-foreground">
-                Sua avaliação nos ajuda a melhorar continuamente nossos serviços.
-              </AlertDescription>
-            </Alert>
-          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useDashboardStats } from '@/hooks/useDashboardStats.js';
+import { useSharedData } from '@/hooks/useSharedData.js';
 import { useDashboard } from '@/contexts/DashboardContext.jsx';
 import DashboardHeader from './DashboardHeader.jsx';
 import DashboardCard from '@/components/ui/dashboard-card.jsx';
@@ -13,15 +13,17 @@ import {
 const GerenteDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const { barbearias } = useDashboard();
-  const { stats, loading: statsLoading, loadAdminStatsWithContext } = useDashboardStats('gerente');
+  
+  // Sistema de dados compartilhados
+  const { useSharedDashboardStats } = useSharedData();
+  const { stats, loading: statsLoading } = useSharedDashboardStats('gerente');
 
   // Carregar estatísticas quando as barbearias estiverem disponíveis
   useEffect(() => {
     if (barbearias && barbearias.length > 0) {
-      console.log('📊 GerenteDashboard - Carregando stats com barbearias do contexto:', barbearias.length);
-      loadAdminStatsWithContext(barbearias);
+      console.log('📊 GerenteDashboard - Barbearias disponíveis no contexto:', barbearias.length);
     }
-  }, [barbearias, loadAdminStatsWithContext]);
+  }, [barbearias]);
 
   const handleNavigation = (path) => {
     console.log('Navegando para', path);

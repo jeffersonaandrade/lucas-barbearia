@@ -99,7 +99,7 @@ export const publicRoutes = [
     element: <TermsOfService />
   },
   {
-    path: '/barbearia/:id/avaliacao',
+    path: '/avaliacao/:clienteId',
     element: <Avaliacao />
   },
   {
