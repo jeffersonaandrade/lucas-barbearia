@@ -36,7 +36,7 @@ const VisualizarFila = () => {
   // Verificar se o cliente tem token cadastrado e redirecionar
   useEffect(() => {
     if (hasToken) {
-      console.log('🔍 Cliente com token encontrado, mostrando alerta de redirecionamento...');
+      
       setShowRedirectAlert(true);
     }
   }, [hasToken]);
@@ -70,7 +70,7 @@ const VisualizarFila = () => {
     carregarBarbearias();
   }, []);
 
-  // Atualização automática a cada 10 segundos
+  // Atualização automática a cada 5 minutos
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -79,7 +79,7 @@ const VisualizarFila = () => {
       } catch (err) {
         console.error('Erro ao atualizar fila:', err);
       }
-    }, 10000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [obterFilaAtual, selectedBarbeariaId]);

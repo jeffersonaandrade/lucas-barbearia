@@ -113,7 +113,7 @@ export const useFilaAPI = (barbeariaId = null) => {
   useEffect(() => {
     const interval = setInterval(() => {
       carregarFilaAtual();
-    }, 30000); // Atualiza a cada 30 segundos
+    }, 300000); // Atualiza a cada 5 minutos
 
     return () => clearInterval(interval);
   }, [barbeariaId]);

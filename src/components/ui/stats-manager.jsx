@@ -20,13 +20,23 @@ const StatsManager = ({
   historicoAtualizado = false,
   loading = false
 }) => {
+  // Log para debug
+  console.log('📊 StatsManager recebeu:', {
+    userRole,
+    stats,
+    loading,
+    statsType: typeof stats,
+    statsKeys: stats ? Object.keys(stats) : null
+  });
+
   // Stats para Admin/Gerente
   if (userRole === 'admin' || userRole === 'gerente') {
     // Mostrar loading se ainda não carregou os dados
     if (loading) {
+      console.log('📊 StatsManager - Mostrando loading...');
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Carregando...</CardTitle>
@@ -44,6 +54,8 @@ const StatsManager = ({
       );
     }
 
+    console.log('📊 StatsManager - Não está carregando, renderizando dados...');
+
     // Usar stats passados como props ou fallback para valores padrão
     const displayStats = stats || {
       totalClientes: 0,
@@ -52,8 +64,12 @@ const StatsManager = ({
       totalBarbearias: 0
     };
 
+    console.log('📊 StatsManager usando displayStats:', displayStats);
+
+    console.log('📊 StatsManager - Renderizando cards com dados:', displayStats);
+    
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
@@ -102,6 +118,32 @@ const StatsManager = ({
             <div className="text-2xl font-bold text-purple-600">{displayStats.totalBarbearias}</div>
             <p className="text-xs text-muted-foreground">
               Unidades ativas
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Atendidos Hoje</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{displayStats.clientesAtendidosHoje || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Clientes atendidos hoje
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-600">{displayStats.tempoMedioEspera || 0}min</div>
+            <p className="text-xs text-muted-foreground">
+              Tempo médio de espera
             </p>
           </CardContent>
         </Card>

@@ -16,7 +16,7 @@ const FilaStats = ({
   
   // Função para formatar tempo médio
   const formatTempoMedio = (tempo) => {
-    if (!tempo || tempo === 0) return 'N/A';
+    if (!tempo || tempo === 0) return '0 min';
     return `${tempo} min`;
   };
 

@@ -5,8 +5,8 @@ export const FilaStatus = () => {
   const { cliente, loading, checkStatus, sairFila } = useFila();
 
   useEffect(() => {
-    // Verificar status a cada 30 segundos
-    const interval = setInterval(checkStatus, 30000);
+    // Verificar status a cada 5 minutos
+    const interval = setInterval(checkStatus, 300000);
     return () => clearInterval(interval);
   }, [checkStatus]);
 
@@ -59,7 +59,7 @@ export const FilaStatus = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-100 rounded-lg p-4">
             <div className="text-2xl font-bold text-black">
-              {cliente.posicao || 'N/A'}
+              {cliente.posicao || 0}
             </div>
             <div className="text-sm text-gray-600">Posição na fila</div>
           </div>

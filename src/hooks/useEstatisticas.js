@@ -49,37 +49,41 @@ export const useEstatisticas = (barbeariaId = null) => {
     setError(null);
 
     try {
-      const response = await filaService.obterEstatisticasPublicas(barbeariaId);
+      // Usar o mesmo endpoint que o useBarbeiroFila
+      const response = await filaService.obterFilaBarbeiro(barbeariaId);
       const data = response.data || response;
 
+      // Extrair estatísticas da resposta da fila
+      const estatisticasFila = data.estatisticas || {};
+      
       // Mapear dados da API para formato padronizado
       const estatisticasMapeadas = {
         // Dados da fila
-        total: data.fila?.total || 0,
-        aguardando: data.fila?.aguardando || 0,
-        proximo: data.fila?.proximo || 0,
-        atendendo: data.fila?.atendendo || 0,
-        finalizado: data.fila?.finalizado || 0,
-        removido: data.fila?.removido || 0,
+        total: estatisticasFila.total_clientes || 0,
+        aguardando: estatisticasFila.aguardando || 0,
+        proximo: estatisticasFila.proximo || 0,
+        atendendo: estatisticasFila.atendendo || 0,
+        finalizado: estatisticasFila.finalizados || 0,
+        removido: estatisticasFila.removidos || 0,
         
         // Dados dos barbeiros
-        barbeirosTotal: data.barbeiros?.total || 0,
-        barbeirosAtendendo: data.barbeiros?.atendendo || 0,
-        barbeirosDisponiveis: data.barbeiros?.disponiveis || 0,
-        barbeirosOcupados: data.barbeiros?.ocupados || 0,
+        barbeirosTotal: estatisticasFila.barbeiros_ativos || 0,
+        barbeirosAtendendo: estatisticasFila.atendendo || 0,
+        barbeirosDisponiveis: estatisticasFila.barbeiros_ativos || 0,
+        barbeirosOcupados: estatisticasFila.atendendo || 0,
         
         // Dados de tempo
-        tempoMedioEspera: data.tempos?.medioEspera || 0,
-        tempoMedioAtendimento: data.tempos?.medioAtendimento || 0,
-        tempoEstimadoProximo: data.tempos?.estimadoProximo || 0,
+        tempoMedioEspera: estatisticasFila.tempo_estimado || 0,
+        tempoMedioAtendimento: 0,
+        tempoEstimadoProximo: estatisticasFila.tempo_estimado || 0,
         
         // Dados das últimas 24h
         ultimas24h: {
-          totalAtendidos: data.ultimas24h?.totalAtendidos || 0,
-          tempoMedioEspera: data.ultimas24h?.tempoMedioEspera || 0,
-          tempoMedioAtendimento: data.ultimas24h?.tempoMedioAtendimento || 0,
-          clientesPorHora: data.ultimas24h?.clientesPorHora || 0,
-          barbeirosAtivos: data.ultimas24h?.barbeirosAtivos || 0
+          totalAtendidos: 0,
+          tempoMedioEspera: estatisticasFila.tempo_estimado || 0,
+          tempoMedioAtendimento: 0,
+          clientesPorHora: 0,
+          barbeirosAtivos: estatisticasFila.barbeiros_ativos || 0
         }
       };
 

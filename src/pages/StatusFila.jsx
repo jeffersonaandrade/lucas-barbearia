@@ -53,13 +53,13 @@ const StatusFila = () => {
     }
   }, [clienteAtual, navigate]);
 
-  // Atualização automática a cada 30 segundos
+  // Atualização automática a cada 5 minutos
   useEffect(() => {
     const interval = setInterval(() => {
       if (clienteAtual?.token) {
         atualizarPosicao(clienteAtual.token);
       }
-    }, 30000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [clienteAtual, atualizarPosicao]);
@@ -202,7 +202,7 @@ const StatusFila = () => {
                   </div>
                   <div className="text-center p-6 bg-secondary rounded-lg">
                     <div className="text-5xl font-bold text-primary mb-2">
-                      {estatisticas.tempoMedioEspera || estatisticas.tempoEstimadoProximo || 'N/A'}
+                      {estatisticas.tempoMedioEspera || estatisticas.tempoEstimadoProximo || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Minutos</div>
                   </div>

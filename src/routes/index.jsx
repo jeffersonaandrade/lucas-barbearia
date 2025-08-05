@@ -25,6 +25,7 @@ const AdminAdicionarFila = lazy(() => import('@/components/AdminAdicionarFila.js
 const AdminFilas = lazy(() => import('@/components/AdminFilas.jsx'));
 const AdminRelatorios = lazy(() => import('@/components/AdminRelatorios.jsx'));
 const AdminConfiguracoes = lazy(() => import('@/components/admin/AdminConfiguracoesWrapper.jsx'));
+const WhatsAppAdminPanel = lazy(() => import('@/components/admin/WhatsAppAdminPanel.jsx'));
 
 // Outros componentes
 const QRCodeGenerator = lazy(() => import('@/components/QRCodeGenerator.jsx'));
@@ -37,7 +38,6 @@ const Avaliacao = lazy(() => import('@/components/Avaliacao.jsx'));
 const AvaliacoesList = lazy(() => import('@/components/AvaliacoesList.jsx'));
 const Unauthorized = lazy(() => import('@/components/Unauthorized.jsx'));
 const TestUserCreation = lazy(() => import('@/components/TestUserCreation.jsx'));
-const ApiTest = lazy(() => import('@/components/ApiTest.jsx'));
 
 
 // Configuração das rotas públicas
@@ -98,6 +98,7 @@ export const publicRoutes = [
     path: '/termos',
     element: <TermsOfService />
   },
+
   {
     path: '/avaliacao/:clienteId',
     element: <Avaliacao />
@@ -110,10 +111,7 @@ export const publicRoutes = [
     path: '/test-user-creation',
     element: <TestUserCreation />
   },
-  {
-    path: '/api-test',
-    element: <ApiTest />
-  }
+
 ];
 
 // Configuração das rotas administrativas
@@ -159,6 +157,16 @@ export const adminRoutes = [
   {
     path: '/admin/configuracoes',
     element: <AdminConfiguracoes />,
+    allowedRoles: ['admin']
+  },
+  {
+    path: '/admin/whatsapp',
+    element: <WhatsAppAdminPanel />,
+    allowedRoles: ['admin']
+  },
+  {
+    path: '/admin/avaliacoes',
+    element: <AvaliacoesList />,
     allowedRoles: ['admin']
   },
   {

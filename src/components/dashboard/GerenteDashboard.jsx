@@ -18,6 +18,11 @@ const GerenteDashboard = ({ onLogout }) => {
   const { useSharedDashboardStats } = useSharedData();
   const { stats, loading: statsLoading } = useSharedDashboardStats('gerente');
 
+  // Debug: Log dos dados recebidos
+  useEffect(() => {
+    console.log('📊 GerenteDashboard - Stats recebidos:', stats);
+  }, [stats]);
+
   // Carregar estatísticas quando as barbearias estiverem disponíveis
   useEffect(() => {
     if (barbearias && barbearias.length > 0) {

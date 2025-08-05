@@ -190,7 +190,7 @@ const AdminFilas = () => {
   // Calcular tempo de espera e cor
   const getTempoEspera = (cliente) => {
     const dataEntrada = cliente.data_entrada || cliente.created_at;
-    if (!dataEntrada) return { tempo: 'N/A', cor: 'text-gray-500' };
+    if (!dataEntrada) return { tempo: '0 min', cor: 'text-gray-500' };
     
     const agora = new Date();
     const entrada = new Date(dataEntrada);

@@ -11,7 +11,8 @@ import {
   Settings, 
   UserPlus,
   BarChart3,
-  MessageCircle
+  MessageCircle,
+  MessageSquare
 } from 'lucide-react';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -21,6 +22,14 @@ const AdminDashboard = ({ onLogout }) => {
   // Sistema de dados compartilhados
   const { useSharedDashboardStats } = useSharedData();
   const { stats, loading: statsLoading } = useSharedDashboardStats('admin');
+
+  // Debug: Log dos dados recebidos
+  useEffect(() => {
+    console.log('📊 AdminDashboard - Stats recebidos:', stats);
+    console.log('📊 AdminDashboard - Loading:', statsLoading);
+    console.log('📊 AdminDashboard - Stats type:', typeof stats);
+    console.log('📊 AdminDashboard - Stats keys:', stats ? Object.keys(stats) : null);
+  }, [stats, statsLoading]);
 
   // Carregar estatísticas quando as barbearias estiverem disponíveis
   useEffect(() => {
@@ -119,6 +128,14 @@ const AdminDashboard = ({ onLogout }) => {
           icon={MessageCircle}
           buttonText="Acessar"
           onButtonClick={() => handleNavigation('/admin/avaliacoes')}
+        />
+
+        <DashboardCard
+          title="WhatsApp"
+          description="Conectar e gerenciar WhatsApp Business"
+          icon={MessageSquare}
+          buttonText="Acessar"
+          onButtonClick={() => handleNavigation('/admin/whatsapp')}
         />
       </div>
     </div>

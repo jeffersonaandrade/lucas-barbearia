@@ -2,41 +2,56 @@ import { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { authService } from '@/services/api.js';
 import { CookieManager } from '@/utils/cookieManager.js';
 
-// Actions
+// Ações
 const AUTH_ACTIONS = {
   SET_USER: 'SET_USER',
-  SET_LOADING: 'SET_LOADING',
-  SET_API_STATUS: 'SET_API_STATUS',
   CLEAR_USER: 'CLEAR_USER',
-  SET_ERROR: 'SET_ERROR'
+  SET_LOADING: 'SET_LOADING',
+  SET_ERROR: 'SET_ERROR',
+  SET_API_STATUS: 'SET_API_STATUS'
 };
 
-// Initial state
+// Estado inicial
 const initialState = {
   user: null,
   loading: true,
-  apiStatus: 'checking', // 'checking', 'available', 'unavailable'
-  error: null
+  error: null,
+  apiStatus: 'checking' // 'checking', 'available', 'unavailable'
 };
 
 // Reducer
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.SET_USER:
-      return { ...state, user: action.payload, loading: false, error: null };
-    
-    case AUTH_ACTIONS.SET_LOADING:
-      return { ...state, loading: action.payload };
-    
-    case AUTH_ACTIONS.SET_API_STATUS:
-      return { ...state, apiStatus: action.payload };
-    
+      return {
+        ...state,
+        user: action.payload,
+        loading: false,
+        error: null
+      };
     case AUTH_ACTIONS.CLEAR_USER:
-      return { ...state, user: null, loading: false, error: null };
-    
+      return {
+        ...state,
+        user: null,
+        loading: false,
+        error: null
+      };
+    case AUTH_ACTIONS.SET_LOADING:
+      return {
+        ...state,
+        loading: action.payload
+      };
     case AUTH_ACTIONS.SET_ERROR:
-      return { ...state, error: action.payload, loading: false };
-    
+      return {
+        ...state,
+        error: action.payload,
+        loading: false
+      };
+    case AUTH_ACTIONS.SET_API_STATUS:
+      return {
+        ...state,
+        apiStatus: action.payload
+      };
     default:
       return state;
   }
@@ -49,25 +64,26 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
   
-  // Refs para controlar verificações
+  // Refs para evitar verificações simultâneas e muito frequentes
   const verificationInProgressRef = useRef(false);
   const lastVerificationRef = useRef(0);
-  const verificationTimeout = 5000; // 5 segundos entre verificações
+  const verificationTimeout = 30000; // 30 segundos entre verificações
+  const hasInitializedRef = useRef(false);
 
-  // Verificar usuário atual
-  const verificarUsuarioAtual = async () => {
-    console.log('🔄 AuthContext - verificarUsuarioAtual: Iniciando...');
+  // Verificar usuário atual (otimizado)
+  const verificarUsuarioAtual = async (force = false) => {
+    console.log('🔄 AuthContext - verificarUsuarioAtual: Iniciando...', { force });
     
     // Evitar verificações simultâneas
-    if (verificationInProgressRef.current) {
+    if (verificationInProgressRef.current && !force) {
       console.log('🔄 AuthContext - Verificação já em andamento, aguardando...');
       return;
     }
 
     const now = Date.now();
     
-    // Evitar verificações muito frequentes
-    if (lastVerificationRef.current > 0 && (now - lastVerificationRef.current) < verificationTimeout) {
+    // Evitar verificações muito frequentes (a menos que seja forçada)
+    if (!force && lastVerificationRef.current > 0 && (now - lastVerificationRef.current) < verificationTimeout) {
       console.log('🔄 AuthContext - Verificação muito recente, aguardando...');
       return;
     }
@@ -89,7 +105,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       // Se temos dados do usuário no localStorage, usar eles diretamente
-      if (userInfo) {
+      if (userInfo && !force) {
         try {
           const user = userInfo;
           console.log('✅ AuthContext - Usuário encontrado no localStorage:', user);
@@ -103,7 +119,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (token && userInfo) {
-        // Tentar validar o token com o servidor
+        // Tentar validar o token com o servidor (apenas se forçado ou primeira vez)
         try {
           console.log('🔄 AuthContext - Validando token no servidor...');
           const response = await authService.getCurrentUser();
@@ -144,57 +160,34 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
       dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'checking' });
       
-      console.log('🔄 AuthContext - Realizando login...');
       const response = await authService.login(email, password);
-      
-      console.log('✅ AuthContext - Login realizado com sucesso');
       
       // Verificar diferentes estruturas possíveis da resposta
       // O backend retorna: { token, user, expiresIn }
       const hasSuccess = response && (response.success || response.authenticated || response.token);
       const user = response?.data?.user || response?.user || response?.data;
+      const token = response?.data?.token || response?.token;
       
       if (hasSuccess && user) {
-        console.log('✅ AuthContext - Login bem-sucedido, usuário:', user.nome);
-        
-        // Verificar se há token na resposta para salvar como cookie
-        const token = response.token || response.data?.token;
+        // Armazenar o token se existir
         if (token) {
-          console.log('🍪 AuthContext - Token salvo como cookie');
           CookieManager.setAdminToken(token);
-        } else {
-          console.log('❌ AuthContext - Nenhum token encontrado na resposta do backend');
-          throw new Error('Token não fornecido pelo backend');
-        }
-        
-        // Salvar informações do usuário no localStorage
-        if (user) {
-          console.log('🍪 AuthContext - Informações do usuário salvas no localStorage');
           CookieManager.setUserInfo(user);
         }
         
-        // Definir o usuário no contexto
         dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
         dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
-        console.log('👤 AuthContext - Usuário autenticado:', user.nome);
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+        return { success: true, user };
       } else {
-        console.log('❌ AuthContext - Login falhou - Estrutura inválida:', {
-          hasResponse: !!response,
-          hasSuccess,
-          hasUser: !!user,
-          responseKeys: response ? Object.keys(response) : 'null',
-          response
-        });
-        throw new Error('Resposta inválida do servidor');
+        throw new Error('Resposta de login inválida');
       }
-      
-      return response;
     } catch (error) {
       console.error('❌ AuthContext - Erro no login:', error);
-      dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'unavailable' });
-      throw error;
-    } finally {
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: error.message });
+      dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+      throw error;
     }
   };
 
@@ -202,14 +195,20 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       console.log('🔄 AuthContext - Realizando logout...');
-      await authService.logout();
-    } catch (error) {
-      console.warn('⚠️ AuthContext - Erro no logout do servidor:', error);
-    } finally {
-      // Limpar cookies
+      
+      // Tentar fazer logout no servidor
+      try {
+        await authService.logout();
+      } catch (error) {
+        console.log('⚠️ AuthContext - Erro no logout do servidor, continuando...');
+      }
+      
+      // Limpar dados locais
       CookieManager.clearAdminCookies();
       
+      // Limpar estado
       dispatch({ type: AUTH_ACTIONS.CLEAR_USER });
+      dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
       
       // Resetar refs
       verificationInProgressRef.current = false;
@@ -217,10 +216,12 @@ export const AuthProvider = ({ children }) => {
       
       // Não redirecionar automaticamente, deixar que o componente decida
       console.log('✅ AuthContext - Logout concluído, cookies limpos');
+    } catch (error) {
+      console.error('❌ AuthContext - Erro no logout:', error);
     }
   };
 
-  // Refresh user
+  // Refresh user (otimizado - só quando necessário)
   const refreshUser = async () => {
     try {
       console.log('🔄 AuthContext - Atualizando dados do usuário...');
@@ -239,12 +240,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Verificar status da API
+  // Verificar status da API (otimizado)
   const verificarStatusAPI = async () => {
     try {
-      const response = await authService.getCurrentUser();
-      dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
-      return response;
+      // Só verificar se não temos dados do usuário ou se forçado
+      if (!state.user) {
+        const response = await authService.getCurrentUser();
+        dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+        return response;
+      } else {
+        dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'available' });
+        return { success: true };
+      }
     } catch (error) {
       dispatch({ type: AUTH_ACTIONS.SET_API_STATUS, payload: 'unavailable' });
       throw error;
@@ -253,29 +260,25 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar autenticação
   const isAuthenticated = () => {
-    const authenticated = !!state.user;
-    console.log('🔍 AuthContext - isAuthenticated:', authenticated, 'user:', state.user);
-    return authenticated;
+    return !!state.user;
   };
 
   // Verificar role
   const hasRole = (role) => {
-    const hasRoleResult = state.user?.role === role;
-    console.log('🔍 AuthContext - hasRole:', role, hasRoleResult, 'user role:', state.user?.role);
-    return hasRoleResult;
+    return state.user?.role === role;
   };
 
   // Verificar múltiplos roles
   const hasAnyRole = (roles) => {
-    const hasAnyRoleResult = roles.includes(state.user?.role);
-    console.log('🔍 AuthContext - hasAnyRole:', roles, hasAnyRoleResult, 'user role:', state.user?.role);
-    return hasAnyRoleResult;
+    return roles.includes(state.user?.role);
   };
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais (otimizado)
   useEffect(() => {
-    console.log('🔄 AuthContext - useEffect: Iniciando verificação inicial...');
-    verificarUsuarioAtual();
+    if (!hasInitializedRef.current) {
+      verificarUsuarioAtual();
+      hasInitializedRef.current = true;
+    }
   }, []);
 
   const value = {

@@ -88,8 +88,11 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
   // ✅ Definir função carregarStatusBarbeiro com useCallback
   const carregarStatusBarbeiro = useCallback(async () => {
+    console.log('🔄 carregarStatusBarbeiro chamado:', { barbeariaId });
+    
     // Evitar chamadas simultâneas
     if (statusCallInProgress.current) {
+      console.log('⚠️ Chamada em progresso, ignorando...');
       return;
     }
 
@@ -97,6 +100,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     
     // Evitar chamadas muito frequentes
     if (lastStatusCall.current > 0 && (now - lastStatusCall.current) < statusCallTimeout) {
+      console.log('⚠️ Chamada muito frequente, ignorando...');
       return;
     }
 
@@ -104,11 +108,17 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       statusCallInProgress.current = true;
       lastStatusCall.current = now;
       
-      const response = await usuariosService.obterStatusBarbeiro();
+      console.log('📡 Fazendo request para obterStatusBarbeiro...');
+      
+      // ✅ USAR O ENDPOINT CORRETO RESTAURADO NO BACKEND
+      const response = await usuariosService.obterStatusBarbeiro(barbeariaId);
+      
+      console.log('📡 Response do obterStatusBarbeiro:', response);
       
       // ✅ Extrair dados corretamente da estrutura do backend
       const statusData = response.data || response;
       
+      console.log('📡 Status data extraído:', statusData);
       setStatusBarbeiro(statusData);
     } catch (error) {
       console.error('❌ Erro ao carregar status do barbeiro:', error);
@@ -116,7 +126,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       statusCallInProgress.current = false;
     }
-  }, []);
+  }, [barbeariaId]);
 
   // ✅ Definir função carregarFilaAtual com useCallback
   const carregarFilaAtual = useCallback(async () => {
@@ -259,17 +269,19 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
   // Carregar status do barbeiro quando usuário estiver autenticado
   useEffect(() => {
-    if (user && user.id) {
+    console.log('🔄 useEffect user - user:', user?.id, 'barbeariaId:', barbeariaId);
+    if (user && user.id && barbeariaId) {
       carregarStatusBarbeiro();
     }
-  }, [user, carregarStatusBarbeiro]);
+  }, [user, barbeariaId, carregarStatusBarbeiro]);
 
   // Carregar status do barbeiro quando API estiver disponível
   useEffect(() => {
-    if (apiStatus === 'available') {
+    console.log('🔄 useEffect apiStatus - apiStatus:', apiStatus, 'barbeariaId:', barbeariaId);
+    if (apiStatus === 'available' && barbeariaId) {
       carregarStatusBarbeiro();
     }
-  }, [apiStatus, carregarStatusBarbeiro]);
+  }, [apiStatus, barbeariaId, carregarStatusBarbeiro]);
 
   // Carregar fila quando status do barbeiro for carregado e houver barbearia
   useEffect(() => {
@@ -291,19 +303,49 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
     const interval = setInterval(() => {
       carregarFilaAtual();
-    }, 60000); // Atualiza a cada 60 segundos (1 minuto)
+    }, 300000); // Atualiza a cada 5 minutos
 
     return () => clearInterval(interval);
   }, [barbeariaId, apiStatus, carregarFilaAtual]);
 
   // Verificar se o barbeiro está ativo
   const isBarbeiroAtivo = useCallback((barbeariaId) => {
+    console.log('🔍 isBarbeiroAtivo chamado:', {
+      barbeariaId,
+      statusBarbeiro,
+      statusBarbeiroKeys: statusBarbeiro ? Object.keys(statusBarbeiro) : null,
+      statusBarbeiroType: typeof statusBarbeiro,
+      statusBarbeiroString: JSON.stringify(statusBarbeiro)
+    });
+    
     // Se não há dados de status, retornar false
     if (!statusBarbeiro || Object.keys(statusBarbeiro).length === 0) {
+      console.log('❌ Sem dados de status, retornando false');
       return false;
     }
     
-    // ✅ ESTRUTURA CORRETA DO BACKEND: statusBarbeiro.barbeiro.ativo
+    // ✅ ESTRUTURA DA RESPOSTA DO BACKEND: { ativo: true, barbeiro: {...}, barbearia: {...} }
+    if (statusBarbeiro?.ativo !== undefined) {
+      const isAtivo = statusBarbeiro.ativo;
+      console.log('✅ Status encontrado na estrutura do backend:', isAtivo);
+      return isAtivo;
+    }
+    
+    // ✅ ESTRUTURA DA RESPOSTA DO ENDPOINT obterStatusBarbeiro: { barbeiro: {...}, status_atual: {...} }
+    if (statusBarbeiro?.barbeiro?.ativo !== undefined) {
+      const isAtivo = statusBarbeiro.barbeiro.ativo;
+      console.log('✅ Status encontrado na estrutura barbeiro.ativo:', isAtivo);
+      return isAtivo;
+    }
+    
+    // ✅ NOVA ESTRUTURA INDEXADA POR BARBEARIA_ID
+    if (statusBarbeiro[barbeariaId]?.ativo !== undefined) {
+      const isAtivo = statusBarbeiro[barbeariaId].ativo;
+      console.log('✅ Status encontrado na nova estrutura:', isAtivo);
+      return isAtivo;
+    }
+    
+    // Fallback para estrutura antiga: statusBarbeiro.barbeiro.ativo
     if (statusBarbeiro?.barbeiro?.ativo !== undefined) {
       const isAtivo = statusBarbeiro.barbeiro.ativo;
       const barbeariaIdBarbeiro = statusBarbeiro.barbeiro.barbearia?.id;
@@ -321,12 +363,6 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       const isAtivo = statusBarbeiro.barbearias.some(barbearia => 
         barbearia.barbearia_id === parseInt(barbeariaId) && barbearia.ativo === true
       );
-      return isAtivo;
-    }
-    
-    // Estrutura alternativa: statusBarbeiro.ativo (diretamente)
-    if (statusBarbeiro?.ativo !== undefined) {
-      const isAtivo = statusBarbeiro.ativo;
       return isAtivo;
     }
     
@@ -485,85 +521,57 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         throw new Error('Barbearia não selecionada');
       }
       
-      // Para obter o ID do barbeiro, vamos usar o contexto de autenticação
-      // ou os dados que já temos disponíveis
-      let barbeiroId = null;
+      // ✅ USAR O ENDPOINT SIMPLIFICADO RESTAURADO NO BACKEND
+      // O endpoint /barbeiros/alterar-status aceita apenas barbearia_id e ativo
       
-      // Primeiro, tentar obter do contexto de autenticação
-      if (user?.id) {
-        barbeiroId = user.id;
-      }
-      // Se não temos do contexto, tentar dos dados de status
-      else if (statusBarbeiro?.barbeiro?.id) {
-        barbeiroId = statusBarbeiro.barbeiro.id;
-      } else if (statusBarbeiro?.id) {
-        barbeiroId = statusBarbeiro.id;
-      } else if (statusBarbeiro?.user_id) {
-        barbeiroId = statusBarbeiro.user_id;
-      } else {
-        throw new Error('Não foi possível identificar o barbeiro. Tente fazer login novamente.');
-      }
-      
-      if (!barbeiroId) {
-        throw new Error('Dados do barbeiro não carregados. Tente recarregar a página.');
-      }
-
-      // REGRA: Se está ativando, primeiro desativar em todas as outras barbearias
-      if (acao === 'ativar') {
-        try {
-          // Obter lista de barbearias onde o barbeiro pode trabalhar
-          const barbeariasResponse = await barbeariasService.listarBarbearias();
-          const barbearias = barbeariasResponse.data || barbeariasResponse;
-          
-          // Desativar em todas as barbearias exceto a atual
-          const promessasDesativacao = barbearias
-            .filter(barbearia => barbearia.id !== parseInt(barbeariaId))
-            .map(async (barbearia) => {
-              try {
-                const dadosDesativacao = {
-                  barbearia_id: barbearia.id,
-                  barbeiro_id: barbeiroId
-                };
-                await usuariosService.atualizarStatusBarbeiro('desativar', dadosDesativacao);
-                return { success: true, barbearia: barbearia.id };
-              } catch (error) {
-                return { success: false, barbearia: barbearia.id, error: error.message };
-              }
-            });
-          
-          // Aguardar todas as desativações
-          await Promise.allSettled(promessasDesativacao);
-          
-        } catch (error) {
-          // Continuar mesmo se houver erro na desativação
-        }
-      }
-
       const dados = {
-        barbearia_id: barbeariaId,
-        barbeiro_id: barbeiroId
+        barbearia_id: parseInt(barbeariaId),
+        ativo: acao === 'ativar'
       };
 
-      await usuariosService.atualizarStatusBarbeiro(acao, dados);
+      console.log('📡 Enviando dados para alterar status:', dados);
+      
+      // ✅ USAR O ENDPOINT CORRETO: POST /barbeiros/alterar-status
+      // Passar diretamente os dados, não a ação
+      await usuariosService.atualizarStatusBarbeiro(dados);
       
       // Invalidar cache de barbeiros
       barbeirosCache.invalidate(barbeariaId);
 
-      // Recarregar status do barbeiro
+      // ✅ Recarregar status do barbeiro usando o endpoint correto
       try {
-        const response = await usuariosService.obterStatusBarbeiro();
-        setStatusBarbeiro(response.data);
+        const response = await usuariosService.obterStatusBarbeiro(barbeariaId);
+        console.log('📡 Response do obterStatusBarbeiro após alteração:', response);
+        
+              // ✅ Extrair dados corretamente da estrutura do backend
+      const statusData = response.data || response;
+      console.log('📡 Status atualizado no hook:', statusData);
+      console.log('📡 Estrutura completa da resposta:', response);
+      setStatusBarbeiro(statusData);
+        
+        // ✅ Forçar recarregamento da fila para atualizar a interface
+        setTimeout(async () => {
+          await carregarFilaAtual();
+        }, 500);
+        
       } catch (statusError) {
+        console.error('❌ Erro ao recarregar status:', statusError);
         // Mesmo que não consigamos recarregar o status, a operação foi bem-sucedida
         // Vamos atualizar o estado local baseado na ação realizada
         const novoStatus = {
-          barbeiro: {
-            id: barbeiroId,
+          [barbeariaId]: {
             ativo: acao === 'ativar',
-            barbearia: { id: barbeariaId }
+            disponivel: acao === 'ativar',
+            barbearia_id: parseInt(barbeariaId)
           }
         };
+        console.log('✅ Status fallback criado:', novoStatus);
         setStatusBarbeiro(novoStatus);
+        
+        // ✅ Forçar recarregamento da fila mesmo no fallback
+        setTimeout(async () => {
+          await carregarFilaAtual();
+        }, 500);
       }
 
     } catch (err) {
@@ -573,7 +581,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [barbeariaId, statusBarbeiro, user]);
+  }, [barbeariaId]);
 
   // Iniciar atendimento (BARBEIRO)
   const iniciarAtendimento = useCallback(async (clienteId, dados) => {
@@ -590,8 +598,8 @@ export const useBarbeiroFila = (barbeariaId = null) => {
         throw new Error('ID do cliente não fornecido');
       }
 
-      // ✅ USAR O NOVO ENDPOINT SIMPLIFICADO
-      const response = await filaService.iniciarAtendimentoSimplificado(clienteId, dados);
+      // ✅ USAR O ENDPOINT CORRETO
+      const response = await filaService.iniciarAtendimento(clienteId, dados, barbeariaId);
 
       // Invalidar cache da fila
       filaCache.invalidate(barbeariaId);
@@ -624,8 +632,8 @@ export const useBarbeiroFila = (barbeariaId = null) => {
 
   // Obter fila filtrada por barbeiro
   const getFilaBarbeiro = useCallback(() => {
-    // ✅ Usar a estrutura correta: statusBarbeiro.barbeiro.id
-    const barbeiroId = statusBarbeiro?.barbeiro?.id || statusBarbeiro?.id;
+    // ✅ Usar a nova estrutura indexada por barbeariaId
+    const barbeiroId = statusBarbeiro?.[barbeariaId]?.barbeiro_id;
     
     if (!barbeiroId) {
       return [];
@@ -635,7 +643,7 @@ export const useBarbeiroFila = (barbeariaId = null) => {
       cliente.barbeiro_id === barbeiroId || 
       cliente.barbeiro === 'Fila Geral'
     );
-  }, [fila, statusBarbeiro]);
+  }, [fila, statusBarbeiro, barbeariaId]);
 
   // Função para verificar status da API
   const verificarStatusAPI = useCallback(async () => {

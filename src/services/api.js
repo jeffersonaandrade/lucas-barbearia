@@ -550,12 +550,15 @@ export const filaService = {
 
   // Estatísticas da fila (PÚBLICO)
   async obterEstatisticasPublicas(barbeariaId) {
-    return api.publicGet(`/fila/${barbeariaId}/estatisticas`);
+    return api.publicGet(`/fila/${barbeariaId}`);
   },
 
   // Chamar próximo cliente (PRIVADO - requer role admin, gerente ou barbeiro)
   async chamarProximo(barbeariaId) {
-    return api.post(`/fila/proximo/${barbeariaId}`, {});
+    console.log('🔔 chamarProximo chamado com barbeariaId:', barbeariaId);
+    const response = await api.post(`/fila/proximo/${barbeariaId}`, {});
+    console.log('✅ chamarProximo resposta:', response);
+    return response;
   },
 
   // Obter fila completa para BARBEIROS (PRIVADO - requer autenticação)
@@ -594,15 +597,18 @@ export const filaService = {
   },
 
           // Iniciar atendimento (PRIVADO - requer autenticação de barbeiro)
-        async iniciarAtendimento(atendimentoId, dados) {
-          return api.put(`/fila/gerenciar/iniciar/${atendimentoId}`, {
+        async iniciarAtendimento(clienteId, dados, barbeariaId = 1) {
+          console.log('🔔 iniciarAtendimento chamado com clienteId:', clienteId, 'barbeariaId:', barbeariaId, 'dados:', dados);
+          const response = await api.post(`/fila/iniciar-atendimento/${barbeariaId}/${clienteId}`, {
             servico_id: dados.servico_id
           });
+          console.log('✅ iniciarAtendimento resposta:', response);
+          return response;
         },
 
   // Iniciar atendimento simplificado (PRIVADO - requer autenticação de barbeiro)
   async iniciarAtendimentoSimplificado(clienteId, dados) {
-    return api.put(`/fila/iniciar-atendimento/${clienteId}`, {
+    return api.post(`/fila/iniciar-atendimento/${clienteId}`, {
       servico_id: dados.servico_id
     });
   },
@@ -619,7 +625,9 @@ export const filaService = {
 
   // Finalizar atendimento simplificado (PRIVADO - requer autenticação de barbeiro)
   async finalizarAtendimentoSimplificado(clienteId, dados) {
-    return api.put(`/fila/finalizar-atendimento/${clienteId}`, {
+    return api.post(`/fila/finalizar/${clienteId}`, {
+      cliente_id: clienteId,
+      servico_id: dados.servico_id || 1,
       valor_servico: dados.valor_servico,
       forma_pagamento: dados.forma_pagamento || 'dinheiro',
       observacoes: dados.observacoes || ''
@@ -691,19 +699,19 @@ export const usuariosService = {
     if (filtros.public) params.append('public', filtros.public);
     
     const queryString = params.toString();
-    const endpoint = queryString ? `/users/gerenciamento/barbeiros?${queryString}` : '/users/gerenciamento/barbeiros';
+    const endpoint = queryString ? `/users/barbeiros?${queryString}` : '/users/barbeiros';
     
     return api.get(endpoint);
   },
 
   // Status do barbeiro (PRIVADO - requer role barbeiro)
   async obterMeuStatus() {
-    return api.get('/users/gerenciamento/barbeiros/meu-status');
+    return api.get('/users/barbeiros/meu-status');
   },
 
   // Obter status do barbeiro (PRIVADO - requer role barbeiro)
-  async obterStatusBarbeiro() {
-    return api.get('/users/barbeiros/meu-status');
+  async obterStatusBarbeiro(barbeariaId) {
+    return api.get(`/users/barbeiros/meu-status?barbearia_id=${barbeariaId}`);
   },
 
   // Obter minhas barbearias (PRIVADO - requer role barbeiro)
@@ -712,23 +720,22 @@ export const usuariosService = {
   },
 
   // Atualizar status do barbeiro (PRIVADO - requer role barbeiro)
-  async atualizarStatusBarbeiro(acao, dados) {
-    // Converter a ação para o formato esperado pela API
-    const ativo = acao === 'ativar';
+  async atualizarStatusBarbeiro(dados) {
+    // ✅ USAR O ENDPOINT RESTAURADO NO BACKEND
     return api.post('/users/barbeiros/alterar-status', {
       barbearia_id: dados.barbearia_id,
-      ativo: ativo
+      ativo: dados.ativo
     });
   },
 
   // Ativar barbeiro (PRIVADO - requer role admin ou gerente)
   async ativarBarbeiro(dados) {
-    return api.post('/users/gerenciamento/barbeiros/ativar', dados);
+    return api.post('/users/barbeiros/ativar', dados);
   },
 
   // Desativar barbeiro (PRIVADO - requer role admin ou gerente)
   async desativarBarbeiro(dados) {
-    return api.post('/users/gerenciamento/barbeiros/desativar', dados);
+    return api.post('/users/barbeiros/desativar', dados);
   },
 
   // Perfil do usuário (PRIVADO - requer autenticação)
@@ -870,21 +877,7 @@ export const utilsService = {
 
 // Serviço de relatórios
 export const relatoriosService = {
-  // Dashboard de relatórios (PRIVADO - requer role admin ou gerente)
-  async obterDashboard(filtros = {}) {
-    const params = new URLSearchParams();
-    
-    // Parâmetros suportados
-    if (filtros.barbearia_id) params.append('barbearia_id', filtros.barbearia_id);
-    if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
-    if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
-    if (filtros.periodo) params.append('periodo', filtros.periodo);
-    
-    const queryString = params.toString();
-    const endpoint = queryString ? `/relatorios/dashboard?${queryString}` : '/relatorios/dashboard';
-    
-    return api.get(endpoint);
-  },
+
 
   // Download de relatórios (PRIVADO - requer role admin ou gerente)
   async downloadRelatorio(filtros = {}) {

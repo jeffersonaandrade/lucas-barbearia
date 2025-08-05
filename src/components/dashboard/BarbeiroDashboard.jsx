@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '@/contexts/DashboardContext.jsx';
-import { useSharedData } from '@/hooks/useSharedData.js';
 import DashboardHeader from './DashboardHeader.jsx';
 import BarbeariaSelector from './BarbeariaSelector.jsx';
 import BarbeiroStatusCard from './BarbeiroStatusCard.jsx';
@@ -14,6 +13,7 @@ import FinalizarAtendimentoModal from '@/components/ui/finalizar-atendimento-mod
 import IniciarAtendimentoModal from '@/components/ui/iniciar-atendimento-modal.jsx';
 import { useNotification, useBarbeiroHandlers } from './BarbeiroDashboardHandlers.js';
 import { useBarbeiroEffects } from './useBarbeiroEffects.js';
+import { useBarbeiroFila } from '@/hooks/useBarbeiroFila.js';
 
 const BarbeiroDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -26,18 +26,28 @@ const BarbeiroDashboard = ({ onLogout }) => {
     setAtendendoAtual 
   } = useDashboard();
 
-  // Sistema de dados compartilhados
-  const { useSharedDashboardStats, useSharedFilaData } = useSharedData();
-  const { stats, loading: statsLoading } = useSharedDashboardStats('barbeiro', barbeariaAtual?.id);
-  const { filaData, loading: filaLoading, error: filaError } = useSharedFilaData(barbeariaAtual?.id);
+  // Hook especializado para barbeiros
+  const { 
+    fila, 
+    statusBarbeiro, 
+    isBarbeiroAtivo,
+    toggleStatusBarbeiro,
+    loading: barbeiroLoading,
+    estatisticas,
+    barbeariaInfo,
+    apiStatus,
+    chamarProximo,
+    finalizarAtendimento,
+    removerCliente,
+    iniciarAtendimento,
+    getFilaBarbeiro
+  } = useBarbeiroFila(barbeariaAtual?.id);
 
-  // Extrair dados da fila
-  const fila = filaData?.fila || [];
-  const estatisticas = filaData?.estatisticas || {};
-  const barbeariaInfo = filaData?.barbeariaInfo || {};
-  const apiStatus = filaData?.apiStatus || 'offline';
-  const statusBarbeiro = filaData?.statusBarbeiro || {};
-  const atendendoHook = filaData?.atendendoAtual || null;
+  // Debug: Log dos dados recebidos
+  useEffect(() => {
+    console.log('📊 BarbeiroDashboard - StatusBarbeiro:', statusBarbeiro);
+    console.log('📊 BarbeiroDashboard - Loading:', barbeiroLoading);
+  }, [statusBarbeiro, barbeiroLoading]);
 
   // Hook para notificações
   const { notificacao, mostrarNotificacao, limparNotificacao } = useNotification();
@@ -54,8 +64,7 @@ const BarbeiroDashboard = ({ onLogout }) => {
     barbeariaAtual,
     setBarbeariaAtual,
     atendendoAtual,
-    setAtendendoAtual,
-    atendendoHook
+    setAtendendoAtual
   });
 
   // Hook para handlers
@@ -65,31 +74,13 @@ const BarbeiroDashboard = ({ onLogout }) => {
     setBarbeariaAtual,
     atendendoAtual,
     setAtendendoAtual,
-    isBarbeiroAtivo: (barbeariaId) => statusBarbeiro[barbeariaId]?.ativo || false,
-    toggleStatusBarbeiro: async (acao) => {
-      // Implementar chamada para API
-      console.log(`Tentando ${acao} barbeiro`);
-    },
-    chamarProximo: async () => {
-      // Implementar chamada para API
-      console.log('Chamando próximo cliente...');
-    },
-    finalizarAtendimento: async (clienteId, dados) => {
-      // Implementar chamada para API
-      console.log('Finalizando atendimento:', clienteId, dados);
-    },
-    removerCliente: async (clienteId) => {
-      // Implementar chamada para API
-      console.log('Removendo cliente:', clienteId);
-    },
-    iniciarAtendimento: async (clienteId, dados) => {
-      // Implementar chamada para API
-      console.log('Iniciando atendimento:', clienteId, dados);
-    },
-    getFilaBarbeiro: async () => {
-      // Implementar chamada para API
-      console.log('Obtendo fila do barbeiro...');
-    },
+    isBarbeiroAtivo,
+    toggleStatusBarbeiro,
+    chamarProximo,
+    finalizarAtendimento,
+    removerCliente,
+    iniciarAtendimento,
+    getFilaBarbeiro,
     mostrarNotificacao,
     navigate
   });
@@ -159,17 +150,17 @@ const BarbeiroDashboard = ({ onLogout }) => {
           barbeariaAtual={barbeariaAtual}
           onBarbeariaChange={handlers.handleBarbeariaChange}
           onToggleAtivo={handlers.handleToggleAtivo}
-          isBarbeiroAtivo={(barbeariaId) => statusBarbeiro[barbeariaId]?.ativo || false}
-          loading={filaLoading}
+          isBarbeiroAtivo={isBarbeiroAtivo}
+          loading={barbeiroLoading}
         />
 
         {/* Status Card */}
         <BarbeiroStatusCard
           barbearias={barbearias}
           barbeariaAtual={barbeariaAtual}
-          isBarbeiroAtivo={(barbeariaId) => statusBarbeiro[barbeariaId]?.ativo || false}
+          isBarbeiroAtivo={isBarbeiroAtivo}
           onToggleAtivo={handlers.handleToggleAtivo}
-          loading={filaLoading}
+          loading={barbeiroLoading}
         />
 
         {/* Stats Manager */}
@@ -177,10 +168,10 @@ const BarbeiroDashboard = ({ onLogout }) => {
           barbeariaAtual={barbeariaAtual}
           barbeiroAtual={barbeiroAtual}
           userRole="barbeiro"
-          stats={stats}
+          stats={estatisticas}
           estatisticas={estatisticas}
           historicoAtualizado={historicoAtualizado}
-          loading={statsLoading}
+          loading={barbeiroLoading}
         />
 
         {/* Navegação por Abas */}
@@ -195,10 +186,10 @@ const BarbeiroDashboard = ({ onLogout }) => {
             barbeariaAtual={barbeariaAtual}
             barbeiroAtual={barbeiroAtual}
             fila={fila}
-            filaLoading={filaLoading}
+            filaLoading={barbeiroLoading}
             atendendoAtual={atendendoAtual}
             setAtendendoAtual={setAtendendoAtual}
-            isBarbeiroAtivo={(barbeariaId) => statusBarbeiro[barbeariaId]?.ativo || false}
+            isBarbeiroAtivo={isBarbeiroAtivo}
             onChamarProximo={handleChamarProximo}
             onFinalizarAtendimento={handleFinalizarAtendimento}
             onAdicionarCliente={handlers.handleAdicionarCliente}

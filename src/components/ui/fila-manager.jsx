@@ -40,23 +40,7 @@ const FilaManager = ({
   const fila = filaFromProps || filaData.fila || [];
   const isLoading = loadingFromProps !== undefined ? loadingFromProps : loading;
   
-  // ✅ Debug: Log dos dados recebidos
-  console.log('🔍 FilaManager - Fila recebida:', {
-    filaLength: fila.length,
-    barbeariaAtual: barbeariaAtual?.id,
-    barbeiroAtual: barbeiroAtual?.id,
-    filaFromProps: filaFromProps?.length,
-    filaData: filaData?.fila?.length
-  });
-  
-  // ✅ Debug: Verificar se a fila está sendo atualizada
-  useEffect(() => {
-    console.log('🔄 FilaManager - Fila atualizada:', {
-      filaLength: fila.length,
-      filaFromProps: filaFromProps?.length,
-      filaData: filaData?.fila?.length
-    });
-  }, [fila, filaFromProps, filaData]);
+
   
   const [tipoFilaAtual, setTipoFilaAtual] = useState('geral');
   const [abaAtiva, setAbaAtiva] = useState('geral');
@@ -72,7 +56,7 @@ const FilaManager = ({
   
   // Configurações de cache
   const filaCacheTimeout = 60000; // 60 segundos (1 minuto) para fila
-  const historicoCacheTimeout = 600000; // 10 minutos para histórico
+  const historicoCacheTimeout = 1800000; // 30 minutos para histórico
   
   // Controle de chamadas duplicadas
   const filaCallInProgress = useRef(false);
@@ -193,13 +177,10 @@ const FilaManager = ({
     
     // Prioridade: cliente atendendo > cliente próximo
     if (clienteAtendendo && (!atendendoAtual || atendendoAtual.id !== clienteAtendendo.id)) {
-      console.log('🔍 Cliente atendendo detectado:', clienteAtendendo);
       setAtendendoAtual(clienteAtendendo);
     } else if (clienteProximo && !clienteAtendendo && (!atendendoAtual || atendendoAtual.id !== clienteProximo.id)) {
-      console.log('🔍 Cliente próximo detectado:', clienteProximo);
       setAtendendoAtual(clienteProximo);
     } else if (!clienteProximo && !clienteAtendendo && atendendoAtual) {
-      console.log('🔍 Nenhum cliente próximo/atendendo encontrado');
       setAtendendoAtual(null);
     }
   };
@@ -219,7 +200,6 @@ const FilaManager = ({
   useEffect(() => {
     // EVITAR LOOP INFINITO - só carregar se realmente mudou
     if (barbeariaAtual?.id && !historicoCallInProgress.current) {
-      console.log('🔄 Barbearia definida, carregando histórico...');
       loadHistoricoData();
     }
   }, [barbeariaAtual?.id]); // REMOVIDO loadHistoricoData da dependência
@@ -228,7 +208,6 @@ const FilaManager = ({
   useEffect(() => {
     // EVITAR LOOP INFINITO - só carregar se realmente mudou
     if (barbeiroAtual?.id && barbeariaAtual?.id && !historicoCallInProgress.current) {
-      console.log('🔄 Barbeiro definido, carregando histórico...');
       loadHistoricoData();
     }
   }, [barbeiroAtual?.id, barbeariaAtual?.id]); // REMOVIDO loadHistoricoData da dependência
@@ -243,7 +222,6 @@ const FilaManager = ({
   // Recarregar histórico quando solicitado explicitamente
   useEffect(() => {
     if (onHistoricoAtualizado) {
-      console.log('🔄 Recarregando histórico por solicitação explícita');
       loadHistoricoData(true);
     }
   }, [onHistoricoAtualizado]);
@@ -365,7 +343,6 @@ const FilaManager = ({
       {/* Tabs com Filas */}
       <Tabs defaultValue="geral" className="w-full" onValueChange={(value) => {
         setAbaAtiva(value);
-        console.log('🔄 Aba alterada para:', value);
         
         if (value === 'especifica') {
           setTipoFilaAtual('especifica');
@@ -634,9 +611,9 @@ const FilaManager = ({
                             </Badge>
                           </div>
                           <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span>📞 {cliente.telefone || cliente.telefone_cliente || 'N/A'}</span>
+                            <span>📞 {cliente.telefone || cliente.telefone_cliente || 'Não informado'}</span>
                             <span>⏱️ {cliente.duracao || 0} min</span>
-                            <span>🕐 {formatarHora(cliente.data_fim) || 'N/A'}</span>
+                            <span>🕐 {formatarHora(cliente.data_fim) || 'Não informado'}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {formatarData(cliente.data_fim)}

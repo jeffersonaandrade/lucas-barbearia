@@ -143,15 +143,15 @@ const AvaliacaoDetailModal = ({ isOpen, onClose, avaliacao }) => {
               </div>
               <div>
                 <p className="text-gray-600">Barbearia</p>
-                <p>{avaliacao.barbearia_nome || 'N/A'}</p>
+                <p>{avaliacao.barbearia_nome || 'Não informado'}</p>
               </div>
               <div>
                 <p className="text-gray-600">Barbeiro</p>
-                <p>{avaliacao.barbeiro_nome || 'N/A'}</p>
+                <p>{avaliacao.barbeiro_nome || 'Não informado'}</p>
               </div>
               <div>
                 <p className="text-gray-600">Data do Atendimento</p>
-                <p>{avaliacao.data_finalizacao ? formatarData(avaliacao.data_finalizacao) : 'N/A'}</p>
+                <p>{avaliacao.data_finalizacao ? formatarData(avaliacao.data_finalizacao) : 'Não informado'}</p>
               </div>
             </div>
           </div>

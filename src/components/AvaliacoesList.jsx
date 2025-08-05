@@ -435,7 +435,7 @@ const AvaliacoesList = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {barbearias.find(b => b.id === avaliacao.barbearia_id)?.nome || 'N/A'}
+                        {barbearias.find(b => b.id === avaliacao.barbearia_id)?.nome || 'Não informado'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
